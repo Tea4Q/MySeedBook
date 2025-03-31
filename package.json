@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "expo-image-picker": "~14.5.0",
+    "lucide-react-native": "^0.344.0"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.45",
+    "typescript": "^5.1.3"
+  }
+}
