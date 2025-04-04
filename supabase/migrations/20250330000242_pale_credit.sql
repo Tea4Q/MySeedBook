@@ -5,7 +5,7 @@
     - `suppliers`
       - `id` (uuid, primary key)
       - `name` (text, required)
-      - `contact_person` (text)
+      - `webaddress` (text)
       - `email` (text)
       - `phone` (text)
       - `address` (text)
@@ -37,7 +37,7 @@ $$ language 'plpgsql';
 CREATE TABLE IF NOT EXISTS suppliers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  contact_person text,
+  webaddress text,
   email text,
   phone text,
   address text,

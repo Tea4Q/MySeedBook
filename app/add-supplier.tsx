@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Building2, User, Mail, Phone, MapPin, CreditCard, FileText } from 'lucide-react-native';
+import { ArrowLeft,  Building2, User, Mail, Phone, MapPinHouse, CreditCard, FileText } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+
+
 
 export default function AddSupplierScreen() {
   const [formData, setFormData] = useState({
     name: '',
-    contact_person: '',
+    webaddress: 'www.example.com',
     email: '',
     phone: '',
     address: '',
@@ -71,17 +73,18 @@ export default function AddSupplierScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <User size={20} color="#336633" />
-              <Text style={styles.label}>Contact Person</Text>
-            </View>
-            <TextInput
+         <View style={styles.inputGroup}>
+           <View style={styles.labelContainer}>
+             <MapPinHouse size={20} color="#336633" />
+             <Text style={styles.label}>Web Address</Text>
+          </View>
+           <TextInput
               style={styles.input}
-              value={formData.contact_person}
-              onChangeText={(text) => setFormData({ ...formData, contact_person: text })}
-              placeholder="Enter contact person name"
-            />
+              value={formData.webaddress}
+              onChangeText={(text) => setFormData({ ...formData, webaddress: text })}
+              placeholder="Enter web address"
+              keyboardType="url"
+              autoCapitalize="none"/>
           </View>
 
           <View style={styles.inputGroup}>

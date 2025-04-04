@@ -1,31 +1,18 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Image, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Upload, X, RotateCcw, Check, Image as ImageIcon } from 'lucide-react-native';
 import { FlipType, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 interface ImageCaptureProps {
-  onImageSelected: (uri: string) => void;
-  maxSize?: number; // Maximum file size in bytes
-  aspectRatio?: [number, number]; // Desired aspect ratio [width, height]
-  uploadUrl: string;
-  onUploadSuccess: (response: any) => void;
-  onUploadFailure: (error: any) => void;
+  onImageCaptured: (uri: string | null) => void;
 }
 
-export default function ImageCapture({
-  onImageSelected,
-  maxSize = 5 * 1024 * 1024, // 5MB default
-  aspectRatio = [4, 3],
-  uploadUrl,
-  onUploadSuccess,
-  onUploadFailure,
-}: ImageCaptureProps) {
+export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   const processImage = async (uri: string): Promise<string> => {
     setIsProcessing(true);
@@ -48,23 +35,6 @@ export default function ImageCapture({
     }
   };
 
-  const validateImage = async (uri: string): Promise<boolean> => {
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      if (blob.size > maxSize) {
-        setError(`Image size exceeds ${maxSize / (1024 * 1024)}MB limit`);
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      setError('Failed to validate image');
-      return false;
-    }
-  };
-
   const takePhoto = async () => {
     try {
       setIsLoading(true);
@@ -81,15 +51,12 @@ export default function ImageCapture({
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: aspectRatio,
+        aspect: [4, 3],
         quality: 1,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const isValid = await validateImage(result.assets[0].uri);
-        if (isValid) {
-          setSelectedImage(result.assets[0].uri);
-        }
+        setSelectedImage(result.assets[0].uri);
       }
     } catch (err) {
       setError('Failed to capture photo');
@@ -107,15 +74,12 @@ export default function ImageCapture({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: aspectRatio,
+        aspect: [4, 3],
         quality: 1,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const isValid = await validateImage(result.assets[0].uri);
-        if (isValid) {
-          setSelectedImage(result.assets[0].uri);
-        }
+        setSelectedImage(result.assets[0].uri);
       }
     } catch (err) {
       setError('Failed to upload photo');
@@ -127,11 +91,11 @@ export default function ImageCapture({
 
   const confirmImage = async () => {
     if (!selectedImage) return;
-
+    
     try {
       setIsProcessing(true);
       const processedUri = await processImage(selectedImage);
-      onImageSelected(processedUri);
+      onImageCaptured(processedUri);
       setSelectedImage(null);
     } catch (err) {
       setError('Failed to process image');
@@ -143,51 +107,11 @@ export default function ImageCapture({
     setError(null);
   };
 
-  const handleUpload = async () => {
-    if (!selectedImage) {
-      setError('No image selected');
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(selectedImage);
-      const blob = await response.blob();
-
-      const formData = new FormData();
-      formData.append('image', blob, 'image.jpg');
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const responseData = await uploadResponse.json();
-
-      if (uploadResponse.ok) {
-        onUploadSuccess(responseData);
-      } else {
-        onUploadFailure(responseData);
-        setError(`Upload failed: ${uploadResponse.status}`);
-      }
-    } catch (err: any) {
-      onUploadFailure(err);
-      setError(`Upload failed: ${err.message}`);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   if (selectedImage) {
     return (
       <View style={styles.previewContainer}>
         <Image source={{ uri: selectedImage }} style={styles.preview} />
-
+        
         {isProcessing ? (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color="#ffffff" />
@@ -223,24 +147,6 @@ export default function ImageCapture({
             </Pressable>
           </View>
         )}
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.uploadButton,
-            pressed && styles.uploadButtonPressed,
-            isUploading && styles.uploadButtonDisabled,
-          ]}
-          onPress={handleUpload}
-          disabled={isUploading}>
-          {isUploading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <>
-              <Upload size={24} color="#ffffff" />
-              <Text style={styles.uploadButtonText}>Upload</Text>
-            </>
-          )}
-        </Pressable>
       </View>
     );
   }
@@ -259,7 +165,7 @@ export default function ImageCapture({
           Drag and drop an image here or use the buttons below
         </Text>
       </View>
-
+      
       <View style={styles.buttonContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -299,7 +205,7 @@ export default function ImageCapture({
       </View>
 
       <Text style={styles.helpText}>
-        Supported formats: JPG, PNG, HEIF • Max size: {maxSize / (1024 * 1024)}MB
+        Supported formats: JPG, PNG, HEIF • Max size: 5MB
       </Text>
     </View>
   );
@@ -378,7 +284,7 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     width: '100%',
-    aspectRatio: 4 / 3,
+    aspectRatio: 4/3,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -439,34 +345,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     marginTop: 12,
-  },
-  uploadButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2d7a3a',
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  uploadButtonPressed: {
-    backgroundColor: '#236b2e',
-    transform: [{ scale: 0.98 }],
-  },
-  uploadButtonDisabled: {
-    opacity: 0.7,
-  },
-  uploadButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

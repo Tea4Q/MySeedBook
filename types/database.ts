@@ -1,7 +1,7 @@
 export interface Supplier {
   id: string;
   name: string;
-  contact_person?: string;
+  webaddress?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -16,7 +16,7 @@ export interface Supplier {
 export interface Seed {
   id: string;
   name: string;
-  variety?: string;
+  type: string;
   quantity: number;
   quantity_unit: string;
   supplier_id?: string;

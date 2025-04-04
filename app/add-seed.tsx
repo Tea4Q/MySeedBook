@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable, ScrollView, Image } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Camera, Upload, Droplets, Sun, Ruler, Clock, Sprout, Mountain, FlaskRound as Flask } from 'lucide-react-native';
-import { ImageCapture  } from '@/components/ImageCapture/';
+import { ArrowLeft, Camera, Upload, Droplets, Sun, Ruler, Clock, Sprout, Mountain, FlaskRound as Flask, CircleAlert as AlertCircle } from 'lucide-react-native';
+import ImageCapture from '@/components/ImageCapture';
+import { SupplierSelect } from '@/components/SupplierSelect';
+import type { Supplier } from '@/types/database';
+import DatePicker from 'react-native-date-picker';
+import { supabase } from '@/lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
 
 type SeedType = {
   label: string;
@@ -16,9 +21,180 @@ const seedTypes: SeedType[] = [
   { label: 'Fruit', value: 'fruit' },
 ];
 
+interface FormData {
+  name: string;
+  type: string;
+  description: string;
+  quantity: string;
+  quantity_unit: string;
+  supplier_id?: string;
+  date_received: Date | null;
+  storage_location?: string;
+  storage_requirements?: string;
+  germination_rate?: string;
+  planting_depth?: string;
+  spacing?: string;
+  watering_requirements?: string;
+  sunlight_requirements?: string;
+  soil_type?: string;
+  fertilizer_requirements?: string;
+  days_to_germinate?: string;
+  days_to_harvest?: string;
+  planting_season?: string;
+  harvest_season?: string;
+  notes?: string;
+}
+
+interface FormErrors {
+  [key: string]: string;
+}
+
 export default function AddSeedScreen() {
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [previewImage, setPreviewImage] = useState<string>('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800&auto=format&fit=crop');
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    type: '',
+    description: '',
+    quantity: '',
+    quantity_unit: 'seeds',
+    date_received: new Date(),
+  });
+  
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showImageCapture, setShowImageCapture] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+
+  const handleImageCaptured = async () => {
+  // Ask for permission to access camera
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    alert('Camera permission is required!');
+    return;
+  }
+
+   // Launch the camera and allow the user to capture an image
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images, // Correct type for mediaTypes
+    quality: 1,  // Full-quality image
+    allowsEditing: true,  // Allow editing of the photo (optional)
+    aspect: [4, 3],  // Aspect ratio (optional)
+    base64: false,  // Don't use base64 encoding (optional)
+  });
+
+  if (!result.canceled) {
+    setPreviewImage(result.uri);  // Set the captured image URI
+  }
+}; 
+
+  const handleSupplierSelect = (supplier: Supplier) => {
+    setFormData(prev => ({
+      ...prev,
+      supplier_id: supplier.id
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Seed name is required';
+    }
+
+    if (!formData.type) {
+      newErrors.type = 'Seed type is required';
+    }
+
+    if (!formData.quantity || isNaN(Number(formData.quantity))) {
+      newErrors.quantity = 'Valid quantity is required';
+    }
+
+    if (!formData.date_received) {
+      newErrors.date_received = 'Received date is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+
+      // Image upload logic
+      let imageUrl: string | null = null;
+      if (previewImage) {
+        // Prepare file name and upload image to Supabase Storage
+        const fileName =`seed_images${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        const { data, error } = await supabase.storage
+          .from('seed-images')  // Ensure 'seed-images' is your bucket name
+          .upload(fileName, { uri: previewImage }, { contentType: 'image/jpeg' });
+
+        if (error) throw error;
+
+        // Get the public URL for the uploaded image
+        imageUrl = `${supabase.storageUrl}/seed-images/${fileName}`;
+      }
+      const { data: seedData, error: seedError } = await supabase
+        .from('seeds')
+        .insert([
+          {
+            name: formData.name,
+            type: formData.type,
+            quantity: Number(formData.quantity),
+            quantity_unit: formData.quantity_unit,
+            supplier_id: formData.supplier_id,
+            date_received: formData.date_received,
+            storage_location: formData.storage_location,
+            storage_requirements: formData.storage_requirements,
+            germination_rate: formData.germination_rate ? Number(formData.germination_rate) : null,
+            planting_instructions: JSON.stringify({
+              depth: formData.planting_depth,
+              spacing: formData.spacing,
+              watering: formData.watering_requirements,
+              sunlight: formData.sunlight_requirements,
+              soil_type: formData.soil_type,
+              fertilizer: formData.fertilizer_requirements,
+              days_to_germinate: formData.days_to_germinate,
+              days_to_harvest: formData.days_to_harvest,
+              planting_season: formData.planting_season,
+              harvest_season: formData.harvest_season,
+            }),
+            notes: formData.notes,
+            image_url: imageUrl,  // Save the image URL to the database
+          },
+        ])
+        .select()
+        .single();
+
+      if (seedError) throw seedError;
+
+      // Show success message and navigate back to inventory screen
+
+      setShowSuccess(true);
+      setTimeout(() => {
+        router.push({
+          pathname: '/(tabs)', // Ensure this is the correct path to your inventory screen
+          params: { highlight: seedData.id }
+        });
+      }, 1500);
+    } catch (error) {
+      console.error('Error adding seed:', error);
+      setErrors({
+        submit: 'Failed to add seed. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
 
   return (
     <View style={styles.container}>
@@ -29,58 +205,89 @@ export default function AddSeedScreen() {
         <Text style={styles.title}>Add New Seed</Text>
       </View>
 
+      {showSuccess && (
+        <View style={styles.successMessage}>
+          <Text style={styles.successText}>Seed added successfully!</Text>
+        </View>
+      )}
+
+      {errors.submit && (
+        <View style={styles.errorBanner}>
+          <AlertCircle size={20} color="#dc2626" />
+          <Text style={styles.errorBannerText}>{errors.submit}</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.imageSection}>
-          <Image source={{ uri: previewImage }} style={styles.previewImage} />
+           {previewImage ? (
+            <Image source={{ uri: previewImage }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.previewImagePlaceholder}>
+              <Text style={styles.previewImagePlaceholderText}>No image selected</Text>
+            </View>
+          )}
           <View style={styles.imageButtons}>
-            <Pressable style={styles.imageButton}>
+             <Pressable style={styles.imageButton} onPress={() => setShowImageCapture(true)}>
               <Camera size={24} color="#2d7a3a" />
               <Text style={styles.imageButtonText}>Take Photo</Text>
             </Pressable>
-            <Pressable style={styles.imageButton}>
+            <Pressable style={styles.imageButton} onPress={() => setShowImageCapture(true)}>
               <Upload size={24} color="#2d7a3a" />
               <Text style={styles.imageButtonText}>Upload</Text>
             </Pressable>
           </View>
         </View>
 
+        {showImageCapture && (
+          <View style={styles.imageCaptureContainer}>
+            <ImageCapture onImageCaptured={handleImageCaptured} />
+          </View>
+        )}
+
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Seed Name</Text>
+            <Text style={styles.label}>Seed Name *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.name && styles.inputError]}
+              value={formData.name}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
               placeholder="e.g., Brandywine Tomato"
               placeholderTextColor="#999"
             />
+            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Seed Type</Text>
+            <Text style={styles.label}>Seed Type *</Text>
             <View style={styles.typeContainer}>
               {seedTypes.map((type) => (
                 <Pressable
                   key={type.value}
                   style={[
                     styles.typeButton,
-                    selectedType === type.value && styles.selectedType,
+                    formData.type === type.value && styles.selectedType,
                   ]}
-                  onPress={() => setSelectedType(type.value)}>
+                  onPress={() => setFormData(prev => ({ ...prev, type: type.value }))}>
                   <Text
                     style={[
                       styles.typeButtonText,
-                      selectedType === type.value && styles.selectedTypeText,
+                      formData.type === type.value && styles.selectedTypeText,
                     ]}>
                     {type.label}
                   </Text>
                 </Pressable>
               ))}
             </View>
+            {errors.type && <Text style={styles.errorText}>{errors.type}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
+              value={formData.description}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
               placeholder="Describe your seeds..."
               placeholderTextColor="#999"
               multiline
@@ -90,30 +297,49 @@ export default function AddSeedScreen() {
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Quantity</Text>
+              <Text style={styles.label}>Quantity *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.quantity && styles.inputError]}
+                value={formData.quantity}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, quantity: text }))}
                 placeholder="0"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
               />
+              {errors.quantity && <Text style={styles.errorText}>{errors.quantity}</Text>}
             </View>
-            <View style={[styles.inputGroup, { flex: 2, marginLeft: 12 }]}>
-              <Text style={styles.label}>Purchase Date</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-              />
+           <View style={[styles.inputGroup, { flex: 2, marginLeft: 12 }]}>
+            <Text style={styles.label}>Purchase Date *</Text>
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <TextInput
+                  style={[styles.input, errors.date_received && styles.inputError]}
+                  placeholder="MM-DD-YYYY"
+                  placeholderTextColor="#999"
+                  value={formData.date_received ? formData.date_received.toLocaleDateString() : ''}
+                  editable={false}
+                />
+              </Pressable>
+              {errors.date_received && <Text style={styles.errorText}>{errors.date_received}</Text>}
+              {showDatePicker && (
+                <DatePicker 
+                  modal
+                  open={showDatePicker}
+                  date={formData.date_received || new Date()}
+                  onConfirm={(date) => {
+                    setShowDatePicker(false);
+                    setFormData(prev => ({ ...prev, date_received: date }));
+                  }}
+                  onCancel={() => setShowDatePicker(false)}
+                />
+              )}
             </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Supplier</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Select supplier"
-              placeholderTextColor="#999"
+            <SupplierSelect
+              onSelect={handleSupplierSelect}
+              selectedSupplierId={formData.supplier_id}
             />
           </View>
 
@@ -126,6 +352,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.timelineLabel}>Days to Germinate</Text>
                 <TextInput
                   style={styles.timelineInput}
+                  value={formData.days_to_germinate}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, days_to_germinate: text }))}
                   placeholder="e.g., 7-10 days"
                   placeholderTextColor="#999"
                 />
@@ -135,6 +363,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.timelineLabel}>Days to Harvest</Text>
                 <TextInput
                   style={styles.timelineInput}
+                  value={formData.days_to_harvest}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, days_to_harvest: text }))}
                   placeholder="e.g., 60-80 days"
                   placeholderTextColor="#999"
                 />
@@ -151,6 +381,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.instructionLabel}>Planting Depth</Text>
                 <TextInput
                   style={styles.instructionInput}
+                  value={formData.planting_depth}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, planting_depth: text }))}
                   placeholder="e.g., 1/4 inch"
                   placeholderTextColor="#999"
                 />
@@ -160,6 +392,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.instructionLabel}>Spacing</Text>
                 <TextInput
                   style={styles.instructionInput}
+                  value={formData.spacing}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, spacing: text }))}
                   placeholder="e.g., 12 inches"
                   placeholderTextColor="#999"
                 />
@@ -172,6 +406,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.instructionLabel}>Watering</Text>
                 <TextInput
                   style={styles.instructionInput}
+                  value={formData.watering_requirements}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, watering_requirements: text }))}
                   placeholder="e.g., Keep soil moist"
                   placeholderTextColor="#999"
                 />
@@ -181,6 +417,8 @@ export default function AddSeedScreen() {
                 <Text style={styles.instructionLabel}>Sunlight</Text>
                 <TextInput
                   style={styles.instructionInput}
+                  value={formData.sunlight_requirements}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, sunlight_requirements: text }))}
                   placeholder="e.g., Full sun"
                   placeholderTextColor="#999"
                 />
@@ -197,15 +435,19 @@ export default function AddSeedScreen() {
                 <Text style={styles.soilLabel}>Soil Type</Text>
                 <TextInput
                   style={styles.soilInput}
+                  value={formData.soil_type}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, soil_type: text }))}
                   placeholder="e.g., Well-draining loam"
                   placeholderTextColor="#999"
                 />
               </View>
               <View style={styles.soilItem}>
-               <Flask size={24} color = "#2d7a3a"/>
+                <Flask size={24} color="#2d7a3a" />
                 <Text style={styles.soilLabel}>Fertilizer</Text>
                 <TextInput
                   style={styles.soilInput}
+                  value={formData.fertilizer_requirements}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, fertilizer_requirements: text }))}
                   placeholder="e.g., 5-10-5 NPK"
                   placeholderTextColor="#999"
                 />
@@ -218,6 +460,8 @@ export default function AddSeedScreen() {
               <Text style={styles.label}>Planting Season</Text>
               <TextInput
                 style={styles.input}
+                value={formData.planting_season}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, planting_season: text }))}
                 placeholder="e.g., Early Spring"
                 placeholderTextColor="#999"
               />
@@ -226,6 +470,8 @@ export default function AddSeedScreen() {
               <Text style={styles.label}>Harvest Season</Text>
               <TextInput
                 style={styles.input}
+                value={formData.harvest_season}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, harvest_season: text }))}
                 placeholder="e.g., Late Summer"
                 placeholderTextColor="#999"
               />
@@ -233,8 +479,14 @@ export default function AddSeedScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.submitButton}>
-          <Text style={styles.submitButtonText}>Add to Inventory</Text>
+        <Pressable 
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.submitButtonText}>
+            {isSubmitting ? 'Adding to Inventory...' : 'Add to Inventory'}
+          </Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -269,14 +521,60 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  successMessage: {
+    backgroundColor: '#dcfce7',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  successText: {
+    color: '#166534',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  errorBannerText: {
+    color: '#dc2626',
+    fontSize: 16,
+    flex: 1,
+  },
   imageSection: {
     marginBottom: 24,
   },
   previewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 12,
+  },
+  previewImagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  previewImagePlaceholderText: {
+    fontSize: 16,
+    color: '#666666',
   },
   imageButtons: {
     flexDirection: 'row',
@@ -299,6 +597,9 @@ const styles = StyleSheet.create({
     color: '#2d7a3a',
     fontWeight: '600',
   },
+  imageCaptureContainer: {
+    marginBottom: 24,
+  },
   formSection: {
     gap: 20,
   },
@@ -318,6 +619,14 @@ const styles = StyleSheet.create({
     color: '#333333',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  inputError: {
+    borderColor: '#dc2626',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    marginTop: 4,
   },
   textArea: {
     height: 100,
@@ -464,6 +773,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 32,
     marginBottom: 24,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitButtonText: {
     fontSize: 18,
