@@ -1,24 +1,10 @@
-import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import {
-  ArrowLeft,
-  Building2,
-  User,
-  Mail,
-  Phone,
-  MapPinHouse,
-  CreditCard,
-  FileText,
-} from 'lucide-react-native';
+import { ArrowLeft,  Building2, User, Mail, Phone, MapPinHouse, CreditCard, FileText } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+
+
 
 export default function AddSupplierScreen() {
   const [formData, setFormData] = useState({
@@ -87,21 +73,18 @@ export default function AddSupplierScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <MapPinHouse size={20} color="#336633" />
-              <Text style={styles.label}>Web Address</Text>
-            </View>
-            <TextInput
+         <View style={styles.inputGroup}>
+           <View style={styles.labelContainer}>
+             <MapPinHouse size={20} color="#336633" />
+             <Text style={styles.label}>Web Address</Text>
+          </View>
+           <TextInput
               style={styles.input}
               value={formData.webaddress}
-              onChangeText={(text) =>
-                setFormData({ ...formData, webaddress: text })
-              }
+              onChangeText={(text) => setFormData({ ...formData, webaddress: text })}
               placeholder="Enter web address"
               keyboardType="url"
-              autoCapitalize="none"
-            />
+              autoCapitalize="none"/>
           </View>
 
           <View style={styles.inputGroup}>
@@ -135,15 +118,13 @@ export default function AddSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <MapPinHouse size={20} color="#336633" />
+              <MapPin size={20} color="#336633" />
               <Text style={styles.label}>Address</Text>
             </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) =>
-                setFormData({ ...formData, address: text })
-              }
+              onChangeText={(text) => setFormData({ ...formData, address: text })}
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -158,9 +139,7 @@ export default function AddSupplierScreen() {
             <TextInput
               style={styles.input}
               value={formData.payment_terms}
-              onChangeText={(text) =>
-                setFormData({ ...formData, payment_terms: text })
-              }
+              onChangeText={(text) => setFormData({ ...formData, payment_terms: text })}
               placeholder="Enter payment terms"
             />
           </View>
@@ -182,13 +161,9 @@ export default function AddSupplierScreen() {
         </View>
 
         <Pressable
-          style={[
-            styles.submitButton,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
+          disabled={isSubmitting}>
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
           </Text>
