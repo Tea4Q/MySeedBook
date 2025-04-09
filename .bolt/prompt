@@ -1,0 +1,126 @@
+I am just learning how to program and just have learn html, css and javascript.
+Project-Specific Instructions for Bolt
+
+    Seed Catalog Management:
+
+        Seed Data Structure: Each seed entry must include:
+
+            Name (Text field)
+
+            Type (Text field, e.g., flower, vegetable, herb)
+
+            Price (Numeric field)
+
+            Quantity (Numeric field)
+
+            Planting Instructions (Text area)
+
+            Growth Timeline (Text area)
+
+            Photo (Image file, optional for users to upload or take a photo)
+
+            Supplier Information (Text or contact details for the supplier)
+
+        The seed data must be stored in a structured way for easy retrieval and display in the inventory section of the app.
+
+    User Interface Design:
+
+        Vintage Theme: Use a vintage-inspired design with the following color palette:
+
+            Primary colors: #262A2B, #BCAB92, #2D2B24, #8B8776, #5E6347
+
+        Use clean, readable fonts like Georgia or similar serif fonts for the vintage feel.
+
+        Buttons should have smooth hover transitions using the transition property (e.g., transition: background-color 0.3s ease).
+
+        The design should be mobile-responsive and work seamlessly on both mobile and desktop devices.
+
+    File Upload/Camera Integration:
+
+        Add Photo: Implement a button for users to take a photo using their camera. This should access the camera and display a preview for the user to confirm.
+
+        Upload Photo: Provide a button for users to upload a photo from their device. The selected photo should be previewed on the screen.
+
+        Use the Supabase Storage API or a similar service to upload and store the photos. Each seed can have an associated photo stored in the cloud.
+
+        Allow both options (taking a photo or uploading a photo) and ensure proper handling of both image file types and user feedback (e.g., success/error messages).
+
+    Calendar and Planting Tracker:
+
+        Include a calendar that allows users to select a date and log the planting details, such as:
+
+            Seed name
+
+            Location (optional)
+
+            Date planted
+
+        Display an interactive calendar where users can add planting events directly by clicking on a date.
+
+        Ensure the calendar is dynamic and can store and display planting data for each date.
+
+    Sign-Up/Login System:
+
+        Implement a combined Sign-Up and Login page with a transition effect between the two forms.
+
+        Use clear form validation for fields like email and password.
+
+        Ensure that the user is authenticated before they can access the seed catalog and planting calendar.
+
+    API Integrations:
+
+        Plant Identification API: Use an API like Planty API or another plant identification service to help users identify plants from uploaded photos. Ensure the integration is smooth, and show the plant’s common name, scientific name, and other useful details when a photo is uploaded.
+
+        The API should be called when the user uploads a photo or takes a photo of a plant, and the resulting plant information should be displayed immediately.
+
+        If the API returns an error (e.g., unable to identify), provide a friendly error message to the user.
+
+    Database:
+
+        Store all seed data, including the name, type, price, quantity, planting instructions, growth timeline, and photo URL in a database (e.g., Supabase, Firebase, or any other backend of choice).
+
+        The inventory section of the app should allow users to view, edit, and delete seed entries.
+
+    Seed Inventory Listing:
+
+        Display a list of all seeds in the inventory with:
+
+            Seed name
+
+            Quantity available
+
+            Price
+
+            Action buttons for editing and deleting seeds
+
+        Ensure that inventory updates automatically when new seeds are added or modified.
+
+    Testing and Debugging:
+
+        Cross-Device Compatibility: Ensure that the app works well on both desktop and mobile devices, with responsive design and smooth functionality.
+
+        Error Handling: Implement error handling for file uploads, photo captures, and API calls. Show users meaningful messages when errors occur (e.g., “Failed to upload photo,” “Unable to identify plant,” etc.).
+
+        User Experience (UX): The app should be intuitive to use. Keep interactions simple and informative, especially when adding or editing seeds, uploading photos, or interacting with the calendar.
+
+    Code Quality:
+
+        Follow best practices for clean, maintainable code. Use modular functions and organize code into components where possible.
+
+        Ensure consistent code style across HTML, CSS, and JavaScript.
+
+        Use comments where necessary to explain complex logic or functionality.
+
+Summary of Expectations:
+
+    Seed data should be easy to input and edit, with clear fields for seed name, type, price, etc.
+
+    Photo handling (upload or camera capture) must be simple, with clear feedback for success or failure.
+
+    User interface must be clean, intuitive, and visually aligned with the vintage design theme.
+
+    Planting calendar and inventory listing should be functional, dynamic, and well-integrated.
+
+    Ensure smooth API integration for plant identification, and manage user authentication with a combined Sign-Up/Login page.
+
+    Follow best coding practices, ensure cross-device compatibility, and handle errors gracefully.
