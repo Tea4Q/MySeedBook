@@ -1,23 +1,66 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
-import { ArrowLeft,  Building2, User, Mail, Phone, MapPinHouse, CreditCard, FileText } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Platform,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import {
+  ArrowLeft,
+  Building2,
+  User,
+  Mail,
+  Phone,
+  MapPinHouse,
+  House,
+  CreditCard,
+  FileText,
+} from 'lucide-react-native';
+const router = useRouter();
+const searchParams = useLocalSearchParams(); // Get query parameters
+console.log(searchParams);
+const supplierName = searchParams.name as string; // Example: ?name=SupplierName
+
 import { supabase } from '@/lib/supabase';
 
+// import { useAuth } from '@/lib/auth';
 
+export default function AddSupplierScreen({
+  supplierName,
+}: {
+  supplierName?: string;
+}) {
+  // const { user } = useAuth(); // Get the current user from the auth context
+  // const [userId, setUserId] = useState<string | null>(null);
 
-export default function AddSupplierScreen() {
   const [formData, setFormData] = useState({
-    name: '',
-    webaddress: 'www.example.com',
+    name: supplierName || '',
+    webaddress: '',
     email: '',
     phone: '',
     address: '',
     payment_terms: '',
     notes: '',
+    user_id: '', // Will be set during submission
   });
+
+  useEffect(() => {
+    if (supplierName) {
+      setFormData((prev) => ({ ...prev, name: supplierName }));
+    }
+  }, [supplierName]);
+
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
@@ -25,13 +68,33 @@ export default function AddSupplierScreen() {
       return;
     }
 
+    if (!validateEmail(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // First get the current user's ID
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error('You must be logged in to add a supplier');
+
+      // Add the user_id to the form data
+      const supplierData = {
+        ...formData,
+        user_id: user.id,
+      };
+
       const { error: supabaseError } = await supabase
         .from('suppliers')
-        .insert([formData]);
+        .insert([supplierData]);
 
       if (supabaseError) throw supabaseError;
 
@@ -73,33 +136,46 @@ export default function AddSupplierScreen() {
             />
           </View>
 
-         <View style={styles.inputGroup}>
-           <View style={styles.labelContainer}>
-             <MapPinHouse size={20} color="#336633" />
-             <Text style={styles.label}>Web Address</Text>
-          </View>
-           <TextInput
+          <View style={styles.inputGroup}>
+            <View style={styles.labelContainer}>
+              <MapPinHouse size={20} color="#336633" />
+              <Text style={styles.label}>Web Address</Text>
+            </View>
+            <TextInput
               style={styles.input}
               value={formData.webaddress}
-              onChangeText={(text) => setFormData({ ...formData, webaddress: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, webaddress: text })
+              }
               placeholder="Enter web address"
               keyboardType="url"
-              autoCapitalize="none"/>
+              autoCapitalize="none"
+            />
           </View>
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
               <Mail size={20} color="#336633" />
               <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  !validateEmail(formData.email) &&
+                    formData.email !== '' &&
+                    styles.inputError,
+                ]}
+                value={formData.email}
+                onChangeText={(text: string) =>
+                  setFormData({ ...formData, email: text })
+                }
+                placeholder="Enter email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {formData.email !== '' && !validateEmail(formData.email) && (
+                <Text style={styles.errorText}>Invalid email address</Text>
+              )}
             </View>
-            <TextInput
-              style={styles.input}
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              placeholder="Enter email address"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -118,13 +194,15 @@ export default function AddSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <MapPin size={20} color="#336633" />
+              <House size={20} color="#336633" />
               <Text style={styles.label}>Address</Text>
             </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) => setFormData({ ...formData, address: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, address: text })
+              }
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -139,7 +217,9 @@ export default function AddSupplierScreen() {
             <TextInput
               style={styles.input}
               value={formData.payment_terms}
-              onChangeText={(text) => setFormData({ ...formData, payment_terms: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, payment_terms: text })
+              }
               placeholder="Enter payment terms"
             />
           </View>
@@ -161,9 +241,13 @@ export default function AddSupplierScreen() {
         </View>
 
         <Pressable
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isSubmitting && styles.submitButtonDisabled,
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}>
+          disabled={isSubmitting}
+        >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
           </Text>
@@ -218,6 +302,10 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 8,
+  },
+  inputError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#fef2f2',
   },
   labelContainer: {
     flexDirection: 'row',

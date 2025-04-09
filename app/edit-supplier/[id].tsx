@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Building2, User, Mail, Phone, MapPinHouse, CreditCard, FileText } from 'lucide-react-native';
+import { ArrowLeft, Building2, User, Mail, Phone, MapPinHouse,House, CreditCard, FileText } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 
@@ -169,7 +169,7 @@ export default function EditSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <MapPin size={20} color="#336633" />
+              <House size={20} color="#336633" />
               <Text style={styles.label}>Address</Text>
             </View>
             <TextInput

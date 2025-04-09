@@ -33,7 +33,7 @@ export default function ManageSuppliersScreen() {
 
   const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    supplier.contact_person?.toLowerCase().includes(searchQuery.toLowerCase())
+    supplier.webaddress?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const toggleSupplierStatus = async (supplier: Supplier) => {
@@ -94,8 +94,8 @@ export default function ManageSuppliersScreen() {
             <View style={styles.supplierHeader}>
               <View>
                 <Text style={styles.supplierName}>{supplier.name}</Text>
-                {supplier.contact_person && (
-                  <Text style={styles.contactPerson}>{supplier.contact_person}</Text>
+                {supplier.webaddress && (
+                  <Text style={styles.webaddress}>{supplier.webaddress}</Text>
                 )}
               </View>
               <View style={styles.statusContainer}>

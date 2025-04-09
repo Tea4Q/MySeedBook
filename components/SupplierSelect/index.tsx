@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, MapPin, Pressable, Modal, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import { Plus, Search, X, Check } from 'lucide-react-native';
+import { View, Text, TextInput, Pressable, Modal, StyleSheet, ActivityIndicator, ScrollView, FlatList } from 'react-native';
+import { Search, Plus, X, Check, Building2, Globe, Mail, Phone } from 'lucide-react-native';
+import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { debounce } from '@/utils/debounce';
@@ -10,31 +11,14 @@ interface SupplierSelectProps {
   selectedSupplierId?: string;
 }
 
-export function SupplierSelect({
-  onSelect,
-  selectedSupplierId,
-}: SupplierSelectProps) {
+export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
-    null
-  );
-  const [showAddNew, setShowAddNew] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form state for new supplier
-  const [newSupplier, setNewSupplier] = useState({
-    name: '',
-    web_address: '',
-    email: '',
-    phone: '',
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   useEffect(() => {
     loadSuppliers();
@@ -57,6 +41,7 @@ export function SupplierSelect({
       const { data, error: supabaseError } = await supabase
         .from('suppliers')
         .select('*')
+        .eq('is_active', true)
         .order('name');
 
       if (supabaseError) throw supabaseError;
@@ -73,13 +58,21 @@ export function SupplierSelect({
 
   const filterSuppliers = useCallback(
     debounce((query: string) => {
-      const filtered = suppliers.filter(
-        (supplier) =>
-          supplier.name.toLowerCase().includes(query.toLowerCase()) ||
-          supplier.web_address?.toLowerCase().includes(query.toLowerCase())
+      if (!query.trim()) {
+        setFilteredSuppliers(suppliers);
+        return;
+      }
+
+      const searchTerms = query.toLowerCase().split(' ');
+      const filtered = suppliers.filter((supplier) =>
+        searchTerms.every(
+          (term) =>
+            supplier.name.toLowerCase().includes(term) ||
+            supplier.webaddress?.toLowerCase().includes(term) ||
+            supplier.email?.toLowerCase().includes(term)
+        )
       );
       setFilteredSuppliers(filtered);
-      setShowAddNew(query.length > 0 && filtered.length === 0);
     }, 300),
     [suppliers]
   );
@@ -89,74 +82,6 @@ export function SupplierSelect({
     filterSuppliers(text);
   };
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-
-    if (!newSupplier.name.trim()) {
-      errors.name = 'Company name is required';
-    }
-
-    if (!newSupplier.webb_address.trim()) {
-      errors.web_address = 'Web Address os reqiored';
-    }
-
-    if (!newSupplier.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newSupplier.email)) {
-      errors.email = 'Invalid email format';
-    }
-
-    if (!newSupplier.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!/^\+?[\d\s-()]{10,}$/.test(newSupplier.phone)) {
-      errors.phone = 'Invalid phone number format';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleAddSupplier = async () => {
-    if (!validateForm()) return;
-
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      const { data, error: supabaseError } = await supabase
-        .from('suppliers')
-        .insert([
-          {
-            ...newSupplier,
-            is_active: true,
-          },
-        ])
-        .select()
-        .single();
-
-      if (supabaseError) throw supabaseError;
-
-      await loadSuppliers();
-      if (data) {
-        setSelectedSupplier(data);
-        onSelect(data);
-      }
-
-      setIsAddModalOpen(false);
-      setNewSupplier({
-        name: '',
-        web_address: '',
-        email: '',
-        phone: '',
-      });
-    } catch (err) {
-      setError('Failed to add supplier');
-      console.error('Error adding supplier:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleSelectSupplier = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
     onSelect(supplier);
@@ -164,28 +89,69 @@ export function SupplierSelect({
     setSearchQuery('');
   };
 
+  const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
+    <Pressable
+      style={[styles.supplierItem, selectedSupplier?.id === supplier.id && styles.selectedItem]}
+      onPress={() => handleSelectSupplier(supplier)}>
+      <View style={styles.supplierIcon}>
+        <Building2 size={24} color="#2d7a3a" />
+      </View>
+      <View style={styles.supplierInfo}>
+        <Text style={styles.supplierName}>{supplier.name}</Text>
+        {supplier.webaddress && (
+          <View style={styles.contactRow}>
+            <Globe size={16} color="#666666" />
+            <Text style={styles.contactText}>{supplier.webaddress}</Text>
+          </View>
+        )}
+        {supplier.email && (
+          <View style={styles.contactRow}>
+            <Mail size={16} color="#666666" />
+            <Text style={styles.contactText}>{supplier.email}</Text>
+          </View>
+        )}
+        {supplier.phone && (
+          <View style={styles.contactRow}>
+            <Phone size={16} color="#666666" />
+            <Text style={styles.contactText}>{supplier.phone}</Text>
+          </View>
+        )}
+      </View>
+      {selectedSupplier?.id === supplier.id && (
+        <View style={styles.checkmark}>
+          <Check size={20} color="#2d7a3a" />
+        </View>
+      )}
+    </Pressable>
+  );
+
   return (
     <View style={styles.container}>
-      <Pressable style={styles.selectButton} onPress={() => setIsOpen(true)}>
-        <Text style={styles.selectButtonText}>
-          {selectedSupplier ? selectedSupplier.name : 'Select Supplier'}
-        </Text>
+      <Pressable
+        style={styles.selectButton}
+        onPress={() => setIsOpen(true)}>
+        {selectedSupplier ? (
+          <View style={styles.selectedSupplierPreview}>
+            <Text style={styles.selectedSupplierName}>{selectedSupplier.name}</Text>
+            {selectedSupplier.webaddress && (
+              <Text style={styles.selectedSupplierwebaddress}>{selectedSupplier.webaddress}</Text>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.selectButtonText}>Select Supplier</Text>
+        )}
       </Pressable>
 
       <Modal
         visible={isOpen}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsOpen(false)}
-      >
+        onRequestClose={() => setIsOpen(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Supplier</Text>
-              <Pressable
-                style={styles.closeButton}
-                onPress={() => setIsOpen(false)}
-              >
+              <Pressable style={styles.closeButton} onPress={() => setIsOpen(false)}>
                 <X size={24} color="#666666" />
               </Pressable>
             </View>
@@ -198,6 +164,7 @@ export function SupplierSelect({
                 onChangeText={handleSearch}
                 placeholder="Search suppliers..."
                 placeholderTextColor="#999999"
+                autoFocus
               />
             </View>
 
@@ -212,153 +179,31 @@ export function SupplierSelect({
                 <ActivityIndicator size="large" color="#2d7a3a" />
               </View>
             ) : (
-              <ScrollView style={styles.supplierList}>
-                {filteredSuppliers.map((supplier) => (
-                  <Pressable
-                    key={supplier.id}
-                    style={[
-                      styles.supplierItem,
-                      selectedSupplier?.id === supplier.id &&
-                        styles.selectedItem,
-                    ]}
-                    onPress={() => handleSelectSupplier(supplier)}
-                  >
-                    <View>
-                      <Text style={styles.supplierName}>{supplier.name}</Text>
-                      {supplier.contact_person && (
-                        <Text style={styles.contactPerson}>
-                          {supplier.web_address}
-                        </Text>
-                      )}
+              <>
+                <FlatList
+                  data={filteredSuppliers}
+                  renderItem={renderSupplierItem}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.supplierList}
+                  ListEmptyComponent={
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>
+                        {searchQuery
+                          ? 'No suppliers found matching your search'
+                          : 'No suppliers available'}
+                      </Text>
                     </View>
-                    {selectedSupplier?.id === supplier.id && (
-                      <Check size={20} color="#2d7a3a" />
-                    )}
-                  </Pressable>
-                ))}
+                  }
+                />
 
-                {showAddNew && (
-                  <Pressable
-                    style={styles.addNewButton}
-                    onPress={() => {
-                      setIsAddModalOpen(true);
-                      setNewSupplier({ ...newSupplier, name: searchQuery });
-                    }}
-                  >
+                <Link href="/add-supplier" asChild>
+                  <Pressable style={styles.addNewButton}>
                     <Plus size={20} color="#ffffff" />
-                    <Text style={styles.addNewButtonText}>
-                      Add New Supplier
-                    </Text>
+                    <Text style={styles.addNewButtonText}>Add New Supplier</Text>
                   </Pressable>
-                )}
-              </ScrollView>
+                </Link>
+              </>
             )}
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isAddModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsAddModalOpen(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Supplier</Text>
-              <Pressable
-                style={styles.closeButton}
-                onPress={() => setIsAddModalOpen(false)}
-              >
-                <X size={24} color="#666666" />
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Company Name *</Text>
-                <TextInput
-                  style={[styles.input, formErrors.name && styles.inputError]}
-                  value={newSupplier.name}
-                  onChangeText={(text) =>
-                    setNewSupplier({ ...newSupplier, name: text })
-                  }
-                  placeholder="Enter company name"
-                />
-                {formErrors.name && (
-                  <Text style={styles.errorText}>{formErrors.name}</Text>
-                )}
-              </View>
-
-             <View style={styles.inputGroup}>
-               <Text style={styles.label}>Web Address *</Text>
-              <TextInput
-                  style={[
-                    styles.input,
-                    formErrors.web_address && styles.inputError,
-                  ]}
-                  value={newSupplier.web_address}
-                  onChangeText={(text) =>
-                    setNewSupplier({ ...newSupplier, web_address: text })
-                  }
-                  placeholder="Enter web address"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                />
-                {formErrors.web_address && (
-                  <Text style={styles.errorText}>{formErrors.web_address}</Text>
-                )}
-</View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email *</Text>
-                <TextInput
-                  style={[styles.input, formErrors.email && styles.inputError]}
-                  value={newSupplier.email}
-                  onChangeText={(text) =>
-                    setNewSupplier({ ...newSupplier, email: text })
-                  }
-                  placeholder="Enter email address"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                {formErrors.email && (
-                  <Text style={styles.errorText}>{formErrors.email}</Text>
-                )}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number *</Text>
-                <TextInput
-                  style={[styles.input, formErrors.phone && styles.inputError]}
-                  value={newSupplier.phone}
-                  onChangeText={(text) =>
-                    setNewSupplier({ ...newSupplier, phone: text })
-                  }
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                />
-                {formErrors.phone && (
-                  <Text style={styles.errorText}>{formErrors.phone}</Text>
-                )}
-              </View>
-
-              <Pressable
-                style={[
-                  styles.submitButton,
-                  isSubmitting && styles.submitButtonDisabled,
-                ]}
-                onPress={handleAddSupplier}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Add Supplier</Text>
-                )}
-              </Pressable>
-            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -377,9 +222,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  selectButtonText: {
+  selectedSupplierPreview: {
+    gap: 4,
+  },
+  selectedSupplierName: {
     fontSize: 16,
     color: '#333333',
+    fontWeight: '600',
+  },
+  selectedSupplierwebaddress: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  selectButtonText: {
+    fontSize: 16,
+    color: '#999999',
   },
   modalContainer: {
     flex: 1,
@@ -445,8 +302,7 @@ const styles = StyleSheet.create({
   },
   supplierItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 16,
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -458,15 +314,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#e6f3e6',
     borderColor: '#2d7a3a',
   },
+  supplierIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e6f3e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  supplierInfo: {
+    flex: 1,
+    gap: 4,
+  },
   supplierName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
     marginBottom: 4,
   },
-  contactPerson: {
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  contactText: {
     fontSize: 14,
     color: '#666666',
+  },
+  checkmark: {
+    marginLeft: 12,
+    alignSelf: 'center',
+  },
+  emptyState: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
   },
   addNewButton: {
     flexDirection: 'row',
@@ -474,49 +361,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#2d7a3a',
     padding: 16,
+    margin: 16,
     borderRadius: 12,
     gap: 8,
   },
   addNewButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  formContainer: {
-    padding: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#333333',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  inputError: {
-    borderColor: '#dc2626',
-  },
-  submitButton: {
-    backgroundColor: '#2d7a3a',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',

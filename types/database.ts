@@ -20,7 +20,7 @@ export interface Seed {
   quantity: number;
   quantity_unit: string;
   supplier_id?: string;
-  date_received: Date;
+  date_purchased: Date;
   expiration_date?: Date;
   storage_location?: string;
   storage_requirements?: string;
