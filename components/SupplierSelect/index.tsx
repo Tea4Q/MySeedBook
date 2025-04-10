@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Modal, StyleSheet, ActivityIndicator, ScrollView, FlatList } from 'react-native';
 import { Search, Plus, X, Check, Building2, Globe, Mail, Phone } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { debounce } from '@/utils/debounce';
@@ -9,11 +9,12 @@ import { debounce } from '@/utils/debounce';
 interface SupplierSelectProps {
   onSelect: (supplier: Supplier) => void;
   selectedSupplierId?: string;
+  initialSearchQuery?: string;
 }
 
-export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectProps) {
+export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuery = '' }: SupplierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +88,14 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
     onSelect(supplier);
     setIsOpen(false);
     setSearchQuery('');
+  };
+
+  const handleAddNewSupplier = () => {
+    router.push({
+      pathname: '/add-supplier',
+      params: { name: searchQuery, returnTo: 'add-seed' }
+    });
+    setIsOpen(false);
   };
 
   const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
@@ -189,19 +198,27 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
                     <View style={styles.emptyState}>
                       <Text style={styles.emptyStateText}>
                         {searchQuery
-                          ? 'No suppliers found matching your search'
+                          ? `No suppliers found matching "${searchQuery}"`
                           : 'No suppliers available'}
                       </Text>
+                      {searchQuery && (
+                        <Pressable style={styles.addNewButton} onPress={handleAddNewSupplier}>
+                          <Plus size={20} color="#ffffff" />
+                          <Text style={styles.addNewButtonText}>
+                            Add "{searchQuery}" as New Supplier
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   }
                 />
 
-                <Link href="/add-supplier" asChild>
-                  <Pressable style={styles.addNewButton}>
+                {!searchQuery && (
+                  <Pressable style={styles.addNewButton} onPress={handleAddNewSupplier}>
                     <Plus size={20} color="#ffffff" />
                     <Text style={styles.addNewButtonText}>Add New Supplier</Text>
                   </Pressable>
-                </Link>
+                )}
               </>
             )}
           </View>
@@ -349,6 +366,7 @@ const styles = StyleSheet.create({
   emptyState: {
     padding: 32,
     alignItems: 'center',
+    gap: 16,
   },
   emptyStateText: {
     fontSize: 16,

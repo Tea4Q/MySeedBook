@@ -8,11 +8,10 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   Building2,
-  User,
   Mail,
   Phone,
   MapPinHouse,
@@ -20,44 +19,27 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react-native';
-const router = useRouter();
-const searchParams = useLocalSearchParams(); // Get query parameters
-console.log(searchParams);
-const supplierName = searchParams.name as string; // Example: ?name=SupplierName
 
 import { supabase } from '@/lib/supabase';
 
-// import { useAuth } from '@/lib/auth';
-
-export default function AddSupplierScreen({
-  supplierName,
-}: {
-  supplierName?: string;
-}) {
-  // const { user } = useAuth(); // Get the current user from the auth context
-  // const [userId, setUserId] = useState<string | null>(null);
+export default function AddSupplierScreen() {
+  const { name, returnTo } = useLocalSearchParams();
 
   const [formData, setFormData] = useState({
-    name: supplierName || '',
+    name: (name as string) || '',
     webaddress: '',
     email: '',
     phone: '',
     address: '',
     payment_terms: '',
     notes: '',
-    user_id: '', // Will be set during submission
   });
-
-  useEffect(() => {
-    if (supplierName) {
-      setFormData((prev) => ({ ...prev, name: supplierName }));
-    }
-  }, [supplierName]);
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Allow empty email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -77,7 +59,6 @@ export default function AddSupplierScreen({
     setError(null);
 
     try {
-      // First get the current user's ID
       const {
         data: { user },
         error: userError,
@@ -86,19 +67,22 @@ export default function AddSupplierScreen({
       if (userError) throw userError;
       if (!user) throw new Error('You must be logged in to add a supplier');
 
-      // Add the user_id to the form data
-      const supplierData = {
-        ...formData,
-        user_id: user.id,
-      };
-
-      const { error: supabaseError } = await supabase
+      const { data: supplier, error: supabaseError } = await supabase
         .from('suppliers')
-        .insert([supplierData]);
+        .insert([{ ...formData, user_id: user.id }])
+        .select()
+        .single();
 
       if (supabaseError) throw supabaseError;
 
-      router.back();
+      if (returnTo === 'add-seed') {
+        router.push({
+          pathname: '/add-seed',
+          params: { supplierId: supplier.id }
+        });
+      } else {
+        router.back();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add supplier');
     } finally {
@@ -157,25 +141,21 @@ export default function AddSupplierScreen({
             <View style={styles.labelContainer}>
               <Mail size={20} color="#336633" />
               <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  !validateEmail(formData.email) &&
-                    formData.email !== '' &&
-                    styles.inputError,
-                ]}
-                value={formData.email}
-                onChangeText={(text: string) =>
-                  setFormData({ ...formData, email: text })
-                }
-                placeholder="Enter email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {formData.email !== '' && !validateEmail(formData.email) && (
-                <Text style={styles.errorText}>Invalid email address</Text>
-              )}
             </View>
+            <TextInput
+              style={[
+                styles.input,
+                !validateEmail(formData.email) && formData.email !== '' && styles.inputError,
+              ]}
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              placeholder="Enter email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {formData.email !== '' && !validateEmail(formData.email) && (
+              <Text style={styles.errorText}>Invalid email address</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -200,9 +180,7 @@ export default function AddSupplierScreen({
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) =>
-                setFormData({ ...formData, address: text })
-              }
+              onChangeText={(text) => setFormData({ ...formData, address: text })}
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -241,13 +219,9 @@ export default function AddSupplierScreen({
         </View>
 
         <Pressable
-          style={[
-            styles.submitButton,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
+          disabled={isSubmitting}>
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
           </Text>
@@ -303,10 +277,6 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 8,
   },
-  inputError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#fef2f2',
-  },
   labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,6 +295,9 @@ const styles = StyleSheet.create({
     color: '#333333',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  inputError: {
+    borderColor: '#dc2626',
   },
   textArea: {
     height: 100,

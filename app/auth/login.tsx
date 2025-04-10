@@ -1,11 +1,32 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { Mail, Lock } from 'lucide-react-native';
+import { useAuth } from '@/lib/auth';
 
 export default function LoginScreen() {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      await signIn(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -21,6 +42,12 @@ export default function LoginScreen() {
         <Text style={styles.title}>Welcome Back!</Text>
         <Text style={styles.subtitle}>Sign in to manage your seed collection</Text>
 
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <View style={styles.inputContainer}>
           <Mail size={20} color="#BCAB92" />
           <TextInput
@@ -31,6 +58,7 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            editable={!isLoading}
           />
         </View>
 
@@ -43,6 +71,7 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            editable={!isLoading}
           />
         </View>
 
@@ -50,8 +79,15 @@ export default function LoginScreen() {
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </Pressable>
 
-        <Pressable style={styles.loginButton}>
-          <Text style={styles.loginButtonText}>Sign In</Text>
+        <Pressable 
+          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+          onPress={handleLogin}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#262A2B" />
+          ) : (
+            <Text style={styles.loginButtonText}>Sign In</Text>
+          )}
         </Pressable>
 
         <View style={styles.divider}>
@@ -114,6 +150,18 @@ const styles = StyleSheet.create({
     color: '#8B8776',
     marginBottom: 32,
   },
+  errorContainer: {
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.2)',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,14 +189,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#5E6347',
+    backgroundColor: '#BCAB92',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
   },
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
   loginButtonText: {
-    color: '#BCAB92',
+    color: '#262A2B',
     fontSize: 18,
     fontWeight: 'bold',
   },

@@ -24,9 +24,11 @@ import {
 } from 'lucide-react-native';
 import ImageCapture from '@/components/ImageCapture';
 import { SupplierSelect } from '@/components/SupplierSelect';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +46,7 @@ const seedTypes: SeedType[] = [
 ];
 
 interface FormData {
+  seedImage: string;
   name: string;
   type: string;
   description: string;
@@ -72,7 +75,7 @@ interface FormErrors {
 }
 
 export default function AddSeedScreen() {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     name: '',
     type: '',
     description: '',
