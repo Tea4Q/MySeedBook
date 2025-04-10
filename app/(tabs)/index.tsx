@@ -70,6 +70,26 @@ export default function InventoryScreen() {
     }, 1000); // Simulating an async update with mock data
   };
 
+  useEffect(() => {
+    const subscription = supabase
+      .from('seeds')
+      .on('INSERT', (payload) => {
+        const newSeed = payload.new;
+        setSeeds((prevSeeds) => [...prevSeeds, newSeed]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeSubscription(subscription);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (highlight) {
+      loadNewSeeds();
+    }
+  }, [highlight]);
+
   const handleAddEvent = (seed: Seed) => {
     router.push({
       pathname: '/calendar',
@@ -91,7 +111,7 @@ export default function InventoryScreen() {
 
   const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = highlight === seed.id;
-   
+
     return (
       <Pressable style={styles.seedItem}>
         <Animated.View style={[highlightStyle]}>
@@ -108,7 +128,7 @@ export default function InventoryScreen() {
                 <Text style={styles.seedType}>{seed.type}</Text>
               </View>
             </View>
-            <Text style={styles.seedDescription}>{seed.desciption}</Text>
+            <Text style={styles.seedDescription}>{seed.description}</Text>
             <View style={styles.seedDetails}>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Quantity</Text>
@@ -127,12 +147,17 @@ export default function InventoryScreen() {
                   <>
                     <View style={[styles.seasonTag, styles.plantTag]}>
                       <Text style={styles.seasonText}>
-                        Plant:{JSON.parse(seed.planting_instructions).planting_season || 'Not specified'}
+                        Plant:
+                        {JSON.parse(seed.planting_instructions)
+                          .planting_season || 'Not specified'}
                       </Text>
                     </View>
                     <View style={[styles.seasonTag, styles.harvestTag]}>
                       <Text style={styles.seasonText}>
-                        `Harvest: {JSON.parse(seed.planting_instructions).harvest_season || 'Not specified'}`
+                        `Harvest:{' '}
+                        {JSON.parse(seed.planting_instructions)
+                          .harvest_season || 'Not specified'}
+                        `
                       </Text>
                     </View>
                   </>

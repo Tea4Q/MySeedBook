@@ -33,6 +33,25 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
 
+const uploadImage = async (file: File) => {
+  try {
+    const fileName = `${Date.now()}-${file.name}`; // Unique file name
+    const { data, error } = await supabase.storage
+      .from('images') // Replace 'images' with your bucket name
+      .upload(fileName, file);
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('Image uploaded successfully:', data);
+    return data.path; // Returns the file path
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return null;
+  }
+};
+
 type SeedType = {
   label: string;
   value: string;
@@ -125,6 +144,7 @@ export default function AddSeedScreen() {
         .from('seeds')
         .insert([
           {
+            seedImage: formData.seedImage,
             name: formData.name,
             type: formData.type,
             quantity: Number(formData.quantity),
@@ -188,6 +208,18 @@ export default function AddSeedScreen() {
     }));
   };
 
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const filePath = await uploadImage(file);
+      if (filePath) {
+        setFormData((prev) => ({ ...prev, seedImage: filePath }));
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -241,6 +273,7 @@ export default function AddSeedScreen() {
               </Pressable>
             </View>
           )}
+          <input type="file" accept="image/*" onChange={handleImageUpload} />
         </View>
 
         {showImageCapture && (
