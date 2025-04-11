@@ -78,9 +78,7 @@ export default function InventoryScreen() {
   })();
 
   useEffect(() => {
-    const subscription = supabase
-      channel('public:seeds')
-      .on('postgres_changes', {
+    const subscription = supabase.channel('seeds').on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'seeds',

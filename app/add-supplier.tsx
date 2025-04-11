@@ -20,7 +20,7 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react-native';
-const router = useRouter();
+
 const searchParams = useLocalSearchParams(); // Get query parameters
 console.log(searchParams);
 const supplierName = searchParams.name as string; // Example: ?name=SupplierName
