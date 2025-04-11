@@ -11,6 +11,8 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
+import { Tabs } from 'expo-router';
+
 
 const mockSeeds: Seed[] = [
   {
@@ -38,6 +40,7 @@ const mockSeeds: Seed[] = [
     description: 'Sweet, crisp peas perfect for fresh eating or cooking.',
   },
 ];
+
 
 export default function InventoryScreen() {
   const { highlight } = useLocalSearchParams();
@@ -80,7 +83,7 @@ export default function InventoryScreen() {
       .subscribe();
 
     return () => {
-      supabase.removeSubscription(subscription);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -117,7 +120,8 @@ export default function InventoryScreen() {
         <Animated.View style={[highlightStyle]}>
           <Image
             source={{
-              uri: seed.seedImage,
+              uri:
+                typeof seed.seedImage === 'string' ? seed.seedImage : undefined,
             }}
             style={styles.seedImage}
           />
@@ -185,7 +189,7 @@ export default function InventoryScreen() {
           <Pressable style={styles.iconButton}>
             <Filter size={24} color="#ffffff" />
           </Pressable>
-          <Link href="\add-seed" asChild>
+          <Link href="/add-seed" asChild>
             <Pressable style={styles.iconButton}>
               <Plus size={24} color="#ffffff" />
             </Pressable>
@@ -342,6 +346,12 @@ const styles = StyleSheet.create({
   },
   harvestTag: {
     backgroundColor: '#ffecb3',
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#666666',
+    marginTop: 16,
   },
   seasonText: {
     fontSize: 12,
