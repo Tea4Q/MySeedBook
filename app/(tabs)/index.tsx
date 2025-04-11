@@ -11,102 +11,115 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-import { Tabs } from 'expo-router';
 
-const mockSeeds: Seed[] = [
-  {
-    id: '1',
-    name: 'Brandywine Tomato',
-    type: 'Heirloom Tomato',
-    quantity: 50,
-    supplier_id: 'Baker Creek Seeds',
-    planting_season: 'Early Spring',
-    harvest_season: 'Late Summer',
-    seedImage:
-      'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=800&auto=format&fit=crop',
-    description: 'Large, pink beefsteak tomatoes with rich, intense flavor.',
-  },
-  {
-    id: '2',
-    name: 'Sugar Snap Peas',
-    type: 'Pea',
-    quantity: 100,
-    supplier_id: "Johnny's Selected Seeds",
-    planting_season: 'Early Spring',
-    harvest_season: 'Early Summer',
-    seedImage:
-      'https://images.unsplash.com/photo-1587049693270-c7560da11218?w=800&auto=format&fit=crop',
-    description: 'Sweet, crisp peas perfect for fresh eating or cooking.',
-  },
-];
+
+
+interface AddSeedResult {
+  success: boolean;
+  error?: string;
+  seedId?: string;
+}
+
+
+
+export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSeedResult> {
+  try {
+    // Validate required fields
+    if (!seedData.name || !seedData.type || !seedData.quantity) {
+      return {
+        success: false,
+        error: 'Missing required fields: name, type, or quantity',
+      };
+    }
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+
+    // Add the seed to the database
+    const { data: newSeed, error: seedError } = await supabase
+      .from('seeds')
+      .insert([{
+        ...seedData,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (seedError) throw seedError;
+
+    // Add to inventory history
+    const { error: historyError } = await supabase
+      .from('seed_inventory_history')
+      .insert([{
+        seed_id: newSeed.id,
+        action: 'add',
+        quantity_change: seedData.quantity,
+        previous_quantity: 0,
+        new_quantity: seedData.quantity,
+        date: new Date().toISOString(),
+        notes: 'Initial inventory addition',
+        user_id: user.id,
+      }]);
+
+    if (historyError) throw historyError;
+
+    return {
+      success: true,
+      seedId: newSeed.id,
+    };
+  } catch (error) {
+    console.error('Error adding seed to inventory:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add seed to inventory',
+    };
+  }
+}
 
 export default function InventoryScreen() {
-  const [seeds, setSeeds] = useState<Seed[]>(mockSeeds);
+  const { highlight } = useLocalSearchParams();
+  const [seeds, setSeeds] = useState<Seed[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { highlight } = useLocalSearchParams();
-  const isValidHighlight = seeds.some((seed) => seed.id === highlight);
 
-  const loadNewSeeds = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    loadSeeds();
+  }, []);
+
+  const loadSeeds = async () => {
     try {
-      const { data, error } = await supabase;
-      if (error) throw error;
-      setSeeds(data || []);
-    } catch (error) {
-      console.error('Error fetching seeds:', error);
-      setError('Failed to load seeds.');
+      setIsLoading(true);
+      setError(null);
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: seedData, error: seedError } = await supabase
+        .from('seeds')
+        .select('*, suppliers(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (seedError) throw seedError;
+      setSeeds(seedData || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load seeds');
     } finally {
       setIsLoading(false);
     }
   };
 
-  {
-    error && (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
-  }
-
-  const plantingInstructions = (() => {
-    try {
-      return JSON.parse(seeds.planting_instructions) || {};
-    } catch {
-      return {};
-    }
-  })();
-
-  useEffect(() => {
-    const subscription = supabase.channel('seeds').on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'seeds',
-      },
-        (payload) =>
-        {
-        const newSeed = payload.new;
-        setSeeds((prevSeeds) => [...prevSeeds, newSeed]);
-      }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (highlight && isValidHighlight) {
-      loadNewSeeds();
-    }
-  }, [highlight]);
-
   const handleAddEvent = (seed: Seed) => {
-    if (!seed.id || !seed.name) {
-      console.error('Invalid seed data: for scheduling event.');
-      return;
-    }
     router.push({
       pathname: '/calendar',
       params: { seedId: seed.id, seedName: seed.name },
@@ -127,26 +140,13 @@ export default function InventoryScreen() {
 
   const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = highlight === seed.id;
-
-    const animatedStyle = useAnimatedStyle(() => {
-      return {
-        transform: [
-          {
-            scale: withTiming(isHighlighted ? 1.05 : 1, { duration: 300 }),
-          },
-        ],
-        opacity: withTiming(isHighlighted ? 0.9 : 1, { duration: 300 }),
-      };
-    });
+   
     return (
       <Pressable style={styles.seedItem}>
-        <Animated.View style={animatedStyle}>
+        <Animated.View style={[highlightStyle]}>
           <Image
             source={{
-              uri:
-                typeof seed.seedImage === 'string'
-                  ? seed.seedImage
-                  : 'https://via.placeholder.com/150',
+              uri: seed.seedImage,
             }}
             style={styles.seedImage}
           />
@@ -168,7 +168,7 @@ export default function InventoryScreen() {
               {seed.supplier_id && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Supplier</Text>
-                  <Text style={styles.detailValue}>{seed.supplier_id}</Text>
+                  <Text style={styles.detailValue}>{seed.supplier.name}</Text>
                 </View>
               )}
               <View style={styles.seasonContainer}>
@@ -176,15 +176,12 @@ export default function InventoryScreen() {
                   <>
                     <View style={[styles.seasonTag, styles.plantTag]}>
                       <Text style={styles.seasonText}>
-                        Plant:
-                        {plantingInstructions.planting_season ||
-                          'Not specified'}
+                        Plant: {JSON.parse(seed.planting_instructions).planting_season || 'Not specified'}
                       </Text>
                     </View>
                     <View style={[styles.seasonTag, styles.harvestTag]}>
                       <Text style={styles.seasonText}>
-                        Harvest:
-                        {plantingInstructions.harvest_season || 'Not specified'}
+                        Harvest: {JSON.parse(seed.planting_instructions).harvest_season || 'Not specified'}
                       </Text>
                     </View>
                   </>
@@ -203,6 +200,40 @@ export default function InventoryScreen() {
       </Pressable>
     );
   };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Seed Inventory</Text>
+        <View style={styles.headerButtons}>
+          <Pressable style={styles.iconButton}>
+            <Filter size={24} color="#ffffff" />
+          </Pressable>
+          <Link href="/add-seed" asChild>
+            <Pressable style={styles.iconButton}>
+              <Plus size={24} color="#ffffff" />
+            </Pressable>
+          </Link>
+        </View>
+      </View>
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      <FlashList
+        data={seeds}
+        renderItem={renderSeedItem}
+        estimatedItemSize={250}
+        contentContainerStyle={styles.list}
+        refreshing={isLoading}
+        onRefresh={loadSeeds}
+      />
+    </View>
+  );
+}
 
   return (
     <View style={styles.container}>
