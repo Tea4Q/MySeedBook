@@ -15,6 +15,7 @@ export interface Supplier {
 
 export interface Seed {
   id: string;
+  seedImage: File;
   name: string;
   type: string;
   quantity: number;
