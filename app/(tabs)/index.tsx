@@ -13,7 +13,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Tabs } from 'expo-router';
 
-
 const mockSeeds: Seed[] = [
   {
     id: '1',
@@ -41,37 +40,42 @@ const mockSeeds: Seed[] = [
   },
 ];
 
-
 export default function InventoryScreen() {
-  const { highlight } = useLocalSearchParams();
   const [seeds, setSeeds] = useState<Seed[]>(mockSeeds);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { highlight } = useLocalSearchParams();
+  const isValidHighlight = seeds.some((seed) => seed.id === highlight);
 
   const loadNewSeeds = async () => {
     setIsLoading(true);
-    // Here, you would fetch the updated seeds from Supabase or your database
-    // For now, we'll simulate an update with mock data.
-
-    setTimeout(() => {
-      // Simulate adding a new seed to the inventory
-      const newSeed: Seed = {
-        id: '3',
-        name: 'Golden Zucchini',
-        type: 'Vegetable',
-        quantity: 200,
-        supplier: 'Seed Savers Exchange',
-        plantingSeason: 'Spring',
-        harvestSeason: 'Summer',
-        seedImage:
-          'https://images.unsplash.com/photo-1587579220409-2b96cce63fe5?w=800&auto=format&fit=crop',
-        description: 'Bright yellow zucchini, great for grilling or sautéing.',
-      };
-
-      setSeeds((prevSeeds) => [...prevSeeds, newSeed]); // Add the new seed to the inventory
+    try {
+      const { data, error } = await supabase;
+      if (error) throw error;
+      setSeeds(data || []);
+    } catch (error) {
+      console.error('Error fetching seeds:', error);
+      setError('Failed to load seeds.');
+    } finally {
       setIsLoading(false);
-    }, 1000); // Simulating an async update with mock data
+    }
   };
+
+  {
+    error && (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  const plantingInstructions = (() => {
+    try {
+      return JSON.parse(seeds.planting_instructions) || {};
+    } catch {
+      return {};
+    }
+  })();
 
   useEffect(() => {
     const subscription = supabase
@@ -88,12 +92,16 @@ export default function InventoryScreen() {
   }, []);
 
   useEffect(() => {
-    if (highlight) {
+    if (highlight && isValidHighlight) {
       loadNewSeeds();
     }
   }, [highlight]);
 
   const handleAddEvent = (seed: Seed) => {
+    if (!seed.id || !seed.name) {
+      console.error('Invalid seed data: for scheduling event.');
+      return;
+    }
     router.push({
       pathname: '/calendar',
       params: { seedId: seed.id, seedName: seed.name },
@@ -115,13 +123,25 @@ export default function InventoryScreen() {
   const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = highlight === seed.id;
 
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        transform: [
+          {
+            scale: withTiming(isHighlighted ? 1.05 : 1, { duration: 300 }),
+          },
+        ],
+        opacity: withTiming(isHighlighted ? 0.9 : 1, { duration: 300 }),
+      };
+    });
     return (
       <Pressable style={styles.seedItem}>
-        <Animated.View style={[highlightStyle]}>
+        <Animated.View style={animatedStyle}>
           <Image
             source={{
               uri:
-                typeof seed.seedImage === 'string' ? seed.seedImage : undefined,
+                typeof seed.seedImage === 'string'
+                  ? seed.seedImage
+                  : 'https://via.placeholder.com/150',
             }}
             style={styles.seedImage}
           />
@@ -152,16 +172,14 @@ export default function InventoryScreen() {
                     <View style={[styles.seasonTag, styles.plantTag]}>
                       <Text style={styles.seasonText}>
                         Plant:
-                        {JSON.parse(seed.planting_instructions)
-                          .planting_season || 'Not specified'}
+                        {plantingInstructions.planting_season ||
+                          'Not specified'}
                       </Text>
                     </View>
                     <View style={[styles.seasonTag, styles.harvestTag]}>
                       <Text style={styles.seasonText}>
-                        `Harvest:{' '}
-                        {JSON.parse(seed.planting_instructions)
-                          .harvest_season || 'Not specified'}
-                        `
+                        Harvest:
+                        {plantingInstructions.harvest_season || 'Not specified'}
                       </Text>
                     </View>
                   </>

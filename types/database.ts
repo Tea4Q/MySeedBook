@@ -14,12 +14,14 @@ export interface Supplier {
 }
 
 export interface Seed {
+  seedImage: File | undefined | string;
   id: string;
   name: string;
   type: string;
   quantity: number;
   quantity_unit: string;
-  supplier_id?: string;
+  description?: string;
+  supplier_id?: Supplier['id'];
   date_purchased: Date;
   expiration_date?: Date;
   storage_location?: string;
