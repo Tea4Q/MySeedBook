@@ -79,11 +79,18 @@ export default function InventoryScreen() {
 
   useEffect(() => {
     const subscription = supabase
-      .from('seeds')
-      .on('INSERT', (payload) => {
+      channel('public:seeds')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'seeds',
+      },
+        (payload) =>
+        {
         const newSeed = payload.new;
         setSeeds((prevSeeds) => [...prevSeeds, newSeed]);
-      })
+      }
+      )
       .subscribe();
 
     return () => {
