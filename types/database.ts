@@ -1,5 +1,5 @@
 export interface Supplier {
-  supplier_image: varchar;
+  supplier_image: string;
   id: string;
   name: string;
   webaddress?: string;
@@ -15,7 +15,7 @@ export interface Supplier {
 }
 
 export interface Seed {
-  seed_image: varchar;
+  seed_image: string;
   id: string;
   name: string;
   type: string;

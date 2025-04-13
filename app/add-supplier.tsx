@@ -41,6 +41,7 @@ export default function AddSupplierScreen() {
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showImageCapture, setShowImageCapture] = useState(false);
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true; // Allow empty email
