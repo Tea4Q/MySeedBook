@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
 
@@ -8,32 +8,6 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  const validateAndSubmit = () => {
-    if (!name.trim()) {
-      Alert.alert('Validation Error', 'Name is required.');
-      return;
-    }
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert('Validation Error', 'Please enter a valid email address.');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert(
-        'Validation Error',
-        'Password must be at least 6 characters long.'
-      );
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Validation Error', 'Passwords do not match.');
-      return;
-    }
-    // Proceed with signup logic
-    Alert.alert('Success', 'Account created successfully!');
-  };
-
-
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>

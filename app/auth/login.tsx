@@ -11,21 +11,22 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&auto=format&fit=crop' }}
+          source={{ uri: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop' }}
           style={styles.logo}
         />
-        <Text style={styles.logoText}>GardenTracker</Text>
+        <Text style={styles.logoText}>Q-Tea Seed Catalogue</Text>
       </View>
 
       <View style={styles.formContainer}>
         <Text style={styles.title}>Welcome Back!</Text>
-        <Text style={styles.subtitle}>Sign in to continue tracking your garden</Text>
+        <Text style={styles.subtitle}>Sign in to manage your seed collection</Text>
 
         <View style={styles.inputContainer}>
-          <Mail size={20} color="#2d7a3a" />
+          <Mail size={20} color="#BCAB92" />
           <TextInput
             style={styles.input}
             placeholder="Email"
+            placeholderTextColor="#8B8776"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -34,10 +35,11 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Lock size={20} color="#2d7a3a" />
+          <Lock size={20} color="#BCAB92" />
           <TextInput
             style={styles.input}
             placeholder="Password"
+            placeholderTextColor="#8B8776"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -71,7 +73,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0',
+    backgroundColor: '#262A2B',
   },
   logoContainer: {
     alignItems: 'center',
@@ -86,11 +88,11 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2d7a3a',
+    color: '#BCAB92',
     marginTop: 16,
   },
   formContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#2D2B24',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 32,
@@ -104,49 +106,49 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a472a',
+    color: '#BCAB92',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666666',
+    color: '#8B8776',
     marginBottom: 32,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8faf8',
+    backgroundColor: '#262A2B',
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#5E6347',
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#333333',
+    color: '#BCAB92',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#2d7a3a',
+    color: '#BCAB92',
     fontSize: 14,
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#2d7a3a',
+    backgroundColor: '#5E6347',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
   },
   loginButtonText: {
-    color: '#ffffff',
+    color: '#BCAB92',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -158,22 +160,22 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#5E6347',
   },
   dividerText: {
-    color: '#666666',
+    color: '#8B8776',
     paddingHorizontal: 16,
     fontSize: 14,
   },
   signupButton: {
     borderWidth: 2,
-    borderColor: '#2d7a3a',
+    borderColor: '#BCAB92',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   signupButtonText: {
-    color: '#2d7a3a',
+    color: '#BCAB92',
     fontSize: 18,
     fontWeight: 'bold',
   },
