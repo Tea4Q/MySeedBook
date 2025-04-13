@@ -1,47 +1,47 @@
 import { Tabs } from 'expo-router';
-import { Bed as Seed, Calendar, ShoppingBag, Settings } from 'lucide-react-native';
+import { Bed as Seed, ShoppingBag, Calendar, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: '#f8f9fa',
-          borderTopColor: '#e9ecef',
+          backgroundColor: '#262A2B',
+          borderTopColor: '#BCAB92',
         },
-        tabBarActiveTintColor: '#2f9e44',
-        tabBarInactiveTintColor: '#868e96',
+        tabBarActiveTintColor: '#BCAB92',
+        tabBarInactiveTintColor: '#8B8776',
         headerStyle: {
-          backgroundColor: '#f8f9fa',
+          backgroundColor: '#262A2B',
         },
-        headerTintColor: '#2f9e44',
+        headerTintColor: '#BCAB92',
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Inventory',
-          tabBarIcon: ({ color, size }) => <Seed size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Seed size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: 'Calendar',
-          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="suppliers"
         options={{
           title: 'Suppliers',
-          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
+          tabBarIcon: ({ color }) => <ShoppingBag size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
         }}
       />
     </Tabs>

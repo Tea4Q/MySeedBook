@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Plus, ExternalLink, MapPin, Phone, Mail, Globe } from 'lucide-react-native';
+import { Plus, ExternalLink, MapPinHouse, Phone, House, Mail, Globe } from 'lucide-react-native';
 import { Link } from 'expo-router';
 
 type Supplier = {
   id: string;
   name: string;
   description: string;
-  website: string;
+  webaddress: string;
   email: string;
   phone: string;
   address: string;
@@ -26,7 +26,7 @@ const mockSuppliers: Supplier[] = [
     id: '1',
     name: 'Baker Creek Heirloom Seeds',
     description: 'Specializing in rare and heirloom varieties, offering one of the largest selections of seeds from the 19th century.',
-    website: 'rareseeds.com',
+    webaddress: 'rareseeds.com',
     email: 'support@rareseeds.com',
     phone: '(417) 924-8917',
     address: 'Mansfield, MO 65704',
@@ -42,7 +42,7 @@ const mockSuppliers: Supplier[] = [
     id: '2',
     name: 'Johnny\'s Selected Seeds',
     description: 'Employee-owned company providing quality vegetable, herb, and flower seeds to growers and gardeners.',
-    website: 'johnnyseeds.com',
+    webaddress: 'johnnyseeds.com',
     email: 'support@johnnyseeds.com',
     phone: '(877) 564-6697',
     address: 'Winslow, ME 04901',
@@ -70,9 +70,9 @@ export default function SuppliersScreen() {
               <Text style={styles.ratingText}>{item.rating.toFixed(1)} ★</Text>
             </View>
           </View>
-          <Pressable style={styles.websiteButton}>
+          <Pressable style={styles.webaddressButton}>
             <Globe size={16} color="#2d7a3a" />
-            <Text style={styles.websiteText}>{item.website}</Text>
+            <Text style={styles.webaddressText}>{item.webaddress}</Text>
           </Pressable>
         </View>
 
@@ -80,7 +80,7 @@ export default function SuppliersScreen() {
 
         <View style={styles.contactInfo}>
           <View style={styles.contactItem}>
-            <MapPin size={16} color="#666666" />
+            <House size={16} color="#666666" />
             <Text style={styles.contactText}>{item.address}</Text>
           </View>
           <View style={styles.contactItem}>
@@ -106,7 +106,7 @@ export default function SuppliersScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
             {item.featuredSeeds.map((seed, index) => (
               <View key={index} style={styles.featuredSeed}>
-                <Image source={{ uri: seed.imageUrl }} style={styles.seedImage} />
+                <Image source={{ uri: seed.seed_image }} style={styles.seedImage} />
                 <Text style={styles.seedName}>{seed.name}</Text>
               </View>
             ))}
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#2d7a3a',
+    backgroundColor: '#336633',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: '#000',
@@ -212,13 +212,13 @@ const styles = StyleSheet.create({
     color: '#856404',
     fontWeight: '600',
   },
-  websiteButton: {
+  webaddressButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 8,
   },
-  websiteText: {
+  webaddressText: {
     fontSize: 16,
     color: '#2d7a3a',
     fontWeight: '500',
