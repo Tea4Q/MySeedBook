@@ -1,7 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, Modal, StyleSheet, ActivityIndicator, ScrollView, FlatList } from 'react-native';
-import { Search, Plus, X, Check, Building2, Globe, Mail, Phone } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import {
+  Image,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Modal,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  FlatList,
+} from 'react-native';
+import {
+  Search,
+  Plus,
+  X,
+  Check,
+  Building2,
+  Globe,
+  Mail,
+  Phone,
+} from 'lucide-react-native';
+import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { debounce } from '@/utils/debounce';
@@ -9,16 +29,23 @@ import { debounce } from '@/utils/debounce';
 interface SupplierSelectProps {
   onSelect: (supplier: Supplier) => void;
   selectedSupplierId?: string;
+  initialSearchQuery?: string;
 }
 
-export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectProps) {
+export function SupplierSelect({
+  onSelect,
+  selectedSupplierId,
+  initialSearchQuery = '',
+}: SupplierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
 
   useEffect(() => {
     loadSuppliers();
@@ -89,10 +116,22 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
     setSearchQuery('');
   };
 
+  const handleAddNewSupplier = () => {
+    router.push({
+      pathname: '/add-supplier',
+      params: { name: searchQuery, returnTo: 'add-seed' },
+    });
+    setIsOpen(false);
+  };
+
   const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
     <Pressable
-      style={[styles.supplierItem, selectedSupplier?.id === supplier.id && styles.selectedItem]}
-      onPress={() => handleSelectSupplier(supplier)}>
+      style={[
+        styles.supplierItem,
+        selectedSupplier?.id === supplier.id && styles.selectedItem,
+      ]}
+      onPress={() => handleSelectSupplier(supplier)}
+    >
       <View style={styles.supplierIcon}>
         <Building2 size={24} color="#2d7a3a" />
       </View>
@@ -127,14 +166,22 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={styles.selectButton}
-        onPress={() => setIsOpen(true)}>
+      <Pressable style={styles.selectButton} onPress={() => setIsOpen(true)}>
         {selectedSupplier ? (
           <View style={styles.selectedSupplierPreview}>
-            <Text style={styles.selectedSupplierName}>{selectedSupplier.name}</Text>
+            {selectedSupplier.supplier_image && (
+              <Image
+                source={{ uri: selectedSupplier.supplier_image }}
+                style={styles.supplierImage}
+              />
+            )}
+            <Text style={styles.selectedSupplierName}>
+              {selectedSupplier.name}
+            </Text>
             {selectedSupplier.webaddress && (
-              <Text style={styles.selectedSupplierwebaddress}>{selectedSupplier.webaddress}</Text>
+              <Text style={styles.selectedSupplierwebaddress}>
+                {selectedSupplier.webaddress}
+              </Text>
             )}
           </View>
         ) : (
@@ -146,12 +193,16 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
         visible={isOpen}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsOpen(false)}>
+        onRequestClose={() => setIsOpen(false)}
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Supplier</Text>
-              <Pressable style={styles.closeButton} onPress={() => setIsOpen(false)}>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setIsOpen(false)}
+              >
                 <X size={24} color="#666666" />
               </Pressable>
             </View>
@@ -189,19 +240,35 @@ export function SupplierSelect({ onSelect, selectedSupplierId }: SupplierSelectP
                     <View style={styles.emptyState}>
                       <Text style={styles.emptyStateText}>
                         {searchQuery
-                          ? 'No suppliers found matching your search'
+                          ? `No suppliers found matching "${searchQuery}"`
                           : 'No suppliers available'}
                       </Text>
+                      {searchQuery && (
+                        <Pressable
+                          style={styles.addNewButton}
+                          onPress={handleAddNewSupplier}
+                        >
+                          <Plus size={20} color="#ffffff" />
+                          <Text style={styles.addNewButtonText}>
+                            Add "{searchQuery}" as New Supplier
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   }
                 />
 
-                <Link href="/add-supplier" asChild>
-                  <Pressable style={styles.addNewButton}>
+                {!searchQuery && (
+                  <Pressable
+                    style={styles.addNewButton}
+                    onPress={handleAddNewSupplier}
+                  >
                     <Plus size={20} color="#ffffff" />
-                    <Text style={styles.addNewButtonText}>Add New Supplier</Text>
+                    <Text style={styles.addNewButtonText}>
+                      Add New Supplier
+                    </Text>
                   </Pressable>
-                </Link>
+                )}
               </>
             )}
           </View>
@@ -238,6 +305,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999999',
   },
+
+  supplierImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 10,
+  },
+  selectedSupplierWebaddress: {
+    fontSize: 14,
+    color: '#666',
+  },
+
+  placeholderText: {
+    fontSize: 16,
+    color: '#999',
+  },
+
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -349,6 +433,7 @@ const styles = StyleSheet.create({
   emptyState: {
     padding: 32,
     alignItems: 'center',
+    gap: 16,
   },
   emptyStateText: {
     fontSize: 16,

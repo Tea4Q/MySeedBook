@@ -3,6 +3,7 @@
 
   1. New Tables
     - `suppliers`
+      - 'supplier_image' (varchar)
       - `id` (uuid, primary key)
       - `name` (text, required)
       - `webaddress` (text)
@@ -35,6 +36,7 @@ $$ language 'plpgsql';
 
 -- Create suppliers table
 CREATE TABLE IF NOT EXISTS suppliers (
+  supplier_image varchar,
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   webaddress text,

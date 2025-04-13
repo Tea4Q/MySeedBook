@@ -1,4 +1,5 @@
 export interface Supplier {
+  supplier_image: varchar;
   id: string;
   name: string;
   webaddress?: string;
@@ -14,24 +15,32 @@ export interface Supplier {
 }
 
 export interface Seed {
+  seed_image: varchar;
   id: string;
-  seedImage: File;
   name: string;
   type: string;
   quantity: number;
-  quantity_unit: string;
+  quantity_unit?: string;
   supplier_id?: string;
   date_purchased: Date;
-  expiration_date?: Date;
   storage_location?: string;
   storage_requirements?: string;
-  batch_number?: string;
   germination_rate?: number;
-  planting_instructions?: string;
+  planting_depth?: string;
+  spacing?: string;
+  watering_requirements?: string;
+  sunlight_requirements?: string;
+  soil_type?: string;
+  fertilizer_requirements?: string;
+  days_to_germinate?: string;
+  days_to_harvest?: string;
+  planting_season?: string;
+  harvest_season?: string;
   notes?: string;
   created_at: Date;
   updated_at: Date;
   user_id: string;
+  description?: string;
 }
 
 export interface SeedInventoryHistory {

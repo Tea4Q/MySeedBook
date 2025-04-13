@@ -7,27 +7,29 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Image,
 } from 'react-native';
-
-import { router, useRouter, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   Building2,
-  User,
   Mail,
   Phone,
   MapPinHouse,
   House,
   CreditCard,
   FileText,
+  Camera,
 } from 'lucide-react-native';
 
 import { supabase } from '@/lib/supabase';
+import ImageCapture from '@/components/ImageCapture';
 
 export default function AddSupplierScreen() {
   const { name, returnTo } = useLocalSearchParams();
 
   const [formData, setFormData] = useState({
+    supplier_image: '',
     name: (name as string) || '',
     webaddress: '',
     email: '',
@@ -37,7 +39,6 @@ export default function AddSupplierScreen() {
     notes: '',
   });
 
-
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,6 +46,13 @@ export default function AddSupplierScreen() {
     if (!email) return true; // Allow empty email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const handleImageCaptured = (uri: string | null) => {
+    if (uri) {
+      setFormData((prev) => ({ ...prev, supplier_image: uri })); // Store the image URL
+    }
+    setShowImageCapture(false); // Close the ImageCapture component
   };
 
   const handleSubmit = async () => {
@@ -81,7 +89,7 @@ export default function AddSupplierScreen() {
       if (returnTo === 'add-seed') {
         router.push({
           pathname: '/add-seed',
-          params: { supplierId: supplier.id }
+          params: { supplierId: supplier.id },
         });
       } else {
         router.back();
@@ -110,6 +118,35 @@ export default function AddSupplierScreen() {
         )}
 
         <View style={styles.formSection}>
+          {/*Supplier Image Section*/}
+          <View style={styles.imageSection}>
+            {formData.supplier_image ? (
+              <Image
+                source={{ uri: formData.supplier_image }}
+                style={styles.previewImage}
+              />
+            ) : (
+              <View style={styles.previewImagePlaceholder}>
+                <Text style={styles.previewImagePlaceholderText}>
+                  No image selected
+                </Text>
+              </View>
+            )}
+            <Pressable
+              style={styles.imageButton}
+              onPress={() => setShowImageCapture(true)}
+            >
+              <Camera size={24} color="#2d7a3a" />
+              <Text style={styles.imageButtonText}>Capture Image</Text>
+            </Pressable>
+          </View>
+
+          {showImageCapture && (
+            <ImageCapture onImageCaptured={handleImageCaptured} />
+          )}
+
+          {/* Supplier Name */}
+
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
               <Building2 size={20} color="#336633" />
@@ -148,7 +185,9 @@ export default function AddSupplierScreen() {
             <TextInput
               style={[
                 styles.input,
-                !validateEmail(formData.email) && formData.email !== '' && styles.inputError,
+                !validateEmail(formData.email) &&
+                  formData.email !== '' &&
+                  styles.inputError,
               ]}
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
@@ -183,7 +222,9 @@ export default function AddSupplierScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) => setFormData({ ...formData, address: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, address: text })
+              }
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -222,9 +263,13 @@ export default function AddSupplierScreen() {
         </View>
 
         <Pressable
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isSubmitting && styles.submitButtonDisabled,
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}>
+          disabled={isSubmitting}
+        >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
           </Text>
@@ -233,6 +278,7 @@ export default function AddSupplierScreen() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -276,12 +322,50 @@ const styles = StyleSheet.create({
   formSection: {
     gap: 20,
   },
-  inputGroup: {
+
+  imageSection: {
+    marginBottom: 24,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  previewImagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  previewImagePlaceholderText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2d7a3a',
     gap: 8,
   },
-  inputError: {
-    borderColor: '#dc2626',
-    backgroundColor: '#fef2f2',
+  imageButtonText: {
+    fontSize: 16,
+    color: '#2d7a3a',
+    fontWeight: '600',
+  },
+  inputGroup: {
+    gap: 8,
   },
   labelContainer: {
     flexDirection: 'row',
@@ -301,6 +385,9 @@ const styles = StyleSheet.create({
     color: '#333333',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  inputError: {
+    borderColor: '#dc2626',
   },
   textArea: {
     height: 100,

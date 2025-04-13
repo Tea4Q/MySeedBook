@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 declare global {
   interface Window {
     frameworkReady?: () => void;
@@ -7,7 +5,5 @@ declare global {
 }
 
 export function useFrameworkReady() {
-  useEffect(() => {
-    window.frameworkReady?.();
-  });
+  window.frameworkReady?.();
 }

@@ -33,25 +33,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
 
-const uploadImage = async (file: File) => {
-  try {
-    const fileName = `${Date.now()}-${file.name}`; // Unique file name
-    const { data, error } = await supabase.storage
-      .from('images') // Replace 'images' with your bucket name
-      .upload(fileName, file);
-
-    if (error) {
-      throw error;
-    }
-
-    console.log('Image uploaded successfully:', data);
-    return data.path; // Returns the file path
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    return null;
-  }
-};
-
 type SeedType = {
   label: string;
   value: string;
@@ -65,13 +46,13 @@ const seedTypes: SeedType[] = [
 ];
 
 interface FormData {
-  seedImage: File | null;
+  seed_image: string;
   name: string;
   type: string;
   description: string;
   quantity: string;
   quantity_unit: string;
-  supplier_id?: string;
+  supplier_id: sting | null;
   date_purchased: Date | null;
   storage_location?: string;
   storage_requirements?: string;
@@ -95,12 +76,25 @@ interface FormErrors {
 
 export default function AddSeedScreen() {
   const [formData, setFormData] = useState({
+    seed_image: '',
     name: '',
     type: '',
     description: '',
     quantity: '',
     quantity_unit: 'seeds',
+    supplier_id: '',
     date_purchased: null,
+    planting_depth: '',
+    spacing: '',
+    watering_requirements: '',
+    sunlight_requirements: '',
+    soil_type: '',
+    fertilizer_requirements: '',
+    days_to_germinate: '',
+    days_to_harvest: '',
+    planting_season: '',
+    harvest_season: '',
+    notes: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -144,30 +138,29 @@ export default function AddSeedScreen() {
         .from('seeds')
         .insert([
           {
-            seedImage: formData.seedImage,
+            seed_image: formData.seed_image,
             name: formData.name,
             type: formData.type,
+            description: formData.description,
             quantity: Number(formData.quantity),
             quantity_unit: formData.quantity_unit,
-            supplier_id: formData.supplier_id,
-            date_purchased: formData.date_purchased?.toISOString(),
+            supplier_id: formData.supplier_name,
+            date_purchased: formData.date_purchased,
+            planting_depth: formData.planting_depth, // Individual column
+            spacing: formData.spacing, // Individual column
+            watering_requirements: formData.watering_requirements, // Individual column
+            sunlight_requirements: formData.sunlight_requirements, // Individual column
+            soil_type: formData.soil_type, // Individual column
+            fertilizer_requirements: formData.fertilizer_requirements, // Individual column
+            days_to_germinate: formData.days_to_germinate, // Individual column
+            days_to_harvest: formData.days_to_harvest, // Individual column
+            planting_season: formData.planting_season, // Individual column
+            harvest_season: formData.harvest_season, // Individual column
             storage_location: formData.storage_location,
             storage_requirements: formData.storage_requirements,
             germination_rate: formData.germination_rate
               ? Number(formData.germination_rate)
               : null,
-            planting_instructions: JSON.stringify({
-              depth: formData.planting_depth,
-              spacing: formData.spacing,
-              watering: formData.watering_requirements,
-              sunlight: formData.sunlight_requirements,
-              soil_type: formData.soil_type,
-              fertilizer: formData.fertilizer_requirements,
-              days_to_germinate: formData.days_to_germinate,
-              days_to_harvest: formData.days_to_harvest,
-              planting_season: formData.planting_season,
-              harvest_season: formData.harvest_season,
-            }),
             notes: formData.notes,
           },
         ])
@@ -195,8 +188,7 @@ export default function AddSeedScreen() {
 
   const handleImageCaptured = (uri: string | null) => {
     if (uri) {
-      setPreviewImage(uri);
-      setIsImageUploaded(true); //Hide buttons after image is captured
+      setFormData((prev) => ({ ...prev, seedI_iage: uri }));
     }
     setShowImageCapture(false);
   };
@@ -204,20 +196,8 @@ export default function AddSeedScreen() {
   const handleSupplierSelect = (supplier: Supplier) => {
     setFormData((prev) => ({
       ...prev,
-      supplier_id: supplier.id,
+      supplier_name: supplier.id,
     }));
-  };
-
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const filePath = await uploadImage(file);
-      if (filePath) {
-        setFormData((prev) => ({ ...prev, seedImage: filePath }));
-      }
-    }
   };
 
   return (
@@ -244,8 +224,11 @@ export default function AddSeedScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.imageSection}>
-          {previewImage ? (
-            <Image source={{ uri: previewImage }} style={styles.previewImage} />
+          {formData.seed_image ? (
+            <Image
+              source={{ uri: formData.seed_image }}
+              style={styles.previewImage}
+            />
           ) : (
             <View style={styles.previewImagePlaceholder}>
               <Text style={styles.previewImagePlaceholderText}>
@@ -258,30 +241,16 @@ export default function AddSeedScreen() {
               <Pressable
                 style={styles.imageButton}
                 onPress={() => setShowImageCapture(true)}
-                setIsImageUploaded={false}
               >
-                <Text style={styles.imageButtonText}>Change Image</Text>
                 <Camera size={24} color="#2d7a3a" />
-                <Text style={styles.imageButtonText}>Take Photo</Text>
-              </Pressable>
-              <Pressable
-                style={styles.imageButton}
-                onPress={() => setShowImageCapture(true)}
-              >
-                <Upload size={24} color="#2d7a3a" />
-                <Text style={styles.imageButtonText}>Upload</Text>
+                <Text style={styles.imageButtonText}>Capture Image</Text>
               </Pressable>
             </View>
           )}
-          <input type="file" accept="image/*" onChange={handleImageUpload} />
         </View>
-
         {showImageCapture && (
-          <View style={styles.imageCaptureContainer}>
-            <ImageCapture onImageCaptured={handleImageCaptured} />
-          </View>
+          <ImageCapture onImageCaptured={handleImageCaptured} />
         )}
-
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Seed Name *</Text>

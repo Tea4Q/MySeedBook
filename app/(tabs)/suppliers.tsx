@@ -106,7 +106,7 @@ export default function SuppliersScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
             {item.featuredSeeds.map((seed, index) => (
               <View key={index} style={styles.featuredSeed}>
-                <Image source={{ uri: seed.imageUrl }} style={styles.seedImage} />
+                <Image source={{ uri: seed.seed_image }} style={styles.seedImage} />
                 <Text style={styles.seedName}>{seed.name}</Text>
               </View>
             ))}

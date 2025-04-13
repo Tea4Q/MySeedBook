@@ -12,15 +12,11 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 
-
-
 interface AddSeedResult {
   success: boolean;
   error?: string;
   seedId?: string;
 }
-
-
 
 export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSeedResult> {
   try {
@@ -146,7 +142,7 @@ export default function InventoryScreen() {
         <Animated.View style={[highlightStyle]}>
           <Image
             source={{
-              uri: seed.seedImage,
+              uri: seed.seed_image,
             }}
             style={styles.seedImage}
           />
@@ -168,24 +164,20 @@ export default function InventoryScreen() {
               {seed.supplier_id && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Supplier</Text>
-                  <Text style={styles.detailValue}>{seed.supplier.name}</Text>
+                  <Text style={styles.detailValue}>{seed.supplier_id}</Text>
                 </View>
               )}
               <View style={styles.seasonContainer}>
-                {seed.planting_instructions && (
-                  <>
                     <View style={[styles.seasonTag, styles.plantTag]}>
                       <Text style={styles.seasonText}>
-                        Plant: {JSON.parse(seed.planting_instructions).planting_season || 'Not specified'}
+                        Plant: {seed.planting_season}
                       </Text>
                     </View>
                     <View style={[styles.seasonTag, styles.harvestTag]}>
                       <Text style={styles.seasonText}>
-                        Harvest: {JSON.parse(seed.planting_instructions).harvest_season || 'Not specified'}
+                        Harvest: {seed.harvest_season}
                       </Text>
                     </View>
-                  </>
-                )}
               </View>
               <Pressable
                 style={styles.addEventButton}
