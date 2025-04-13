@@ -52,7 +52,7 @@ interface FormData {
   description: string;
   quantity: string;
   quantity_unit: string;
-  supplier_id: sting | null;
+  supplier_id: string | null;
   date_purchased: Date | null;
   storage_location?: string;
   storage_requirements?: string;
@@ -89,6 +89,9 @@ export default function AddSeedScreen() {
     watering_requirements: '',
     sunlight_requirements: '',
     soil_type: '',
+    storage_location: '',
+    storage_requirements: '',
+    germination_rate: '',
     fertilizer_requirements: '',
     days_to_germinate: '',
     days_to_harvest: '',
@@ -144,7 +147,7 @@ export default function AddSeedScreen() {
             description: formData.description,
             quantity: Number(formData.quantity),
             quantity_unit: formData.quantity_unit,
-            supplier_id: formData.supplier_name,
+            supplier_id: formData.supplier_id,
             date_purchased: formData.date_purchased,
             planting_depth: formData.planting_depth, // Individual column
             spacing: formData.spacing, // Individual column
