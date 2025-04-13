@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { Link } from 'expo-router';
 import { Mail, Lock } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
@@ -32,7 +40,9 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop' }}
+          source={{
+            uri: 'https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop',
+          }}
           style={styles.logo}
         />
         <Text style={styles.logoText}>Q-Tea Seed Catalogue</Text>
@@ -40,7 +50,9 @@ export default function LoginScreen() {
 
       <View style={styles.formContainer}>
         <Text style={styles.title}>Welcome Back!</Text>
-        <Text style={styles.subtitle}>Sign in to manage your seed collection</Text>
+        <Text style={styles.subtitle}>
+          Sign in to manage your seed collection
+        </Text>
 
         {error && (
           <View style={styles.errorContainer}>
@@ -79,10 +91,11 @@ export default function LoginScreen() {
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </Pressable>
 
-        <Pressable 
+        <Pressable
           style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
           onPress={handleLogin}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           {isLoading ? (
             <ActivityIndicator color="#262A2B" />
           ) : (
