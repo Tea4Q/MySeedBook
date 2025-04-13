@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -18,14 +19,17 @@ import {
   House,
   CreditCard,
   FileText,
+  Camera,
 } from 'lucide-react-native';
 
 import { supabase } from '@/lib/supabase';
+import ImageCapture from '@/components/ImageCapture';
 
 export default function AddSupplierScreen() {
   const { name, returnTo } = useLocalSearchParams();
 
   const [formData, setFormData] = useState({
+    supplier_image: '',
     name: (name as string) || '',
     webaddress: '',
     email: '',
@@ -42,6 +46,13 @@ export default function AddSupplierScreen() {
     if (!email) return true; // Allow empty email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const handleImageCaptured = (uri: string | null) => {
+    if (uri) {
+      setFormData((prev) => ({ ...prev, supplier_image: uri })); // Store the image URL
+    }
+    setShowImageCapture(false); // Close the ImageCapture component
   };
 
   const handleSubmit = async () => {
@@ -78,7 +89,7 @@ export default function AddSupplierScreen() {
       if (returnTo === 'add-seed') {
         router.push({
           pathname: '/add-seed',
-          params: { supplierId: supplier.id }
+          params: { supplierId: supplier.id },
         });
       } else {
         router.back();
@@ -107,6 +118,34 @@ export default function AddSupplierScreen() {
         )}
 
         <View style={styles.formSection}>
+          {/*Supplier Image Section*/}
+          <View style={styles.imageSection}>
+            {formData.supplier_image ? (
+              <Image
+                source={{ uri: formData.supplier_image }}
+                style={styles.previewImage}
+              />
+            ) : (
+              <View style={styles.previewImagePlaceholder}>
+                <Text style={styles.previewImagePlaceholderText}>
+                  No image selected
+                </Text>
+              </View>
+            )}
+            <Pressable
+              style={styles.imageButton}
+              onPress={() => setShowImageCapture(true)}
+            >
+              <Camera size={24} color="#2d7a3a" />
+              <Text style={styles.imageButtonText}>Capture Image</Text>
+            </Pressable>
+          </View>
+
+          {showImageCapture && (
+            <ImageCapture onImageCaptured={handleImageCaptured} />
+          )}
+
+          {/* Supplier Name */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
               <Building2 size={20} color="#336633" />
@@ -145,7 +184,9 @@ export default function AddSupplierScreen() {
             <TextInput
               style={[
                 styles.input,
-                !validateEmail(formData.email) && formData.email !== '' && styles.inputError,
+                !validateEmail(formData.email) &&
+                  formData.email !== '' &&
+                  styles.inputError,
               ]}
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
@@ -180,7 +221,9 @@ export default function AddSupplierScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) => setFormData({ ...formData, address: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, address: text })
+              }
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -219,9 +262,13 @@ export default function AddSupplierScreen() {
         </View>
 
         <Pressable
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isSubmitting && styles.submitButtonDisabled,
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}>
+          disabled={isSubmitting}
+        >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
           </Text>

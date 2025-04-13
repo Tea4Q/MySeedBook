@@ -16,6 +16,7 @@ export interface Supplier {
 export interface Seed {
   seedImage: File | undefined | string;
   id: string;
+  seedImage: blob | string | null;
   name: string;
   type: string;
   quantity: number;

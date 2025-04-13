@@ -65,13 +65,13 @@ const seedTypes: SeedType[] = [
 ];
 
 interface FormData {
-  seedImage: string;
+  seedImage: uri | null;
   name: string;
   type: string;
   description: string;
   quantity: string;
-  quantity_unit: string;
-  supplier_id?: string;
+  quantity_unit: 'seeds';
+  supplier_name?: string;
   date_purchased: Date | null;
   storage_location?: string;
   storage_requirements?: string;
@@ -95,12 +95,26 @@ interface FormErrors {
 
 export default function AddSeedScreen() {
   const [formData, setFormData] = useState({
+    seedImage: '',
     name: '',
     type: '',
     description: '',
     quantity: '',
     quantity_unit: 'seeds',
+    supplier_name: '',
     date_purchased: null,
+    storage_location: '',
+    planting_depth: '',
+    spacing: '',
+    watering_requirements: '',
+    sunlight_requirements: '',
+    soil_type: '',
+    fertilizer_requirements: '',
+    days_to_germinate: '',
+    days_to_harvest: '',
+    planting_season: '',
+    harvest_season: '',
+    notes: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -147,27 +161,28 @@ export default function AddSeedScreen() {
             seedImage: formData.seedImage,
             name: formData.name,
             type: formData.type,
+            description: formData.description,
             quantity: Number(formData.quantity),
             quantity_unit: formData.quantity_unit,
-            supplier_id: formData.supplier_id,
-            date_purchased: formData.date_purchased?.toISOString(),
+            supplier_id: formData.supplier_name,
+            date_purchased: formData.date_purchased
+              ? formData.date_purchased.toISOString()
+              : null,
             storage_location: formData.storage_location,
             storage_requirements: formData.storage_requirements,
             germination_rate: formData.germination_rate
               ? Number(formData.germination_rate)
               : null,
-            planting_instructions: JSON.stringify({
-              depth: formData.planting_depth,
-              spacing: formData.spacing,
-              watering: formData.watering_requirements,
-              sunlight: formData.sunlight_requirements,
-              soil_type: formData.soil_type,
-              fertilizer: formData.fertilizer_requirements,
-              days_to_germinate: formData.days_to_germinate,
-              days_to_harvest: formData.days_to_harvest,
-              planting_season: formData.planting_season,
-              harvest_season: formData.harvest_season,
-            }),
+            planting_depth: formData.planting_depth, // Individual column
+            spacing: formData.spacing, // Individual column
+            watering_requirements: formData.watering_requirements, // Individual column
+            sunlight_requirements: formData.sunlight_requirements, // Individual column
+            soil_type: formData.soil_type, // Individual column
+            fertilizer_requirements: formData.fertilizer_requirements, // Individual column
+            days_to_germinate: formData.days_to_germinate, // Individual column
+            days_to_harvest: formData.days_to_harvest, // Individual column
+            planting_season: formData.planting_season, // Individual column
+            harvest_season: formData.harvest_season, // Individual column
             notes: formData.notes,
           },
         ])
@@ -195,8 +210,7 @@ export default function AddSeedScreen() {
 
   const handleImageCaptured = (uri: string | null) => {
     if (uri) {
-      setPreviewImage(uri);
-      setIsImageUploaded(true); //Hide buttons after image is captured
+      setFormData((prev) => ({ ...prev, seedImage: uri }));
     }
     setShowImageCapture(false);
   };
@@ -204,20 +218,8 @@ export default function AddSeedScreen() {
   const handleSupplierSelect = (supplier: Supplier) => {
     setFormData((prev) => ({
       ...prev,
-      supplier_id: supplier.id,
+      supplier_name: supplier.name,
     }));
-  };
-
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const filePath = await uploadImage(file);
-      if (filePath) {
-        setFormData((prev) => ({ ...prev, seedImage: filePath }));
-      }
-    }
   };
 
   return (
@@ -244,8 +246,11 @@ export default function AddSeedScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.imageSection}>
-          {previewImage ? (
-            <Image source={{ uri: previewImage }} style={styles.previewImage} />
+          {formData.seedImage ? (
+            <Image
+              source={{ uri: formData.seedImage }}
+              style={styles.previewImage}
+            />
           ) : (
             <View style={styles.previewImagePlaceholder}>
               <Text style={styles.previewImagePlaceholderText}>
@@ -258,28 +263,15 @@ export default function AddSeedScreen() {
               <Pressable
                 style={styles.imageButton}
                 onPress={() => setShowImageCapture(true)}
-                setIsImageUploaded={false}
               >
-                <Text style={styles.imageButtonText}>Change Image</Text>
                 <Camera size={24} color="#2d7a3a" />
-                <Text style={styles.imageButtonText}>Take Photo</Text>
-              </Pressable>
-              <Pressable
-                style={styles.imageButton}
-                onPress={() => setShowImageCapture(true)}
-              >
-                <Upload size={24} color="#2d7a3a" />
-                <Text style={styles.imageButtonText}>Upload</Text>
+                <Text style={styles.imageButtonText}>Capture Image</Text>
               </Pressable>
             </View>
           )}
-          <input type="file" accept="image/*" onChange={handleImageUpload} />
         </View>
-
         {showImageCapture && (
-          <View style={styles.imageCaptureContainer}>
-            <ImageCapture onImageCaptured={handleImageCaptured} />
-          </View>
+          <ImageCapture onImageCaptured={handleImageCaptured} />
         )}
 
         <View style={styles.formSection}>

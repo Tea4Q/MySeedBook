@@ -69,21 +69,21 @@ export default function InventoryScreen() {
     );
   }
 
-  const plantingInstructions = (() => {
-    try {
-      return JSON.parse(seeds.planting_instructions) || {};
-    } catch {
-      return {};
-    }
-  })();
-
   useEffect(() => {
     const subscription = supabase
-      .from('seeds')
-      .on('INSERT', (payload) => {
-        const newSeed = payload.new;
-        setSeeds((prevSeeds) => [...prevSeeds, newSeed]);
-      })
+      .channel('public:seeds')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'seeds',
+        },
+        (payload) => {
+          const newSeed = payload.new;
+          setSeeds((prevSeeds) => [...prevSeeds, newSeed]);
+        }
+      )
       .subscribe();
 
     return () => {
@@ -139,7 +139,7 @@ export default function InventoryScreen() {
           <Image
             source={{
               uri:
-                typeof seed.seedImage === 'string'
+                typeof seed.seedImage === 'uri'
                   ? seed.seedImage
                   : 'https://via.placeholder.com/150',
             }}

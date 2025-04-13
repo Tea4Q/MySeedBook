@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, Modal, StyleSheet, ActivityIndicator, ScrollView, FlatList } from 'react-native';
-import { Search, Plus, X, Check, Building2, Globe, Mail, Phone } from 'lucide-react-native';
+import {
+  Image,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Modal,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  FlatList,
+} from 'react-native';
+import {
+  Search,
+  Plus,
+  X,
+  Check,
+  Building2,
+  Globe,
+  Mail,
+  Phone,
+} from 'lucide-react-native';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
@@ -12,14 +32,20 @@ interface SupplierSelectProps {
   initialSearchQuery?: string;
 }
 
-export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuery = '' }: SupplierSelectProps) {
+export function SupplierSelect({
+  onSelect,
+  selectedSupplierId,
+  initialSearchQuery = '',
+}: SupplierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
 
   useEffect(() => {
     loadSuppliers();
@@ -93,15 +119,19 @@ export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuer
   const handleAddNewSupplier = () => {
     router.push({
       pathname: '/add-supplier',
-      params: { name: searchQuery, returnTo: 'add-seed' }
+      params: { name: searchQuery, returnTo: 'add-seed' },
     });
     setIsOpen(false);
   };
 
   const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
     <Pressable
-      style={[styles.supplierItem, selectedSupplier?.id === supplier.id && styles.selectedItem]}
-      onPress={() => handleSelectSupplier(supplier)}>
+      style={[
+        styles.supplierItem,
+        selectedSupplier?.id === supplier.id && styles.selectedItem,
+      ]}
+      onPress={() => handleSelectSupplier(supplier)}
+    >
       <View style={styles.supplierIcon}>
         <Building2 size={24} color="#2d7a3a" />
       </View>
@@ -136,14 +166,22 @@ export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuer
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={styles.selectButton}
-        onPress={() => setIsOpen(true)}>
+      <Pressable style={styles.selectButton} onPress={() => setIsOpen(true)}>
         {selectedSupplier ? (
           <View style={styles.selectedSupplierPreview}>
-            <Text style={styles.selectedSupplierName}>{selectedSupplier.name}</Text>
+            {selectedSupplier.supplier_image && (
+              <Image
+                source={{ uri: selectedSupplier.supplier_image }}
+                style={styles.supplierImage}
+              />
+            )}
+            <Text style={styles.selectedSupplierName}>
+              {selectedSupplier.name}
+            </Text>
             {selectedSupplier.webaddress && (
-              <Text style={styles.selectedSupplierwebaddress}>{selectedSupplier.webaddress}</Text>
+              <Text style={styles.selectedSupplierwebaddress}>
+                {selectedSupplier.webaddress}
+              </Text>
             )}
           </View>
         ) : (
@@ -155,12 +193,16 @@ export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuer
         visible={isOpen}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsOpen(false)}>
+        onRequestClose={() => setIsOpen(false)}
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Supplier</Text>
-              <Pressable style={styles.closeButton} onPress={() => setIsOpen(false)}>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setIsOpen(false)}
+              >
                 <X size={24} color="#666666" />
               </Pressable>
             </View>
@@ -202,7 +244,10 @@ export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuer
                           : 'No suppliers available'}
                       </Text>
                       {searchQuery && (
-                        <Pressable style={styles.addNewButton} onPress={handleAddNewSupplier}>
+                        <Pressable
+                          style={styles.addNewButton}
+                          onPress={handleAddNewSupplier}
+                        >
                           <Plus size={20} color="#ffffff" />
                           <Text style={styles.addNewButtonText}>
                             Add "{searchQuery}" as New Supplier
@@ -214,9 +259,14 @@ export function SupplierSelect({ onSelect, selectedSupplierId, initialSearchQuer
                 />
 
                 {!searchQuery && (
-                  <Pressable style={styles.addNewButton} onPress={handleAddNewSupplier}>
+                  <Pressable
+                    style={styles.addNewButton}
+                    onPress={handleAddNewSupplier}
+                  >
                     <Plus size={20} color="#ffffff" />
-                    <Text style={styles.addNewButtonText}>Add New Supplier</Text>
+                    <Text style={styles.addNewButtonText}>
+                      Add New Supplier
+                    </Text>
                   </Pressable>
                 )}
               </>
@@ -255,6 +305,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999999',
   },
+  supplierImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  selectedSupplierPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedSupplierName: {
+    fontSize: 16,
+    color: '#333333',
+    fontWeight: '600',
+  },
+
+  selectedSupplierwebaddress: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999999',
+  },
+
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
