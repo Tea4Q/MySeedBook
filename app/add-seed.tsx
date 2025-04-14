@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -54,6 +55,7 @@ interface FormData {
   quantity_unit: string;
   supplier_id: string | null;
   date_purchased: Date | null;
+  seed_price: number;
   storage_location?: string;
   storage_requirements?: string;
   germination_rate?: string;
@@ -83,7 +85,9 @@ export default function AddSeedScreen() {
     quantity: '',
     quantity_unit: 'seeds',
     supplier_id: '',
+    supplier_name: '',
     date_purchased: null,
+    seed_price: '',
     planting_depth: '',
     spacing: '',
     watering_requirements: '',
@@ -106,6 +110,47 @@ export default function AddSeedScreen() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showImageCapture, setShowImageCapture] = useState(false);
   const [isImageUploaded, setIsImageUploaded] = useState(false);
+  const [seeds, setSeeds] = useState<
+    { id: number; name: string; seed_image: string; supplier_name: string }[]
+  >([]);
+
+  useEffect(() => {
+    fetchSeeds();
+  }, []);
+
+  const fetchSeeds = async () => {
+    const { data, error } = await supabase
+      .from('data')
+      .select('id, name, seed_image, supplier_id');
+
+    if (error) {
+      console.error('Error fetching seeds:', error);
+      return;
+    }
+    //Fetch all suppliers to map to supplier_id to supplier
+    const { data: suppliers, error: supplierError } = await supabase
+      .from('suppliers')
+      .select('id, name');
+    if (supplierError) {
+      console.error('Error fetching suppliers:', supplierError);
+      return;
+    }
+    // Map supplier IDs to names for easier access
+    const supplierMap = suppliers?.reduce((map, supplier) => {
+      map[supplier.id] = supplier.name;
+      return map;
+    }, {} as Record<string, string>);
+
+    // Add supplier names to the seed data
+    const seedsWithSupplierNames = data?.map((seed) => {
+      return {
+        ...seed,
+        supplier_name: supplierMap[seed.supplier_id] || 'Unknown Supplier',
+      };
+    });
+
+    setSeeds(seedsWithSupplierNames);
+  };
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -147,8 +192,11 @@ export default function AddSeedScreen() {
             description: formData.description,
             quantity: Number(formData.quantity),
             quantity_unit: formData.quantity_unit,
-            supplier_id: formData.supplier_id,
+            supplier_id: formData.supplier_id || null,
             date_purchased: formData.date_purchased,
+            seed_price: formData.seed_price
+              ? Number(formData.seed_price)
+              : null,
             planting_depth: formData.planting_depth, // Individual column
             spacing: formData.spacing, // Individual column
             watering_requirements: formData.watering_requirements, // Individual column
@@ -191,7 +239,7 @@ export default function AddSeedScreen() {
 
   const handleImageCaptured = (uri: string | null) => {
     if (uri) {
-      setFormData((prev) => ({ ...prev, seedI_iage: uri }));
+      setFormData((prev) => ({ ...prev, seed_image: uri }));
     }
     setShowImageCapture(false);
   };
@@ -199,7 +247,8 @@ export default function AddSeedScreen() {
   const handleSupplierSelect = (supplier: Supplier) => {
     setFormData((prev) => ({
       ...prev,
-      supplier_name: supplier.id,
+      supplier_id: supplier.id,
+      supplier_name: supplier.name,
     }));
   };
 
@@ -329,8 +378,7 @@ export default function AddSeedScreen() {
                 <Text style={styles.errorText}>{errors.quantity}</Text>
               )}
             </View>
-
-            <View style={[styles.inputGroup, { flex: 2, marginLeft: 12 }]}>
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
               <Text style={styles.label}>Purchase Date</Text>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
@@ -341,11 +389,11 @@ export default function AddSeedScreen() {
                   renderInput={({ inputRef, inputProps, InputProps }) => (
                     <View style={styles.datePickerContainer}>
                       <TextInput
-                        ref={inputRef}
                         style={[
                           styles.input,
                           errors.date_purchased && styles.inputError,
                         ]}
+                        ref={inputRef}
                         {...inputProps}
                         placeholder="Select a date"
                         placeholderTextColor="#999"
@@ -361,9 +409,26 @@ export default function AddSeedScreen() {
                 <Text style={styles.errorText}>{errors.date_purchased}</Text>
               )}
             </View>
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+              <Text style={styles.label}>Price</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.seed_price}
+                onChangeText={(text) =>
+                  setFormData((prev) => ({ ...prev, seed_price: text }))
+                }
+                placeholder="e.g., 10.50"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Supplier</Text>
+            {formData.supplier_name ? (
+              <Text style={styles.label}>{formData.supplier_name}</Text>
+            ) : null}
             <SupplierSelect
               onSelect={handleSupplierSelect}
               selectedSupplierId={formData.supplier_id}
@@ -555,6 +620,21 @@ export default function AddSeedScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+
+      <FlatList
+        data={seeds}
+        renderItem={({ item: seed }) => (
+          <View>
+            <Image
+              source={{ uri: seed.seed_image }}
+              style={{ width: 100, height: 100 }}
+            />
+            <Text>{seed.name}</Text>
+            <Text>{seed.supplier_name}</Text>
+          </View>
+        )}
+        keyExtractor={(seed) => seed.id.toString()}
+      />
     </View>
   );
 }
@@ -571,6 +651,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#336633',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
     padding: 8,
@@ -685,11 +770,11 @@ const styles = StyleSheet.create({
     color: '#333333',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    gap: 8,
   },
   inputError: {
     borderColor: '#dc2626',
   },
-
   datePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -745,9 +830,6 @@ const styles = StyleSheet.create({
   },
   selectedTypeText: {
     color: '#ffffff',
-  },
-  row: {
-    flexDirection: 'row',
   },
   timingSection: {
     backgroundColor: '#ffffff',

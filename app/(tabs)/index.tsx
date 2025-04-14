@@ -18,7 +18,9 @@ interface AddSeedResult {
   seedId?: string;
 }
 
-export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSeedResult> {
+export async function addSeedToInventory(
+  seedData: Partial<Seed>
+): Promise<AddSeedResult> {
   try {
     // Validate required fields
     if (!seedData.name || !seedData.type || !seedData.quantity) {
@@ -29,7 +31,10 @@ export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSe
     }
 
     // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
     if (userError) throw userError;
     if (!user) {
       return {
@@ -41,12 +46,14 @@ export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSe
     // Add the seed to the database
     const { data: newSeed, error: seedError } = await supabase
       .from('seeds')
-      .insert([{
-        ...seedData,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }])
+      .insert([
+        {
+          ...seedData,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
       .select()
       .single();
 
@@ -55,16 +62,18 @@ export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSe
     // Add to inventory history
     const { error: historyError } = await supabase
       .from('seed_inventory_history')
-      .insert([{
-        seed_id: newSeed.id,
-        action: 'add',
-        quantity_change: seedData.quantity,
-        previous_quantity: 0,
-        new_quantity: seedData.quantity,
-        date: new Date().toISOString(),
-        notes: 'Initial inventory addition',
-        user_id: user.id,
-      }]);
+      .insert([
+        {
+          seed_id: newSeed.id,
+          action: 'add',
+          quantity_change: seedData.quantity,
+          previous_quantity: 0,
+          new_quantity: seedData.quantity,
+          date: new Date().toISOString(),
+          notes: 'Initial inventory addition',
+          user_id: user.id,
+        },
+      ]);
 
     if (historyError) throw historyError;
 
@@ -76,7 +85,10 @@ export async function addSeedToInventory(seedData: Partial<Seed>): Promise<AddSe
     console.error('Error adding seed to inventory:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to add seed to inventory',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to add seed to inventory',
     };
   }
 }
@@ -96,7 +108,10 @@ export default function InventoryScreen() {
       setIsLoading(true);
       setError(null);
 
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error('User not authenticated');
 
@@ -107,6 +122,7 @@ export default function InventoryScreen() {
         .order('created_at', { ascending: false });
 
       if (seedError) throw seedError;
+      console.log('Seed Data:', seedData);
       setSeeds(seedData || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load seeds');
@@ -136,7 +152,7 @@ export default function InventoryScreen() {
 
   const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = highlight === seed.id;
-   
+
     return (
       <Pressable style={styles.seedItem}>
         <Animated.View style={[highlightStyle]}>
@@ -156,28 +172,28 @@ export default function InventoryScreen() {
             <Text style={styles.seedDescription}>{seed.description}</Text>
             <View style={styles.seedDetails}>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Quantity</Text>
+                <Text style={styles.detailLabel}>Quantity:</Text>
                 <Text style={styles.detailValue}>
                   {seed.quantity} {seed.quantity_unit}
                 </Text>
               </View>
               {seed.supplier_id && (
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Supplier</Text>
-                  <Text style={styles.detailValue}>{seed.supplier_id}</Text>
+                  <Text style={styles.detailLabel}>Supplier:</Text>
+                  <Text style={styles.detailValue}>{seed.suppliers.name}</Text>
                 </View>
               )}
               <View style={styles.seasonContainer}>
-                    <View style={[styles.seasonTag, styles.plantTag]}>
-                      <Text style={styles.seasonText}>
-                        Plant: {seed.planting_season}
-                      </Text>
-                    </View>
-                    <View style={[styles.seasonTag, styles.harvestTag]}>
-                      <Text style={styles.seasonText}>
-                        Harvest: {seed.harvest_season}
-                      </Text>
-                    </View>
+                <View style={[styles.seasonTag, styles.plantTag]}>
+                  <Text style={styles.seasonText}>
+                    Plant: {seed.planting_season}
+                  </Text>
+                </View>
+                <View style={[styles.seasonTag, styles.harvestTag]}>
+                  <Text style={styles.seasonText}>
+                    Harvest: {seed.harvest_season}
+                  </Text>
+                </View>
               </View>
               <Pressable
                 style={styles.addEventButton}
@@ -223,38 +239,6 @@ export default function InventoryScreen() {
         refreshing={isLoading}
         onRefresh={loadSeeds}
       />
-    </View>
-  );
-}
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Seed Inventory</Text>
-        <View style={styles.headerButtons}>
-          <Pressable style={styles.iconButton}>
-            <Filter size={24} color="#ffffff" />
-          </Pressable>
-          <Link href="/add-seed" asChild>
-            <Pressable style={styles.iconButton}>
-              <Plus size={24} color="#ffffff" />
-            </Pressable>
-          </Link>
-        </View>
-      </View>
-
-      {isLoading ? (
-        <Text style={styles.loadingText}>Loading new seeds...</Text>
-      ) : (
-        <FlashList
-          data={seeds}
-          renderItem={renderSeedItem}
-          estimatedItemSize={250}
-          contentContainerStyle={styles.list}
-          refreshing={isLoading}
-          onRefresh={loadNewSeeds}
-        />
-      )}
     </View>
   );
 }
@@ -392,12 +376,6 @@ const styles = StyleSheet.create({
   },
   harvestTag: {
     backgroundColor: '#ffecb3',
-  },
-  loadingText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#666666',
-    marginTop: 16,
   },
   seasonText: {
     fontSize: 12,
