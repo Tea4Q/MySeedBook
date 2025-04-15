@@ -71,22 +71,22 @@ interface FormData {
   description: string;
   quantity: string;
   quantity_unit: string;
-  supplier_id?: string;
+  supplier_id: string;
   date_purchased: Date | null;
-  storage_location?: string;
-  storage_requirements?: string;
-  germination_rate?: string;
-  planting_depth?: string;
-  spacing?: string;
-  watering_requirements?: string;
-  sunlight_requirements?: string;
-  soil_type?: string;
-  fertilizer_requirements?: string;
-  days_to_germinate?: string;
-  days_to_harvest?: string;
-  planting_season?: string;
-  harvest_season?: string;
-  notes?: string;
+  storage_location: string;
+  storage_requirements: string;
+  germination_rate: string;
+  planting_depth: string;
+  spacing: string;
+  watering_requirements: string;
+  sunlight_requirements: string;
+  soil_type: string;
+  fertilizer_requirements: string;
+  days_to_germinate: string;
+  days_to_harvest: string;
+  planting_season: string;
+  harvest_season: string;
+  notes: string;
 }
 
 interface FormErrors {
@@ -156,7 +156,6 @@ export default function AddSeedScreen() {
             germination_rate: formData.germination_rate
               ? Number(formData.germination_rate)
               : null,
-            planting_instructions: JSON.stringify({
               depth: formData.planting_depth,
               spacing: formData.spacing,
               watering: formData.watering_requirements,
@@ -167,7 +166,6 @@ export default function AddSeedScreen() {
               days_to_harvest: formData.days_to_harvest,
               planting_season: formData.planting_season,
               harvest_season: formData.harvest_season,
-            }),
             notes: formData.notes,
           },
         ])

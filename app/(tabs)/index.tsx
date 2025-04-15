@@ -233,39 +233,12 @@ export default function InventoryScreen() {
       />
     </View>
   );
-}
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Seed Inventory</Text>
-        <View style={styles.headerButtons}>
-          <Pressable style={styles.iconButton}>
-            <Filter size={24} color="#ffffff" />
-          </Pressable>
-          <Link href="/add-seed" asChild>
-            <Pressable style={styles.iconButton}>
-              <Plus size={24} color="#ffffff" />
-            </Pressable>
-          </Link>
-        </View>
-      </View>
-
-      {isLoading ? (
-        <Text style={styles.loadingText}>Loading new seeds...</Text>
-      ) : (
-        <FlashList
-          data={seeds}
-          renderItem={renderSeedItem}
-          estimatedItemSize={250}
-          contentContainerStyle={styles.list}
-          refreshing={isLoading}
-          onRefresh={loadNewSeeds}
-        />
-      )}
-    </View>
-  );
-}
+      };
+      
+      
+    
+  
 
 const styles = StyleSheet.create({
   container: {
