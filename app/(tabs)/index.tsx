@@ -12,6 +12,8 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 
+
+
 interface AddSeedResult {
   success: boolean;
   error?: string;
@@ -137,6 +139,20 @@ export default function InventoryScreen() {
     });
   };
 
+
+  const handleEditSeed = (seed: Seed) => {
+    setEditingSeed(seed);
+    setIsEditFormVisible(true);
+  };
+
+  const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
+  
+  const [isEditFormVisible, setIsEditFormVisible] = useState(false);
+  const handleCloseEditForm = () => {
+    setIsEditFormVisible(false);
+    setEditingSeed(null);
+  };
+
   // Animated style for highlight
   const highlightStyle = useAnimatedStyle(() => {
     return {
@@ -149,7 +165,8 @@ export default function InventoryScreen() {
     };
   });
 
-  const renderSeedItem = ({ item: seed }: { item: Seed }) => {
+  const renderSeedItem = ({ item: seed }: { item: Seed }) =>
+  {
     const isHighlighted = highlight === seed.id;
 
     return (
@@ -194,16 +211,25 @@ export default function InventoryScreen() {
                   </Text>
                 </View>
               </View>
+              {/* Add Edit Button */}
               <Pressable
-                style={styles.addEventButton}
-                onPress={() => handleAddEvent(seed)}
-              >
+                style={styles.seedItem}>
+                <View style={styles.seedContent}>
+                  <Text style={styles.seedName}>{seed.name}</Text>
+                    <Pressable
+                     style={styles.editButton}
+                      onPress={() => handleEditSeed(seed)}>
+                        <Text style={styles.editButtonText}>Edit</Text>
+                    </Pressable>
+                </View>
+              </Pressable>
+              <Pressable style={styles.addEventButton}
+                onPress={() => handleAddEvent(seed)}>
                 <Calendar size={20} color="#ffffff" />
                 <Text style={styles.addEventText}>Schedule Event</Text>
               </Pressable>
-            </View>
-          </View>
-        </Animated.View>
+            </View >
+        </Animated.View >
       </Pressable>
     );
   };
