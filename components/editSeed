@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
-import
-     {
+import {
   FlatList,
   View,
   Text,
   StyleSheet,
+  style,
   Pressable,
+  onPress,
   Image,
   TextInput,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Plus, Filter, Calendar } from 'lucide-react-native';
 import { Link, useRouter, router, useLocalSearchParams } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import type { Seed } from '@/types/database';
+import { Seed } from '../../types/seed';
+import { EditSeed } from '../../components/EditSeed';
+
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -21,83 +23,56 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 
-
 import { DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import * as ImagePicker from 'expo-image-picker';
+import { createClient } from '@supabase/supabase-js';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const [isEditFormVisible, setIsEditFormVisible] = useState(false);
-const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
-const [seeds, setSeeds] = useState<Seed[]>([]);
-const [selectedSupplier, setSelectedSupplier] = useState(null);
-const [searchQuery, setSearchQuery] = useState('');
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
- const handleEditSeed = (seed: Seed) =>
-     {
-          setEditingSeed(seed);
-          setIsEditFormVisible(true);
-     }
+import { useLocalSearchParams } from 'expo-router';
 
-const [formData, setFormData] = useState(seed);
+export default function EditSeedScreen() {
+  const { seed } = useLocalSearchParams(); // Retrieve the seed parameter
+  const editingSeed = seed ? JSON.parse(seed) : null;
 
-useEffect(() => {
-  setFormData(seed);
-}, [seed]);
+  const [isEditFormVisible, setIsEditFormVisible] = useState(false);
+  const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
+  const [seeds, setSeeds] = useState<Seed[]>([]);
+  const [formData, setFormData] = useState<Seed | null>(null);
+  const [date, setDate] = useState(new Date());
 
-const handleSave = () => {
-  onSave(formData);
-};
-const handleCancel = () => {
-  onCancel();
-};
-const fetchSeeds = async () =>
-     {
-          try
-          {
-               const { data, error } = await supabase
-                    .from('seeds')
-                    .select('*')
-                    .ilike('name', `%${searchQuery}%`)
-                    .order('name', { ascending: true });
-     
-               if (error) throw error;
-               setSeeds(data);
-          } catch (err)
-          {
-               console.error('Error fetching seeds:', err);
-          }
-     };
+  useEffect(() => {
+    if (editingSeed) {
+      setFormData(editingSeed);
+    }
+  }, [editingSeed]);
 
-     useEffect(() =>
-{
-     fetchSeeds();
-}
-     , [searchQuery]);
+  const handleEditSeed = (seed: Seed) => {
+    router.push({
+      pathname: '/editSeed',
+      params: { seeed: JSON.stringify(seed) },
+    });
+    setEditingSeed(seed);
+    setIsEditFormVisible(true);
+  };
 
-
-export default function EditSeedScreen()
-{
-     const handlePickImage = async () =>
-     { const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          quality: 1,
-     });
-          if (!result.canceled)
-          {
-               setFormData((prev) => ({ ...prev, seed_image: result.assets[0].uri }));
-          }
-     }
-    
-     const handleSaveSeed = async (updatedSeed: Seed) => {
-     try {
-     const { data, error } = await supabase
-          .from('seeds')
-          .update({
+  const handleSaveSeed = async (updatedSeed: Seed) => {
+    if (!updatedSeed.name || !updatedSeed.quantity) {
+      console.error('Invalid seed data');
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('seeds')
+        .update({
           seed_image: updatedSeed.seedImage,
           name: updatedSeed.name,
           quantity: updatedSeed.quantity,
@@ -120,253 +95,104 @@ export default function EditSeedScreen()
           planting_season: updatedSeed.planting_season,
           harvest_season: updatedSeed.harvest_season,
           notes: updatedSeed.notes,
-          })
-          .eq('id', updatedSeed.id);
+        })
+        .eq('id', updatedSeed.id);
 
-     if (error) throw error;
+      if (error) throw error;
 
-     // Refresh the seed list
-     fetchSeeds();
-     setIsEditFormVisible(false);
-     setEditingSeed(null);
-     } catch (err) {
-     console.error('Error updating seed:', err);
-     }
-     };
-
-
-     return (
-     <View style={styles.container}>
-     {isEditFormVisible && editingSeed && (
-          <EditSeed
-            seed={editingSeed}
-            onSave={handleSaveSeed}
-            onCancel={() => setIsEditFormVisible(false)}
-          />
-     )}
-     <FlatList
-          data={seeds}
-          renderItem={renderSeedItem}
-          keyExtractor={(seed) => seed.id.toString()}
-     />
-     </View>
-     );
-     };
-
-     
-  return (
-    <View style={styles.editForm}>
-      <Text style={styles.label}> Seed Image </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.seed_image}
-        onChangeText={(uri) => setFormData({ ...formData, seed_image: uri })}
-      />
-      <Text style={styles.label}>Seed Name</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.name}
-        onChangeText={(text) => setFormData({ ...formData, name: text })}
-      />
-      <Text style={styles.label}> Type </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.type}
-        onChangeText={(text) => setFormData({ ...formData, type: text })}
-      />
-      <Text style={styles.label}> Description </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.description}
-        onChangeText={(text) => setFormData({ ...formData, description: text })}
-      />
-      <Text style={styles.label}>Quantity</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.quantity.toString()}
-        onChangeText={(text) =>
-          setFormData({ ...formData, quantity: parseInt(text, 10) || 0 })
-        }
-        keyboardType="numeric"
-      />
-     
-      <Text style={styles.label}> Date Purchased </Text>
-<LocalizationProvider dateAdapter={AdapterDayjs}>
-  <DatePicker
-    value={formData.date_purchased}
-    onChange={(date) =>
-      setFormData({ ...formData, date_purchased: date?.toString() || '' })
+      // Refresh the seed list
+      fetchSeeds();
+      setIsEditFormVisible(false);
+      setEditingSeed(null);
+    } catch (err) {
+      console.error('Error updating seed:', err);
     }
-    renderInput={({ inputRef, inputProps, InputProps }) => (
-      <View style={styles.datePickerContainer}>
-        <TextInput
-          style={styles.input}
-          ref={inputRef}
-          {...inputProps}
-          placeholder="Select a date"
-          placeholderTextColor="#999"
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setDate(selectedDate || date);
+    setFormData({
+      ...formData,
+      date_purchased: selectedDate?.toISOString() || '',
+    });
+  };
+
+  const handleSave = () => {
+    onSave(formData);
+  };
+  const handleCancel = () => {
+    onCancel();
+  };
+
+  function onSave(formData: any) {
+    throw new Error('Function not implemented.');
+  }
+
+  function onCancel() {
+    throw new Error('Function not implemented.');
+  }
+
+  const fetchSeeds = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seeds')
+        .select('*')
+        .ilike('name', `%${searchQuery}%`)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setSeeds(data);
+    } catch (err) {
+      console.error('Error fetching seeds:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSeeds();
+  }, [searchQuery]);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (!result.canceled && result.assets?.length > 0) {
+      setFormData((prev) => ({ ...prev, seed_image: result.assets[0].uri }));
+    }
+  };
+
+  const renderSeedItem = ({ item }: { item: Seed }) => (
+    <Pressable onPress={() => handleEditSeed(item)}>
+      <View style={styles.row}>
+        <Text>{item.name}</Text>
+      </View>
+    </Pressable>
+  );
+
+  return (
+    <View style={styles.container}>
+      {isEditFormVisible && editingSeed && (
+        <EditSeed
+          seed={editingSeed}
+          onSave={handleSaveSeed}
+          onCancel={() => setIsEditFormVisible(false)}
         />
-        <Pressable onPress={InputProps?.onClick}>
-          <CalendarTodayIcon style={styles.calendarIcon} />
-        </Pressable>
-      </View>
-    )}
-  />
-</LocalizationProvider>
-      <Text style={styles.label}> Seed Price </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.seed_price.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({ ...formData, seed_price: parseFloat(text) || null })
-        }
-        keyboardType="numeric"
-             />
-             
-              <Text style={styles.label}> Supplier ID </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.supplier_id?.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({ ...formData, supplier_id: parseInt(text) || null })
-        }
-        keyboardType="numeric"
+      )}
+      <FlatList
+        data={seeds}
+        renderItem={renderSeedItem}
+        keyExtractor={(seed) => seed.id.toString()}
       />
-     //  <Text style={styles.label}>Storage Location</Text>
-     //  <TextInput
-     //    style={styles.input}
-     //    value={formData.storage_location}
-     //    onChangeText={(text) =>
-     //      setFormData({ ...formData, storage_location: text })
-     //    }
-     //  />
-     //  <Text style={styles.label}>Storage Requirements</Text>
-     //  <TextInput
-     //    style={styles.input}
-     //    value={formData.storage_requirements}
-     //    onChangeText={(text) =>
-     //      setFormData({ ...formData, storage_requirements: text })
-     //    }
-     //  />
-     //  <Text style={styles.label}> Germination Rate </Text>
-     //  <TextInput
-     //    style={styles.input}
-     //    value={formData.germination_rate?.toString() || ''}
-     //    onChangeText={(text) =>
-     //      setFormData({
-     //        ...formData,
-     //        germination_rate: parseFloat(text) || null,
-     //      })
-     //    }
-     //    keyboardType="numeric"
-        //  />
-             
-             
-     <Text style={styles.label}>Days to Germinate</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.days_to_germinate?.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({
-            ...formData,
-            days_to_germinate: parseInt(text) || null,
-          })
-        }
-        keyboardType="numeric"
+      <DateTimePicker
+        value={date}
+        mode="date"
+        display="default"
+        onChange={handleDateChange}
       />
-      <Text style={styles.label}>Days to Harvest</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.days_to_harvest?.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({ ...formData, days_to_harvest: parseInt(text) || null })
-        }
-        keyboardType="numeric"
-      /> 
-        <Text style={styles.label}> Planting Depth </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.planting_depth?.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({ ...formData, planting_depth: parseFloat(text) || null })
-        }
-        keyboardType="numeric"
-      />
-      <Text style={styles.label}>Spacing</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.spacing?.toString() || ''}
-        onChangeText={(text) =>
-          setFormData({ ...formData, spacing: parseFloat(text) || null })
-        }
-        keyboardType="numeric"
-      />
-      <Text style={styles.label}> Watering Requirements </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.watering_requirements}
-        onChangeText={(text) =>
-          setFormData({ ...formData, watering_requirements: text })
-        }
-      />
-      <Text style={styles.label}> Sunlight </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.sunlight}
-        onChangeText={(text) => setFormData({ ...formData, sunlight: text })}
-      />
-      <Text style={styles.label}> Soil Type </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.soil_type}
-        onChangeText={(text) => setFormData({ ...formData, soil_type: text })}
-      />      
-      <Text style={styles.label}>Fertilizer Requirements</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.fertilizer_requirements}
-        onChangeText={(text) =>
-          setFormData({ ...formData, fertilizer_requirements: text })
-        }
-      />
-      <Text style={styles.label}> Planting Season </Text>
-      <TextInput
-        style={styles.input}
-        value={formData.planting_season}
-        onChangeText={(text) =>
-          setFormData({ ...formData, planting_season: text })
-        }
-      />
-      <Text style={styles.label}>Harvest Season</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.harvest_season}
-        onChangeText={(text) =>
-          setFormData({ ...formData, harvest_season: text })
-        }
-      />
-      <Text style={styles.label}>Notes</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.notes}
-        onChangeText={(text) => setFormData({ ...formData, notes: text })}
-        multiline
-        numberOfLines={4}
-             />
-             
-      <View style={styles.buttonContainer}>
-        <Pressable style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
-        </Pressable>
-        <Pressable style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </Pressable>
-      </View>
-     </View>
-     );
-     };
-
-
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -403,9 +229,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 8,
     marginBottom: 16,
-     },
-  
-   imagePreview: {
+  },
+  imagePreview: {
     width: 100,
     height: 100,
     marginBottom: 16,
@@ -418,25 +243,24 @@ const styles = StyleSheet.create({
   imageButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
-     },
-  
+  },
   datePickerContainer: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: '#cccccc',
-          borderRadius: 4,
-          padding: 8,
-          marginBottom: 16,
-     },
-     calendarIcon: {
-          marginLeft: 8,
-          color: '#007bff',
-     },
-     errorText: {
-          color: '#dc2626',
-          marginTop: 4,
-     },
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#cccccc',
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 16,
+  },
+  calendarIcon: {
+    marginLeft: 8,
+    color: '#007bff',
+  },
+  errorText: {
+    color: '#dc2626',
+    marginTop: 4,
+  },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

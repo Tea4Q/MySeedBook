@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Plus, Filter, Calendar } from 'lucide-react-native';
+import { Plus, Filter, Pencil, Calendar } from 'lucide-react-native';
 import { Link, useRouter, router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Seed } from '@/types/database';
@@ -11,8 +11,6 @@ import Animated, {
   withSequence,
   withDelay,
 } from 'react-native-reanimated';
-
-
 
 interface AddSeedResult {
   success: boolean;
@@ -139,14 +137,19 @@ export default function InventoryScreen() {
     });
   };
 
-
   const handleEditSeed = (seed: Seed) => {
+    console.log('Edit button pressed for seed:', seed);
+    router.push({
+      pathname: '/Components/editSeed',
+      params: { seed: JSON.stringify(seed) },
+    });
+    // setFormData(seed);
     setEditingSeed(seed);
     setIsEditFormVisible(true);
   };
 
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
-  
+
   const [isEditFormVisible, setIsEditFormVisible] = useState(false);
   const handleCloseEditForm = () => {
     setIsEditFormVisible(false);
@@ -165,8 +168,7 @@ export default function InventoryScreen() {
     };
   });
 
-  const renderSeedItem = ({ item: seed }: { item: Seed }) =>
-  {
+  const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = highlight === seed.id;
 
     return (
@@ -211,25 +213,31 @@ export default function InventoryScreen() {
                   </Text>
                 </View>
               </View>
+
               {/* Add Edit Button */}
-              <Pressable
-                style={styles.seedItem}>
-                <View style={styles.seedContent}>
-                  <Text style={styles.seedName}>{seed.name}</Text>
-                    <Pressable
-                     style={styles.editButton}
-                      onPress={() => handleEditSeed(seed)}>
-                        <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
-                </View>
-              </Pressable>
-              <Pressable style={styles.addEventButton}
-                onPress={() => handleAddEvent(seed)}>
-                <Calendar size={20} color="#ffffff" />
-                <Text style={styles.addEventText}>Schedule Event</Text>
-              </Pressable>
-            </View >
-        </Animated.View >
+              <View style={[styles.row, { gap: 12 }]}>
+                <Pressable
+                  style={[styles.addEventButton, { flex: 1 }]}
+                  onPress={() => handleEditSeed(seed)}
+                >
+                  <Pencil size={20} color="#ffffff" />
+                  <Text style={styles.addEventText}>Edit</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.addEventButton,
+                    { flex: 1 },
+                    { marginLeft: 12 },
+                  ]}
+                  onPress={() => handleAddEvent(seed)}
+                >
+                  <Calendar size={20} color="#ffffff" />
+                  <Text style={styles.addEventText}>Schedule Event</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
       </Pressable>
     );
   };
@@ -291,6 +299,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   headerButtons: {
     flexDirection: 'row',
