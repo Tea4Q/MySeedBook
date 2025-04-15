@@ -122,7 +122,6 @@ export default function InventoryScreen() {
         .order('created_at', { ascending: false });
 
       if (seedError) throw seedError;
-      console.log('Seed Data:', seedData);
       setSeeds(seedData || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load seeds');
