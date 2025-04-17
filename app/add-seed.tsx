@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Image,
   FlatList,
 } from 'react-native';
-import { router } from 'expo-router';
+import { useRouter, router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   Camera,
@@ -33,6 +33,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
+import { Seed } from '../types'; // Adjust the import path as necessary
 
 type SeedType = {
   label: string;
@@ -55,6 +56,7 @@ interface FormData {
   quantity_unit: string;
   supplier_id: string;
   date_purchased: Date | null;
+  seed_price: string;
   storage_location: string;
   storage_requirements: string;
   germination_rate: string;
@@ -75,34 +77,69 @@ interface FormErrors {
   [key: string]: string;
 }
 
-export default function AddSeedScreen() {
-  const [formData, setFormData] = useState({
-    seed_image: '',
-    name: '',
-    type: '',
-    description: '',
-    quantity: '',
-    quantity_unit: 'seeds',
-    supplier_id: '',
-    supplier_name: '',
-    date_purchased: null,
-    seed_price: '',
-    planting_depth: '',
-    spacing: '',
-    watering_requirements: '',
-    sunlight_requirements: '',
-    soil_type: '',
-    storage_location: '',
-    storage_requirements: '',
-    germination_rate: '',
-    fertilizer_requirements: '',
-    days_to_germinate: '',
-    days_to_harvest: '',
-    planting_season: '',
-    harvest_season: '',
-    notes: '',
-  });
+const getInitialFormState = (): FormData => ({
+  seed_image: '',
+  name: '',
+  type: '',
+  description: '',
+  quantity: '',
+  quantity_unit: 'seeds',
+  supplier_id: '',
+  supplier_name: '',
+  date_purchased: Date | null,
+  seed_price: '',
+  planting_depth: '',
+  spacing: '',
+  watering_requirements: '',
+  sunlight_requirements: '',
+  soil_type: '',
+  storage_location: '',
+  storage_requirements: '',
+  germination_rate: '',
+  fertilizer_requirements: '',
+  days_to_germinate: '',
+  days_to_harvest: '',
+  planting_season: '',
+  harvest_season: '',
+  notes: '',
+});
 
+export default function AddOrEditSeedScreen() {
+  const { seed } = useLocalSearchParams(); // Retrieve the seed parameter
+  const isEditing = !!seed!; //Check if we're editing
+
+  const editingSeed = useMemo(() => {
+    if (!seed) return null;
+    try {
+      const parsedSeed = JSON.parse(seed as string);
+      return parsedSeed;
+    } catch (error) {
+      console.error('Error parsing seed data:', error);
+      return null;
+    }
+  }, [seed]);
+
+  // Intialize form state base on mode
+  const [formData, setFormData] = useState<FormData>(
+    isEditing && editingSeed ? editingSeed : getInitialFormState()
+  );
+  const clearForm = () => {
+    setFormData(getInitialFormState());
+    setErrors({});
+    setIsImageUploaded(false);
+    setPreviewImage(null);
+  };
+
+  const router = useRouter();
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    formData.date_purchased || null
+  );
+  const [selectedImage, setSelectedImage] = useState<string | null>(
+    formData.seed_image || null
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -113,134 +150,110 @@ export default function AddSeedScreen() {
     { id: number; name: string; seed_image: string; supplier_name: string }[]
   >([]);
 
-  useEffect(() => {
-    fetchSeeds();
-  }, []);
-
-  const fetchSeeds = async () => {
-    const { data, error } = await supabase
-      .from('data')
-      .select('id, name, seed_image, supplier_id');
-
-    if (error) {
-      console.error('Error fetching seeds:', error);
-      return;
-    }
-    //Fetch all suppliers to map to supplier_id to supplier
-    const { data: suppliers, error: supplierError } = await supabase
-      .from('suppliers')
-      .select('id, name');
-    if (supplierError) {
-      console.error('Error fetching suppliers:', supplierError);
-      return;
-    }
-    // Map supplier IDs to names for easier access
-    const supplierMap = suppliers?.reduce((map, supplier) => {
-      map[supplier.id] = supplier.name;
-      return map;
-    }, {} as Record<string, string>);
-
-    // Add supplier names to the seed data
-    const seedsWithSupplierNames = data?.map((seed) => {
-      return {
-        ...seed,
-        supplier_name: supplierMap[seed.supplier_id] || 'Unknown Supplier',
-      };
-    });
-
-    setSeeds(seedsWithSupplierNames);
-  };
-
   const validateForm = () => {
-    const newErrors: FormErrors = {};
+    const errors: Record<string, string> = {};
+    if (!formData.name) errors.name = 'Seed name is required';
+    if (!formData.quantity) errors.quantity = 'Quantity is required';
+    if (!formData.type) errors.type = 'Seed type is required';
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Seed name is required';
-    }
-
-    if (!formData.type) {
-      newErrors.type = 'Seed type is required';
-    }
-
-    if (!formData.quantity || isNaN(Number(formData.quantity))) {
-      newErrors.quantity = 'Valid quantity is required';
-    }
-
-    if (!formData.date_purchased) {
-      newErrors.date_purchased = 'Purchase date is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     if (!validateForm()) {
       return;
-    }
+    } // Validate form before submission
 
     setIsSubmitting(true);
     try {
-      const { data: seedData, error: seedError } = await supabase
-        .from('seeds')
-        .insert([
-          {
+      if (isEditing) {
+        // Update the existing seed
+        const { data: existingSeed, error: fetchError } = await supabase
+          .from('seeds')
+          .select('*')
+          .eq('id', formData.id)
+          .single();
+        if (fetchError) throw fetchError;
+
+        const { error } = await supabase
+          .from('seeds')
+          .update({
             seed_image: formData.seed_image,
             name: formData.name,
+            quantity: Number(formData.quantity) || 0,
             type: formData.type,
             description: formData.description,
-            quantity: Number(formData.quantity),
-            quantity_unit: formData.quantity_unit,
-            supplier_id: formData.supplier_id || null,
+            supplier_id: formData.supplier_id,
             date_purchased: formData.date_purchased,
-            seed_price: formData.seed_price
-              ? Number(formData.seed_price)
-              : null,
-            planting_depth: formData.planting_depth, // Individual column
-            spacing: formData.spacing, // Individual column
-            watering_requirements: formData.watering_requirements, // Individual column
-            sunlight_requirements: formData.sunlight_requirements, // Individual column
-            soil_type: formData.soil_type, // Individual column
-            fertilizer_requirements: formData.fertilizer_requirements, // Individual column
-            days_to_germinate: formData.days_to_germinate, // Individual column
-            days_to_harvest: formData.days_to_harvest, // Individual column
-            planting_season: formData.planting_season, // Individual column
-            harvest_season: formData.harvest_season, // Individual column
+            seed_price: formData.seed_price,
+            planting_depth: formData.planting_depth,
+            spacing: formData.spacing,
+            watering_requirements: formData.watering_requirements,
+            sunlight_requirements: formData.sunlight_requirements,
+            soil_type: formData.soil_type,
             storage_location: formData.storage_location,
             storage_requirements: formData.storage_requirements,
-            germination_rate: formData.germination_rate
-              ? Number(formData.germination_rate)
-              : null,
-              depth: formData.planting_depth,
-              spacing: formData.spacing,
-              watering: formData.watering_requirements,
-              sunlight: formData.sunlight_requirements,
-              soil_type: formData.soil_type,
-              fertilizer: formData.fertilizer_requirements,
-              days_to_germinate: formData.days_to_germinate,
-              days_to_harvest: formData.days_to_harvest,
-              planting_season: formData.planting_season,
-              harvest_season: formData.harvest_season,
+            germination_rate: formData.germination_rate,
+            fertilizer_requirements: formData.fertilizer_requirements,
+            days_to_germinate: formData.days_to_germinate,
+            days_to_harvest: formData.days_to_harvest,
+            planting_season: formData.planting_season,
+            harvest_season: formData.harvest_season,
             notes: formData.notes,
-          },
-        ])
-        .select()
-        .single();
+          })
+          .eq('id', formData.id);
 
-      if (seedError) throw seedError;
-
+        if (error) throw error;
+        console.log('Successfully updated seed');
+      } else {
+        // Add a new seed
+        const { error: seedError } = await supabase.from('seeds').insert({
+          seed_image: formData.seed_image,
+          name: formData.name,
+          type: formData.type,
+          description: formData.description,
+          quantity: Number(formData.quantity),
+          quantity_unit: formData.quantity_unit,
+          supplier_id: formData.supplier_id || null,
+          date_purchased: formData.date_purchased,
+          seed_price: formData.seed_price ? Number(formData.seed_price) : null,
+          planting_depth: formData.planting_depth,
+          spacing: formData.spacing,
+          watering_requirements: formData.watering_requirements,
+          sunlight_requirements: formData.sunlight_requirements,
+          soil_type: formData.soil_type,
+          fertilizer_requirements: formData.fertilizer_requirements,
+          days_to_germinate: formData.days_to_germinate,
+          days_to_harvest: formData.days_to_harvest,
+          planting_season: formData.planting_season,
+          harvest_season: formData.harvest_season,
+          storage_location: formData.storage_location,
+          storage_requirements: formData.storage_requirements,
+          germination_rate: formData.germination_rate
+            ? Number(formData.germination_rate)
+            : null,
+          notes: formData.notes,
+        });
+        if (seedError) throw seedError;
+        clearForm(); // Clear form after successful submission
+      }
+      //Show success
       setShowSuccess(true);
+
+      //Navigate back to the main screen
       setTimeout(() => {
         router.push({
           pathname: '/(tabs)',
-          params: { highlight: seedData.id },
+          params: { highlight: formData.id },
         });
-      }, 1500);
+        setShowSuccess(false);
+      }, 2000);
     } catch (error) {
-      console.error('Error adding seed:', error);
-      setErrors({
-        submit: 'Failed to add seed. Please try again.',
-      });
+      console.error('Error saving seed:', error);
+      setErrors({ submit: 'Failed to save seed. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -263,16 +276,25 @@ export default function AddSeedScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>
+        {isEditing ? 'Edit Seed' : 'Add New Seed'}
+      </Text>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </Pressable>
-        <Text style={styles.title}>Add New Seed</Text>
+        <Text style={styles.title}>
+          {isEditing ? 'Edit Seed' : 'Add New Seed'}
+        </Text>
       </View>
 
       {showSuccess && (
         <View style={styles.successMessage}>
-          <Text style={styles.successText}>Seed added successfully!</Text>
+          <Text style={styles.successText}>
+            {isEditing
+              ? 'Seed updated successfully'
+              : ' Seed added successfully!'}
+          </Text>
         </View>
       )}
 
@@ -284,6 +306,9 @@ export default function AddSeedScreen() {
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.label}>
+          {isEditing ? 'Edit Seed Details' : 'Add New Seed'}
+        </Text>
         <View style={styles.imageSection}>
           {formData.seed_image ? (
             <Image
@@ -482,7 +507,6 @@ export default function AddSeedScreen() {
 
           <View style={styles.plantingSection}>
             <Text style={styles.sectionTitle}>Planting Instructions</Text>
-
             <View style={styles.instructionRow}>
               <View style={styles.instructionItem}>
                 <Ruler size={24} color="#2d7a3a" />
@@ -616,16 +640,9 @@ export default function AddSeedScreen() {
           </View>
         </View>
 
-        <Pressable
-          style={[
-            styles.submitButton,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
+        <Pressable style={styles.submitButton} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'Adding to Inventory...' : 'Add to Inventory'}
+            {isEditing ? 'Save Changes' : 'Add Seed'}
           </Text>
         </Pressable>
       </ScrollView>

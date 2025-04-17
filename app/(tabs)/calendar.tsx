@@ -1,8 +1,35 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput } from 'react-native';
-import { format, addMonths, startOfMonth, eachDayOfInterval, endOfMonth, addDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  format,
+  addMonths,
+  startOfMonth,
+  eachDayOfInterval,
+  endOfMonth,
+  addDays,
+} from 'date-fns';
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  Trash2,
+} from 'lucide-react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { supabase } from '../../lib/supabase';
+
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -61,7 +88,11 @@ interface DateCalculation {
   harvestDate: Date;
 }
 
-const calculateDates = (sowDate: Date, daysToGerminate: number, daysToHarvest: number): DateCalculation => {
+const calculateDates = (
+  sowDate: Date,
+  daysToGerminate: number,
+  daysToHarvest: number
+): DateCalculation => {
   return {
     germinationDate: addDays(sowDate, daysToGerminate),
     harvestDate: addDays(sowDate, daysToHarvest),
@@ -71,8 +102,84 @@ const calculateDates = (sowDate: Date, daysToGerminate: number, daysToHarvest: n
 export default function CalendarScreen() {
   const params = useLocalSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<PlantingEvent[]>(mockEvents);
+  const [events, setEvents] = useState<PlantingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Fetch event when component loads
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // When the month changes, fetch events for the new month
+  useEffect(() => {
+    fetchEventsForMonth(currentDate);
+  }, [currentDate]);
+
+  useEffect(() => {
+    if (isModalVisible) {
+      console.log('Modal visible, current event:', newEvent);
+    }
+  }, [isModalVisible]);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*');
+
+      if (error) throw error;
+      if (!data) return;
+
+      // Convert date string from database to date
+      const formattedEvents = data?.map((event) => ({
+        ...event,
+        date: new Date(event.date),
+        category: event.category as EventCategory,
+      }));
+
+      setEvents(formattedEvents || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Optionally, fetch events for the current month for best performance
+  const fetchEventsForMonth = async (date: Date) => {
+    const startDate = startOfMonth(date).toISOString;
+    const endDate = endOfMonth(date).toISOString;
+
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .gte('event_date', startDate)
+        .lte('event_date', endDate);
+      // Convert date string from database to date
+      // and format the events
+      if (error) throw error;
+      if (!data) return;
+
+      const formattedEvents = data.map((event) => ({
+        ...event,
+        id: event.id,
+        date: new Date(event.event_date),
+        seedName: event.seed_name,
+        seedId: event.seed_id,
+        category: event.category as EventCategory,
+        notes: event.notes,
+      }));
+
+      setEvents(formattedEvents || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
   const [newEvent, setNewEvent] = useState<Partial<PlantingEvent>>({
     category: 'sow',
     date: new Date(),
@@ -110,51 +217,85 @@ export default function CalendarScreen() {
     );
   };
 
-  const handleAddEvent = () => {
-    if (!newEvent.seedName || !newEvent.date || !newEvent.category) return;
+  const handleAddEvent = async () => {
+    if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
+      alert('Please fill in all fields.');
+      return;
+    }
+    try {
+      // First insert the main event
+      const { data: mainEventData, error: mainEventError } = await supabase
+        .from('calendar_events')
+        .insert({
+          seed_id: newEvent.seedId,
+          seed_name: newEvent.seedName,
+          event_date: newEvent.date.toISOString(),
+          category: newEvent.category,
+          notes: newEvent.notes,
+        })
+        .select();
 
-    const eventToAdd: PlantingEvent = {
-      id: Date.now().toString(),
-      date: new Date(newEvent.date),
-      seedName: newEvent.seedName,
-      seedId: newEvent.seedId,
-      category: newEvent.category as EventCategory,
-      notes: newEvent.notes,
-    };
+      if (mainEventError) throw mainEventError;
 
-    if (newEvent.category === 'sow') {
-      const { germinationDate, harvestDate } = calculateDates(
-        new Date(newEvent.date),
-        parseInt(daysToGerminate, 10),
-        parseInt(daysToHarvest, 10)
-      );
+      // If it's a sow event, calculate germination and harvest dates
+      // and insert them as well
+      if (newEvent.category === 'sow') {
+        const { germinationDate, harvestDate } = calculateDates(
+          new Date(newEvent.date),
+          parseInt(daysToGerminate, 10),
+          parseInt(daysToHarvest, 10)
+        );
 
-      const relatedEvents: PlantingEvent[] = [
-        {
-          id: Date.now().toString() + '-germination',
-          date: germinationDate,
-          seedName: newEvent.seedName,
-          seedId: newEvent.seedId,
+        // Insert germination and harvest events
+        await supabase.from('calendar_events').insert({
+          seed_id: newEvent.seedId,
+          seed_name: newEvent.seedName,
+          event_date: germinationDate.toISOString(),
           category: 'germination',
           notes: `Expected germination date for ${newEvent.seedName}`,
-        },
-        {
-          id: Date.now().toString() + '-harvest',
-          date: harvestDate,
-          seedName: newEvent.seedName,
-          seedId: newEvent.seedId,
+        });
+
+        // Insert harvest event
+        await supabase.from('calendar_events').insert({
+          seed_id: newEvent.seedId,
+          seed_name: newEvent.seedName,
+          event_date: harvestDate.toISOString(),
           category: 'harvest',
           notes: `Estimated harvest date for ${newEvent.seedName}`,
-        },
-      ];
+        });
 
-      setEvents([...events, eventToAdd, ...relatedEvents]);
-    } else {
-      setEvents([...events, eventToAdd]);
+        // Refresh the events list
+        fetchEventsForMonth(currentDate); // Refresh events for the current month
+
+        // Reset form and close modal
+        setIsModalVisible(false);
+        setNewEvent({ category: 'sow', date: new Date() });
+      }
+    } catch (error) {
+      console.error('Error adding event:', error);
+      alert('Error adding event. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setIsModalVisible(false);
-    setNewEvent({ category: 'sow', date: new Date() });
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      // Remove the event from the local state
+      setEvents(events.filter((event) => event.id !== eventId));
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Error deleting event. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -163,9 +304,7 @@ export default function CalendarScreen() {
         <Pressable onPress={previousMonth} style={styles.iconButton}>
           <ChevronLeft size={24} color="#2f9e44" />
         </Pressable>
-        <Text style={styles.monthText}>
-          {format(currentDate, 'MMMM yyyy')}
-        </Text>
+        <Text style={styles.monthText}>{format(currentDate, 'MMMM yyyy')}</Text>
         <Pressable onPress={nextMonth} style={styles.iconButton}>
           <ChevronRight size={24} color="#2f9e44" />
         </Pressable>
@@ -177,20 +316,20 @@ export default function CalendarScreen() {
             {day}
           </Text>
         ))}
-        
-        {Array.from({ length: startOfMonth(currentDate).getDay() }).map((_, index) => (
-          <View key={`empty-${index}`} style={styles.emptyDay} />
-        ))}
+
+        {Array.from({ length: startOfMonth(currentDate).getDay() }).map(
+          (_, index) => (
+            <View key={`empty-${index}`} style={styles.emptyDay} />
+          )
+        )}
 
         {days.map((date) => {
           const dateEvents = getEventsForDate(date);
           return (
             <View
               key={date.toISOString()}
-              style={[
-                styles.day,
-                dateEvents.length > 0 && styles.dayWithEvent,
-              ]}>
+              style={[styles.day, dateEvents.length > 0 && styles.dayWithEvent]}
+            >
               <Text style={styles.dayText}>{date.getDate()}</Text>
               <View style={styles.eventIndicators}>
                 {dateEvents.map((event) => (
@@ -209,56 +348,74 @@ export default function CalendarScreen() {
       </View>
 
       <View style={styles.addEventContainer}>
-        <Pressable style={styles.addEventButton} onPress={() => setIsModalVisible(true)}>
+        <Pressable
+          style={styles.addEventButton}
+          onPress={() => setIsModalVisible(true)}
+        >
           <Plus size={24} color="#ffffff" />
           <Text style={styles.addEventText}>Add Event</Text>
         </Pressable>
       </View>
 
-      <ScrollView style={styles.eventList}>
-        <Text style={styles.eventListTitle}>Events this month</Text>
-        {events
-          .filter(
-            (event) =>
-              event.date.getMonth() === currentDate.getMonth() &&
-              event.date.getFullYear() === currentDate.getFullYear()
-          )
-          .map((event) => (
-            <View key={event.id} style={styles.eventItem}>
-              <View
-                style={[
-                  styles.eventDot,
-                  { backgroundColor: CATEGORY_COLORS[event.category] },
-                ]}
-              />
-              <View style={styles.eventDetails}>
-                <Text style={styles.eventCategory}>
-                  {CATEGORY_LABELS[event.category]}
-                </Text>
-                <Text style={styles.eventDate}>
-                  {format(event.date, 'MMMM d, yyyy')}
-                </Text>
-                <Text style={styles.eventText}>{event.seedName}</Text>
-                {event.notes && (
-                  <Text style={styles.eventNotes}>{event.notes}</Text>
-                )}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2f9e44" />
+          <Text style={styles.loadingText}>Loading events...</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.eventList}>
+          <Text style={styles.eventListTitle}>Events this month</Text>
+          {events
+            .filter(
+              (event) =>
+                event.date.getMonth() === currentDate.getMonth() &&
+                event.date.getFullYear() === currentDate.getFullYear()
+            )
+            .map((event) => (
+              <View key={event.id} style={styles.eventItem}>
+                <View
+                  style={[
+                    styles.eventDot,
+                    { backgroundColor: CATEGORY_COLORS[event.category] },
+                  ]}
+                />
+                <View style={styles.eventDetails}>
+                  <Text style={styles.eventCategory}>
+                    {CATEGORY_LABELS[event.category]}
+                  </Text>
+                  <Text style={styles.eventDate}>
+                    {format(event.date, 'MMMM d, yyyy')}
+                  </Text>
+                  <Text style={styles.eventText}>{event.seedName}</Text>
+                  {event.notes && (
+                    <Text style={styles.eventNotes}>{event.notes}</Text>
+                  )}
+                </View>
+                <Pressable
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteEvent(event.id)}
+                >
+                  <Trash2 size={20} color="#e03131" />
+                </Pressable>
               </View>
-            </View>
-          ))}
-      </ScrollView>
+            ))}
+        </ScrollView>
+      )}
 
       <Modal
         visible={isModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsModalVisible(false)}>
+        onRequestClose={() => setIsModalVisible(false)}
+      >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Event</Text>
               <Pressable
                 style={styles.closeButton}
-                onPress={() => setIsModalVisible(false)}>
+                onPress={() => setIsModalVisible(false)}
+              >
                 <X size={24} color="#666666" />
               </Pressable>
             </View>
@@ -269,7 +426,9 @@ export default function CalendarScreen() {
                 <TextInput
                   style={styles.input}
                   value={newEvent.seedName}
-                  onChangeText={(text) => setNewEvent({ ...newEvent, seedName: text })}
+                  onChangeText={(text) =>
+                    setNewEvent({ ...newEvent, seedName: text })
+                  }
                   placeholder="Enter seed name"
                   editable={!params.seedName}
                 />
@@ -278,34 +437,75 @@ export default function CalendarScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Event Type</Text>
                 <View style={styles.categoryContainer}>
-                  {(Object.keys(CATEGORY_COLORS) as EventCategory[]).map((category) => (
-                    <Pressable
-                      key={category}
-                      style={[
-                        styles.categoryButton,
-                        {
-                          backgroundColor:
-                            newEvent.category === category
-                              ? CATEGORY_COLORS[category]
-                              : '#ffffff',
-                        },
-                      ]}
-                      onPress={() => setNewEvent({ ...newEvent, category })}>
-                      <Text
+                  {(Object.keys(CATEGORY_COLORS) as EventCategory[]).map(
+                    (category) => (
+                      <Pressable
+                        key={category}
                         style={[
-                          styles.categoryButtonText,
+                          styles.categoryButton,
                           {
-                            color:
+                            backgroundColor:
                               newEvent.category === category
-                                ? '#ffffff'
-                                : '#666666',
+                                ? CATEGORY_COLORS[category]
+                                : '#ffffff',
                           },
-                        ]}>
-                        {CATEGORY_LABELS[category]}
-                      </Text>
-                    </Pressable>
-                  ))}
+                        ]}
+                        onPress={() => setNewEvent({ ...newEvent, category })}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryButtonText,
+                            {
+                              color:
+                                newEvent.category === category
+                                  ? '#ffffff'
+                                  : '#666666',
+                            },
+                          ]}
+                        >
+                          {CATEGORY_LABELS[category]}
+                        </Text>
+                      </Pressable>
+                    )
+                  )}
                 </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Event Date</Text>
+                <Pressable
+                  style={styles.datePickerContainer}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {newEvent.date
+                      ? format(newEvent.date, 'MMM d, yyyy')
+                      : 'Select a date'}
+                  </Text>
+                  <Calendar size={20} color="#2d7a3a" />
+                </Pressable>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={newEvent.date || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      console.log('Date picker event:', event);
+                      console.log('Selected date before:', newEvent.date);
+                      setShowDatePicker(Platform.OS === 'ios');
+
+                      if (selectedDate) {
+                        console.log('New selected date:', selectedDate);
+                        setNewEvent((prev) => {
+                          const updated = { ...prev, date: selectedDate };
+                          console.log('Updated event:', updated);
+                          return updated;
+                        });
+                      }
+                    }}
+                  />
+                )}
               </View>
 
               {newEvent.category === 'sow' && (
@@ -339,7 +539,9 @@ export default function CalendarScreen() {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={newEvent.notes}
-                  onChangeText={(text) => setNewEvent({ ...newEvent, notes: text })}
+                  onChangeText={(text) =>
+                    setNewEvent({ ...newEvent, notes: text })
+                  }
                   placeholder="Add any notes about this event"
                   multiline
                   numberOfLines={4}
@@ -491,6 +693,9 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 4,
   },
+  deleteButton: {
+    padding: 8,
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -574,5 +779,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  datePickerButton: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    alignItems: 'center',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#212529',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#666666',
   },
 });

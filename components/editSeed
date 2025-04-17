@@ -41,12 +41,9 @@ import { useLocalSearchParams } from 'expo-router';
 
 export default function EditSeedScreen() {
   const { seed } = useLocalSearchParams(); // Retrieve the seed parameter
-  const editingSeed = seed ? JSON.parse(seed) : null;
+  const editingSeed = seed ? JSON.parse(seed as string) : null;
 
-  const [isEditFormVisible, setIsEditFormVisible] = useState(false);
-  const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
-  const [seeds, setSeeds] = useState<Seed[]>([]);
-  const [formData, setFormData] = useState<Seed | null>(null);
+  const [formData, setFormData] = useState<editingSeed | null>(null);
   const [date, setDate] = useState(new Date());
 
   useEffect(() => {
@@ -55,14 +52,7 @@ export default function EditSeedScreen() {
     }
   }, [editingSeed]);
 
-  const handleEditSeed = (seed: Seed) => {
-    router.push({
-      pathname: '/editSeed',
-      params: { seeed: JSON.stringify(seed) },
-    });
-    setEditingSeed(seed);
-    setIsEditFormVisible(true);
-  };
+ 
 
   const handleSaveSeed = async (updatedSeed: Seed) => {
     if (!updatedSeed.name || !updatedSeed.quantity) {
@@ -70,7 +60,7 @@ export default function EditSeedScreen() {
       return;
     }
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('seeds')
         .update({
           seed_image: updatedSeed.seedImage,
@@ -171,19 +161,17 @@ export default function EditSeedScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {isEditFormVisible && editingSeed && (
-        <EditSeed
-          seed={editingSeed}
-          onSave={handleSaveSeed}
-          onCancel={() => setIsEditFormVisible(false)}
+    <View style= { styles.container } >
+  <View style={ styles.editForm }>
+  <Text style={ styles.label }> Edit Seed </Text>
+    < TextInput
+style = { styles.input }
+        value={formData?.name || ''}
+onChangeText = {(text) => setFormData({ ...formData, name: text })}
         />
-      )}
-      <FlatList
-        data={seeds}
-        renderItem={renderSeedItem}
-        keyExtractor={(seed) => seed.id.toString()}
-      />
+          
+          <Text 
+     
       <DateTimePicker
         value={date}
         mode="date"

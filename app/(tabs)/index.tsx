@@ -138,14 +138,10 @@ export default function InventoryScreen() {
   };
 
   const handleEditSeed = (seed: Seed) => {
-    console.log('Edit button pressed for seed:', seed);
     router.push({
-      pathname: '/Components/editSeed',
+      pathname: '/add-seed',
       params: { seed: JSON.stringify(seed) },
     });
-    // setFormData(seed);
-    setEditingSeed(seed);
-    setIsEditFormVisible(true);
   };
 
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
