@@ -503,6 +503,7 @@ export default function CalendarScreen() {
                   }
                   placeholder="Enter seed name"
                   editable={!params.seedName}
+                  editable={!params.seedName}
                 />
               </View>
 
