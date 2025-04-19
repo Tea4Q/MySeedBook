@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -25,11 +26,11 @@ import {
   X,
   Trash2,
 } from 'lucide-react-native';
+import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams } from 'expo-router';
-import { supabase } from '../../lib/supabase';
-
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Platform } from 'react-native';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -106,6 +107,18 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [markedRange, setMarkedRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
+    start: null,
+    end: null,
+  });
+  const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
+  const [isViewEventModalVisible, setIsViewEventModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isEventModalVisible, setIsEventModalVisible] = useState(false);
+  const [lastTap, setLastTap] = useState<number | null>(null);
 
   // Fetch event when component loads
   useEffect(() => {
@@ -119,7 +132,7 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (isModalVisible) {
-      console.log('Modal visible, current event:', newEvent);
+      fetchEventsForMonth(currentDate); // Fetch events for the current month when modal opens
     }
   }, [isModalVisible]);
 
@@ -134,9 +147,9 @@ export default function CalendarScreen() {
       if (!data) return;
 
       // Convert date string from database to date
-      const formattedEvents = data?.map((event) => ({
+      const formattedEvents = data.map((event) => ({
         ...event,
-        date: new Date(event.date),
+        date: new Date(event.date), // Convert event_date to Date
         category: event.category as EventCategory,
       }));
 
@@ -150,8 +163,8 @@ export default function CalendarScreen() {
 
   // Optionally, fetch events for the current month for best performance
   const fetchEventsForMonth = async (date: Date) => {
-    const startDate = startOfMonth(date).toISOString;
-    const endDate = endOfMonth(date).toISOString;
+    const startDate = startOfMonth(date).toISOString();
+    const endDate = endOfMonth(date).toISOString();
 
     try {
       const { data, error } = await supabase
@@ -217,12 +230,39 @@ export default function CalendarScreen() {
     );
   };
 
-  const handleAddEvent = async () => {
-    if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
-      alert('Please fill in all fields.');
-      return;
+  const handleDatePress = (date: Date) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300; // Time in milliseconds
+
+    if (lastTap && now - lastTap < DOUBLE_TAP_DELAY) {
+      // Double-tap detected
+      setSelectedDate(date);
+      setIsEventModalVisible(true);
+    } else {
+      // Single tap detected, update lastTap
+      setLastTap(now);
+      setMarkedRange({ start: date, end: null }); // Highlight the tapped date
     }
+  };
+
+  const getEventsForSelectedDate = () => {
+    if (!selectedDate) return [];
+    return events.filter(
+      (event) =>
+        event.date.getDate() === selectedDate.getDate() &&
+        event.date.getMonth() === selectedDate.getMonth() &&
+        event.date.getFullYear() === selectedDate.getFullYear()
+    );
+  };
+
+  const handleAddEvent = async () => {
     try {
+      //Logic for creating the event
+      if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
       // First insert the main event
       const { data: mainEventData, error: mainEventError } = await supabase
         .from('calendar_events')
@@ -235,7 +275,12 @@ export default function CalendarScreen() {
         })
         .select();
 
-      if (mainEventError) throw mainEventError;
+      if (mainEventError) {
+        console.error('Error inserting event:', mainEventError);
+        throw mainEventError;
+      }
+
+      console.log('Inserted event:', mainEventData);
 
       // If it's a sow event, calculate germination and harvest dates
       // and insert them as well
@@ -246,7 +291,7 @@ export default function CalendarScreen() {
           parseInt(daysToHarvest, 10)
         );
 
-        // Insert germination and harvest events
+        // Insert germination event
         await supabase.from('calendar_events').insert({
           seed_id: newEvent.seedId,
           seed_name: newEvent.seedName,
@@ -263,22 +308,21 @@ export default function CalendarScreen() {
           category: 'harvest',
           notes: `Estimated harvest date for ${newEvent.seedName}`,
         });
-
-        // Refresh the events list
-        fetchEventsForMonth(currentDate); // Refresh events for the current month
-
-        // Reset form and close modal
-        setIsModalVisible(false);
-        setNewEvent({ category: 'sow', date: new Date() });
       }
+
+      fetchEventsForMonth(currentDate); // Refresh the events list
+      setIsModalVisible(false); // Close the modal
     } catch (error) {
       console.error('Error adding event:', error);
       alert('Error adding event. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
-
+  // Your existing logic for adding events
+  // and handling date changes goes here
+  const handleDateChange = (date: Date) => {
+    setNewEvent((prev) => ({ ...prev, date }));
+    setShowDatePicker(false);
+  };
   const handleDeleteEvent = async (eventId: string) => {
     try {
       const { error } = await supabase
@@ -322,13 +366,33 @@ export default function CalendarScreen() {
             <View key={`empty-${index}`} style={styles.emptyDay} />
           )
         )}
-
         {days.map((date) => {
-          const dateEvents = getEventsForDate(date);
+          const isInRange =
+            markedRange.start &&
+            markedRange.end &&
+            date >= markedRange.start &&
+            date <= markedRange.end;
+          const isStart =
+            markedRange.start && date.getTime() === markedRange.start.getTime();
+          const isEnd =
+            markedRange.end && date.getTime() === markedRange.end.getTime();
+
+          const dateEvents = events.filter(
+            (event) =>
+              event.date.getDate() === date.getDate() &&
+              event.date.getMonth() === date.getMonth() &&
+              event.date.getFullYear() === date.getFullYear()
+          );
           return (
-            <View
+            <Pressable
               key={date.toISOString()}
-              style={[styles.day, dateEvents.length > 0 && styles.dayWithEvent]}
+              style={[
+                styles.day,
+                isInRange && styles.dayInRange,
+                isStart && styles.dayStart,
+                isEnd && styles.dayEnd,
+              ]}
+              onPress={() => handleDatePress(date)}
             >
               <Text style={styles.dayText}>{date.getDate()}</Text>
               <View style={styles.eventIndicators}>
@@ -342,15 +406,22 @@ export default function CalendarScreen() {
                   />
                 ))}
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </View>
 
+      <Pressable
+        style={styles.resetButton}
+        onPress={() => setMarkedRange({ start: null, end: null })}
+      >
+        <Text style={styles.resetButtonText}>Reset Range</Text>
+      </Pressable>
+
       <View style={styles.addEventContainer}>
         <Pressable
           style={styles.addEventButton}
-          onPress={() => setIsModalVisible(true)}
+          onPress={() => setIsAddEventModalVisible(true)}
         >
           <Plus size={24} color="#ffffff" />
           <Text style={styles.addEventText}>Add Event</Text>
@@ -403,10 +474,10 @@ export default function CalendarScreen() {
       )}
 
       <Modal
-        visible={isModalVisible}
+        visible={isAddEventModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={() => setIsAddEventModalVisible(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -414,13 +485,14 @@ export default function CalendarScreen() {
               <Text style={styles.modalTitle}>Add New Event</Text>
               <Pressable
                 style={styles.closeButton}
-                onPress={() => setIsModalVisible(false)}
+                onPress={() => setIsAddEventModalVisible(false)}
               >
                 <X size={24} color="#666666" />
               </Pressable>
             </View>
 
             <ScrollView style={styles.modalScroll}>
+              {/* Add Event Form */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Seed Name</Text>
                 <TextInput
@@ -430,6 +502,7 @@ export default function CalendarScreen() {
                     setNewEvent({ ...newEvent, seedName: text })
                   }
                   placeholder="Enter seed name"
+                  editable={!params.seedName}
                   editable={!params.seedName}
                 />
               </View>
@@ -475,7 +548,13 @@ export default function CalendarScreen() {
                 <Text style={styles.label}>Event Date</Text>
                 <Pressable
                   style={styles.datePickerContainer}
-                  onPress={() => setShowDatePicker(true)}
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      setShowDatePicker(true); // For web, show the ReactDatePicker
+                    } else {
+                      setShowDatePicker(true); // For mobile, show the native DateTimePicker
+                    }
+                  }}
                 >
                   <Text style={styles.dateText}>
                     {newEvent.date
@@ -485,23 +564,25 @@ export default function CalendarScreen() {
                   <Calendar size={20} color="#2d7a3a" />
                 </Pressable>
 
-                {showDatePicker && (
+                {/* Web Date Picker */}
+                {Platform.OS === 'web' && showDatePicker && (
+                  <ReactDatePicker
+                    selected={newEvent.date}
+                    onChange={(date: Date) => handleDateChange(date)}
+                    onClickOutside={() => setShowDatePicker(false)}
+                    inline
+                  />
+                )}
+
+                {/* Mobile Date Picker */}
+                {Platform.OS !== 'web' && showDatePicker && (
                   <DateTimePicker
                     value={newEvent.date || new Date()}
                     mode="date"
                     display="default"
                     onChange={(event, selectedDate) => {
-                      console.log('Date picker event:', event);
-                      console.log('Selected date before:', newEvent.date);
-                      setShowDatePicker(Platform.OS === 'ios');
-
                       if (selectedDate) {
-                        console.log('New selected date:', selectedDate);
-                        setNewEvent((prev) => {
-                          const updated = { ...prev, date: selectedDate };
-                          console.log('Updated event:', updated);
-                          return updated;
-                        });
+                        handleDateChange(selectedDate);
                       }
                     }}
                   />
@@ -551,6 +632,56 @@ export default function CalendarScreen() {
               <Pressable style={styles.addButton} onPress={handleAddEvent}>
                 <Text style={styles.addButtonText}>Add Event</Text>
               </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={isEventModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEventModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Events for{' '}
+                {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : ''}
+              </Text>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setIsEventModalVisible(false)}
+              >
+                <X size={24} color="#666666" />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {getEventsForSelectedDate().length > 0 ? (
+                getEventsForSelectedDate().map((event) => (
+                  <View key={event.id} style={styles.eventItem}>
+                    <View
+                      style={[
+                        styles.eventDot,
+                        { backgroundColor: CATEGORY_COLORS[event.category] },
+                      ]}
+                    />
+                    <View style={styles.eventDetails}>
+                      <Text style={styles.eventCategory}>
+                        {CATEGORY_LABELS[event.category]}
+                      </Text>
+                      <Text style={styles.eventText}>{event.seedName}</Text>
+                      {event.notes && (
+                        <Text style={styles.eventNotes}>{event.notes}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noEventsText}>No events for this day.</Text>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -616,6 +747,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f3f5',
     borderRadius: 8,
   },
+  dayInRange: {
+    backgroundColor: '#d3f9d8',
+    borderRadius: 8,
+  },
+  dayStart: {
+    backgroundColor: '#74c0fc',
+    borderRadius: 8,
+  },
+  dayEnd: {
+    backgroundColor: '#ff8787',
+    borderRadius: 8,
+  },
   eventIndicators: {
     flexDirection: 'row',
     gap: 2,
@@ -641,6 +784,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addEventText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resetButton: {
+    backgroundColor: '#e03131',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    margin: 16,
+  },
+  resetButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
@@ -811,5 +966,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     color: '#666666',
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 16,
   },
 });
