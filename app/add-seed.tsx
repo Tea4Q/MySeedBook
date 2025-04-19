@@ -25,15 +25,12 @@ import {
 } from 'lucide-react-native';
 import ImageCapture from '@/components/ImageCapture';
 import { SupplierSelect } from '@/components/SupplierSelect';
-import { DatePicker } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
 import { Seed } from '../types'; // Adjust the import path as necessary
+import { enUS } from 'date-fns/locale/en-US';
 
 type SeedType = {
   label: string;
@@ -55,7 +52,7 @@ interface FormData {
   quantity: string;
   quantity_unit: string;
   supplier_id: string;
-  date_purchased: Date | null;
+  date_purchased: Date;
   seed_price: string;
   storage_location: string;
   storage_requirements: string;
@@ -86,7 +83,7 @@ const getInitialFormState = (): FormData => ({
   quantity_unit: 'seeds',
   supplier_id: '',
   supplier_name: '',
-  date_purchased: Date | null,
+  date_purchased: new Date(),
   seed_price: '',
   planting_depth: '',
   spacing: '',
@@ -149,6 +146,7 @@ export default function AddOrEditSeedScreen() {
   const [seeds, setSeeds] = useState<
     { id: number; name: string; seed_image: string; supplier_name: string }[]
   >([]);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -414,34 +412,33 @@ export default function AddOrEditSeedScreen() {
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
               <Text style={styles.label}>Purchase Date</Text>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  value={formData.date_purchased}
-                  onChange={(date) =>
-                    setFormData((prev) => ({ ...prev, date_purchased: date }))
-                  }
-                  renderInput={({ inputRef, inputProps, InputProps }) => (
-                    <View style={styles.datePickerContainer}>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          errors.date_purchased && styles.inputError,
-                        ]}
-                        ref={inputRef}
-                        {...inputProps}
-                        placeholder="Select a date"
-                        placeholderTextColor="#999"
-                      />
-                      <Pressable onPress={InputProps?.onClick}>
-                        <CalendarTodayIcon style={styles.calendarIcon} />
-                      </Pressable>
-                    </View>
-                  )}
-                />
-              </LocalizationProvider>
+              <Pressable
+                style={styles.datePickerContainer}
+                onPress={() => setDatePickerVisibility(true)}
+              >
+                <Text style={styles.dateText}>
+                  {formData.date_purchased
+                    ? new Date(formData.date_purchased).toLocaleDateString()
+                    : 'Select a date'}
+                </Text>
+                <Text style={styles.calendarIcon}>📅</Text>
+              </Pressable>
+
               {errors.date_purchased && (
                 <Text style={styles.errorText}>{errors.date_purchased}</Text>
               )}
+
+              {/* Modal Date Picker */}
+              <DateTimePickerModal
+                isVisible={isDatePickerVisible}
+                mode="date"
+                date={formData.date_purchased || new Date()}
+                onConfirm={(date) => {
+                  setFormData((prev) => ({ ...prev, date_purchased: date }));
+                  setDatePickerVisibility(false);
+                }}
+                onCancel={() => setDatePickerVisibility(false)}
+              />
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
               <Text style={styles.label}>Price</Text>
@@ -460,9 +457,7 @@ export default function AddOrEditSeedScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Supplier</Text>
-            {formData.supplier_name ? (
-              <Text style={styles.label}>{formData.supplier_name}</Text>
-            ) : null}
+            {formData.supplier_name || null}
             <SupplierSelect
               onSelect={handleSupplierSelect}
               selectedSupplierId={formData.supplier_id}
@@ -809,6 +804,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333333',
   },
   datePicker: {
     flex: 1,
