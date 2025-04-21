@@ -29,7 +29,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import type { Supplier } from '@/types/database';
 import { supabase } from '@/lib/supabase';
-import { Seed } from '../types'; // Adjust the import path as necessary
+
 import { enUS } from 'date-fns/locale/en-US';
 
 type SeedType = {
