@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
 import { Bell, Sun, Moon, CloudRain } from 'lucide-react-native';
+import React from 'react';
 
 export default function SettingsScreen() {
   return (

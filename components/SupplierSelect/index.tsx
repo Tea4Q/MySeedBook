@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Image,
@@ -21,10 +22,12 @@ import {
   Mail,
   Phone,
 } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
+import { Link, router, usePathname } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { debounce } from '@/utils/debounce';
+import { useFocusEffect } from '@react-navigation/native'; // Or your navigation library's equivalent
+import AddSupplierForm from '../AddSupplierForm/index'; // Fix import to point to the file, not the directory
 
 interface SupplierSelectProps {
   onSelect: (supplier: Supplier) => void;
@@ -46,6 +49,12 @@ export function SupplierSelect({
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [pendingSupplierName, setPendingSupplierName] = useState<string | null>(
+    null
+  );
+
+  const [reloadSuppliers, setReloadSuppliers] = useState(false);
 
   useEffect(() => {
     loadSuppliers();
@@ -60,16 +69,16 @@ export function SupplierSelect({
     }
   }, [selectedSupplierId, suppliers]);
 
-  const loadSuppliers = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const loadSuppliers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
+    try {
       const { data, error: supabaseError } = await supabase
         .from('suppliers')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('supplier_name');
 
       if (supabaseError) throw supabaseError;
 
@@ -81,7 +90,14 @@ export function SupplierSelect({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSuppliers(); // Reload suppliers when the screen comes into focus
+      setReloadSuppliers(false); // Reset the reload flag
+    }, [loadSuppliers])
+  );
 
   const filterSuppliers = useCallback(
     debounce((query: string) => {
@@ -94,7 +110,7 @@ export function SupplierSelect({
       const filtered = suppliers.filter((supplier) =>
         searchTerms.every(
           (term) =>
-            supplier.name.toLowerCase().includes(term) ||
+            supplier.supplier_name?.toLowerCase().includes(term) ||
             supplier.webaddress?.toLowerCase().includes(term) ||
             supplier.email?.toLowerCase().includes(term)
         )
@@ -116,12 +132,22 @@ export function SupplierSelect({
     setSearchQuery('');
   };
 
+  const pathname = usePathname();
+
   const handleAddNewSupplier = () => {
-    router.push({
-      pathname: '/add-supplier',
-      params: { name: searchQuery, returnTo: 'add-seed' },
-    });
-    setIsOpen(false);
+    setIsOpen(false); // Close the select supplier modal first
+    setPendingSupplierName(searchQuery); // Pass the current search query
+    setShowAddSupplierModal(true); // Open the add supplier modal
+  };
+
+  // Handler for when a new supplier is added from the inline modal
+  const handleSupplierAdded = async (newSupplier: Supplier) => {
+    setShowAddSupplierModal(false);
+    setIsOpen(false); // Close the supplier select modal
+    await loadSuppliers(); // Refresh suppliers list
+    setSelectedSupplier(newSupplier);
+    onSelect(newSupplier);
+    setSearchQuery('');
   };
 
   const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
@@ -132,32 +158,62 @@ export function SupplierSelect({
       ]}
       onPress={() => handleSelectSupplier(supplier)}
     >
-      <View style={styles.supplierIcon}>
-        <Building2 size={24} color="#2d7a3a" />
+      {/* Avatar/Icon on the left */}
+      <View style={styles.supplierAvatarContainer}>
+        {/* If you have supplier.image_url, use <Image> here, else fallback to icon */}
+        <View style={styles.supplierAvatarBg}>
+          <Building2 size={24} color="#2d7a3a" />
+        </View>
       </View>
-      <View style={styles.supplierInfo}>
-        <Text style={styles.supplierName}>{supplier.name}</Text>
+      {/* Info in the middle */}
+      <View style={styles.supplierInfoBetter}>
+        <Text
+          style={styles.supplierNameBetter}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {supplier.supplier_name}
+        </Text>
         {supplier.webaddress && (
-          <View style={styles.contactRow}>
+          <View style={styles.contactRowBetter}>
             <Globe size={16} color="#666666" />
-            <Text style={styles.contactText}>{supplier.webaddress}</Text>
+            <Text
+              style={styles.contactTextBetter}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {supplier.webaddress}
+            </Text>
           </View>
         )}
         {supplier.email && (
-          <View style={styles.contactRow}>
+          <View style={styles.contactRowBetter}>
             <Mail size={16} color="#666666" />
-            <Text style={styles.contactText}>{supplier.email}</Text>
+            <Text
+              style={styles.contactTextBetter}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {supplier.email}
+            </Text>
           </View>
         )}
         {supplier.phone && (
-          <View style={styles.contactRow}>
+          <View style={styles.contactRowBetter}>
             <Phone size={16} color="#666666" />
-            <Text style={styles.contactText}>{supplier.phone}</Text>
+            <Text
+              style={styles.contactTextBetter}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {supplier.phone}
+            </Text>
           </View>
         )}
       </View>
+      {/* Checkmark on the right if selected */}
       {selectedSupplier?.id === supplier.id && (
-        <View style={styles.checkmark}>
+        <View style={styles.checkmarkBetter}>
           <Check size={20} color="#2d7a3a" />
         </View>
       )}
@@ -167,27 +223,26 @@ export function SupplierSelect({
   return (
     <View style={styles.container}>
       <Pressable style={styles.selectButton} onPress={() => setIsOpen(true)}>
-        {selectedSupplier ? (
-          <View style={styles.selectedSupplierPreview}>
-            {selectedSupplier.supplier_image && (
-              <Image
-                source={{ uri: selectedSupplier.supplier_image }}
-                style={styles.supplierImage}
-              />
-            )}
-            <Text style={styles.selectedSupplierName}>
-              {selectedSupplier.name}
-            </Text>
-            {selectedSupplier.webaddress && (
-              <Text style={styles.selectedSupplierwebaddress}>
-                {selectedSupplier.webaddress}
-              </Text>
-            )}
-          </View>
-        ) : (
-          <Text style={styles.selectButtonText}>Select Supplier</Text>
-        )}
+        <Text>{selectedSupplier?.supplier_name || 'Select supplier'}</Text>
       </Pressable>
+
+      {/* Add Supplier Modal (inline, not navigation) */}
+      <Modal
+        visible={showAddSupplierModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddSupplierModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <AddSupplierForm
+              initialSupplierName={pendingSupplierName || ''}
+              onSuccess={handleSupplierAdded}
+              onCancel={() => setShowAddSupplierModal(false)}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={isOpen}
@@ -407,27 +462,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  supplierInfo: {
-    flex: 1,
-    gap: 4,
+  supplierAvatarContainer: {
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  supplierName: {
+  supplierAvatarBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e6f3e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  supplierInfoBetter: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  supplierNameBetter: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: 2,
+    maxWidth: '100%',
   },
-  contactRow: {
+  contactRowBetter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    marginBottom: 1,
   },
-  contactText: {
+  contactTextBetter: {
     fontSize: 14,
     color: '#666666',
+    maxWidth: '90%',
   },
-  checkmark: {
-    marginLeft: 12,
+  checkmarkBetter: {
+    marginLeft: 8,
     alignSelf: 'center',
   },
   emptyState: {

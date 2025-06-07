@@ -1,7 +1,23 @@
+import React from 'react';
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Image, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Image,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Upload, X, RotateCcw, Check, Image as ImageIcon } from 'lucide-react-native';
+import {
+  Camera,
+  Upload,
+  X,
+  RotateCcw,
+  Check,
+  Image as ImageIcon,
+} from 'lucide-react-native';
 import { FlipType, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 interface ImageCaptureProps {
@@ -73,6 +89,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        // mediaTypes: [ImagePicker.MediaType.IMAGE, ImagePicker.MediaType.VIDEO],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -91,7 +108,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
   const confirmImage = async () => {
     if (!selectedImage) return;
-    
+
     try {
       setIsProcessing(true);
       const processedUri = await processImage(selectedImage);
@@ -111,7 +128,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
     return (
       <View style={styles.previewContainer}>
         <Image source={{ uri: selectedImage }} style={styles.preview} />
-        
+
         {isProcessing ? (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color="#ffffff" />
@@ -121,7 +138,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
           <View style={styles.previewActions}>
             <Pressable
               style={[styles.previewButton, styles.cancelButton]}
-              onPress={cancelSelection}>
+              onPress={cancelSelection}
+            >
               <X size={24} color="#dc2626" />
               <Text style={[styles.previewButtonText, styles.cancelButtonText]}>
                 Cancel
@@ -130,7 +148,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
             <Pressable
               style={[styles.previewButton, styles.retakeButton]}
-              onPress={takePhoto}>
+              onPress={takePhoto}
+            >
               <RotateCcw size={24} color="#2d7a3a" />
               <Text style={[styles.previewButtonText, styles.retakeButtonText]}>
                 Retake
@@ -139,9 +158,12 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
             <Pressable
               style={[styles.previewButton, styles.confirmButton]}
-              onPress={confirmImage}>
+              onPress={confirmImage}
+            >
               <Check size={24} color="#ffffff" />
-              <Text style={[styles.previewButtonText, styles.confirmButtonText]}>
+              <Text
+                style={[styles.previewButtonText, styles.confirmButtonText]}
+              >
                 Confirm
               </Text>
             </Pressable>
@@ -165,7 +187,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
           Drag and drop an image here or use the buttons below
         </Text>
       </View>
-      
+
       <View style={styles.buttonContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -174,7 +196,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
             isLoading && styles.buttonDisabled,
           ]}
           onPress={takePhoto}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           {isLoading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
@@ -192,7 +215,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
             isLoading && styles.buttonDisabled,
           ]}
           onPress={uploadPhoto}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           {isLoading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
@@ -284,7 +308,7 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     width: '100%',
-    aspectRatio: 4/3,
+    aspectRatio: 4 / 3,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',

@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { Search, Plus, CreditCard as Edit2 } from 'lucide-react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
+import React from 'react';
 
 export default function ManageSuppliersScreen() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -20,7 +29,7 @@ export default function ManageSuppliersScreen() {
       const { data, error: supabaseError } = await supabase
         .from('suppliers')
         .select('*')
-        .order('name');
+        .order('supplier_name');
 
       if (supabaseError) throw supabaseError;
       setSuppliers(data || []);
@@ -31,9 +40,12 @@ export default function ManageSuppliersScreen() {
     }
   };
 
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    supplier.webaddress?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSuppliers = suppliers.filter(
+    (supplier) =>
+      supplier.supplier_name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      supplier.webaddress?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const toggleSupplierStatus = async (supplier: Supplier) => {
@@ -45,11 +57,15 @@ export default function ManageSuppliersScreen() {
 
       if (supabaseError) throw supabaseError;
 
-      setSuppliers(suppliers.map(s =>
-        s.id === supplier.id ? { ...s, is_active: !s.is_active } : s
-      ));
+      setSuppliers(
+        suppliers.map((s) =>
+          s.id === supplier.id ? { ...s, is_active: !s.is_active } : s
+        )
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update supplier status');
+      setError(
+        err instanceof Error ? err.message : 'Failed to update supplier status'
+      );
     }
   };
 
@@ -93,7 +109,9 @@ export default function ManageSuppliersScreen() {
           <View key={supplier.id} style={styles.supplierCard}>
             <View style={styles.supplierHeader}>
               <View>
-                <Text style={styles.supplierName}>{supplier.name}</Text>
+                <Text style={styles.supplierName}>
+                  {supplier.supplier_name}
+                </Text>
                 {supplier.webaddress && (
                   <Text style={styles.webaddress}>{supplier.webaddress}</Text>
                 )}
@@ -102,9 +120,12 @@ export default function ManageSuppliersScreen() {
                 <Pressable
                   style={[
                     styles.statusBadge,
-                    supplier.is_active ? styles.activeBadge : styles.inactiveBadge,
+                    supplier.is_active
+                      ? styles.activeBadge
+                      : styles.inactiveBadge,
                   ]}
-                  onPress={() => toggleSupplierStatus(supplier)}>
+                  onPress={() => toggleSupplierStatus(supplier)}
+                >
                   <Text style={styles.statusText}>
                     {supplier.is_active ? 'Active' : 'Inactive'}
                   </Text>
@@ -114,7 +135,8 @@ export default function ManageSuppliersScreen() {
                     pathname: '/edit-supplier/[id]',
                     params: { id: supplier.id },
                   }}
-                  asChild>
+                  asChild
+                >
                   <Pressable style={styles.editButton}>
                     <Edit2 size={20} color="#336633" />
                   </Pressable>
@@ -130,13 +152,15 @@ export default function ManageSuppliersScreen() {
                 <Text style={styles.detailText}>Phone: {supplier.phone}</Text>
               )}
               {supplier.address && (
-                <Text style={styles.detailText}>Address: {supplier.address}</Text>
+                <Text style={styles.detailText}>
+                  Address: {supplier.address}
+                </Text>
               )}
-              {supplier.payment_terms && (
+              {/* {supplier.payment_terms && (
                 <Text style={styles.detailText}>
                   Payment Terms: {supplier.payment_terms}
                 </Text>
-              )}
+              )} */}
             </View>
 
             {supplier.notes && (

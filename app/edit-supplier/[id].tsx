@@ -1,7 +1,25 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Building2, User, Mail, Phone, MapPinHouse,House, CreditCard, FileText } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Building2,
+  User,
+  Mail,
+  Phone,
+  MapPinHouse,
+  House,
+  CreditCard,
+  FileText,
+} from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 
@@ -9,7 +27,8 @@ export default function EditSupplierScreen() {
   const { id } = useLocalSearchParams();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    id: id as string,
+    supplier_name: '',
     webaddress: '',
     email: '',
     phone: '',
@@ -37,12 +56,13 @@ export default function EditSupplierScreen() {
       if (data) {
         setSupplier(data);
         setFormData({
-          name: data.name,
+          id: data.id,
+          supplier_name: data.supplier_name,
           webaddress: data.webaddress || '',
           email: data.email || '',
           phone: data.phone || '',
           address: data.address || '',
-          payment_terms: data.payment_terms || '',
+          payment_terms: data,
           notes: data.notes || '',
         });
       }
@@ -54,7 +74,7 @@ export default function EditSupplierScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name.trim()) {
+    if (!formData.supplier_name.trim()) {
       setError('Supplier name is required');
       return;
     }
@@ -72,7 +92,9 @@ export default function EditSupplierScreen() {
 
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update supplier');
+      setError(
+        err instanceof Error ? err.message : 'Failed to update supplier'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -118,24 +140,29 @@ export default function EditSupplierScreen() {
             </View>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              value={formData.supplier_name}
+              onChangeText={(text) =>
+                setFormData({ ...formData, supplier_name: text })
+              }
               placeholder="Enter supplier name"
             />
           </View>
 
-           <View style={styles.inputGroup}>
-           <View style={styles.labelContainer}>
-             <MapPinHouse size={20} color="#336633" />
-             <Text style={styles.label}>Web Address</Text>
-          </View>
-           <TextInput
+          <View style={styles.inputGroup}>
+            <View style={styles.labelContainer}>
+              <MapPinHouse size={20} color="#336633" />
+              <Text style={styles.label}>Web Address</Text>
+            </View>
+            <TextInput
               style={styles.input}
               value={formData.webaddress}
-              onChangeText={(text) => setFormData({ ...formData, webaddress: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, webaddress: text })
+              }
               placeholder="Enter web address"
               keyboardType="url"
-              autoCapitalize="none"/>
+              autoCapitalize="none"
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -175,7 +202,9 @@ export default function EditSupplierScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(text) => setFormData({ ...formData, address: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, address: text })
+              }
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
@@ -190,7 +219,9 @@ export default function EditSupplierScreen() {
             <TextInput
               style={styles.input}
               value={formData.payment_terms}
-              onChangeText={(text) => setFormData({ ...formData, payment_terms: text })}
+              onChangeText={(text) =>
+                setFormData({ ...formData, payment_terms: text })
+              }
               placeholder="Enter payment terms"
             />
           </View>
@@ -212,9 +243,13 @@ export default function EditSupplierScreen() {
         </View>
 
         <Pressable
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isSubmitting && styles.submitButtonDisabled,
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}>
+          disabled={isSubmitting}
+        >
           <Text style={styles.submitButtonText}>
             {isSubmitting ? 'Updating Supplier...' : 'Update Supplier'}
           </Text>

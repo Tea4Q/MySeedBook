@@ -1,12 +1,11 @@
 export interface Supplier {
-  supplier_image: string;
+  supplier_images: string;
   id: string;
-  name: string;
+  supplier_name?: string;
   webaddress?: string;
   email?: string;
   phone?: string;
   address?: string;
-  payment_terms?: string;
   notes?: string;
   is_active: boolean;
   created_at: Date;
@@ -15,14 +14,15 @@ export interface Supplier {
 }
 
 export interface Seed {
-  seed_image: string;
+  seed_images: Array<{ type: 'supabase' | 'url'; url: string }>;
   id: string;
-  name: string;
+  seed_name: string;
   type: string;
   quantity: number;
   quantity_unit?: string;
   supplier_id?: string;
-  date_purchased: Date;
+  date_purchased: Date | null | undefined;
+  seed_price?: number;
   storage_location?: string;
   storage_requirements?: string;
   germination_rate?: number;
@@ -32,15 +32,15 @@ export interface Seed {
   sunlight_requirements?: string;
   soil_type?: string;
   fertilizer_requirements?: string;
-  days_to_germinate?: string;
-  days_to_harvest?: string;
+  days_to_germinate?: string | number;
+  days_to_harvest?: string | number;
   planting_season?: string;
   harvest_season?: string;
   notes?: string;
-  created_at: Date;
-  updated_at: Date;
   user_id: string;
   description?: string;
+  suppliers: Supplier | null; // The nested object after joining suppliers table
+  deleted_at?: string | null; // Soft delete field
 }
 
 export interface SeedInventoryHistory {

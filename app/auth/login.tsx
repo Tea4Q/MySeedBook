@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { Mail, Lock } from 'lucide-react-native';

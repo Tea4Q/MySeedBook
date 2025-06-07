@@ -1,6 +1,8 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
+    "jsx": "react",
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
     "baseUrl": ".",
     "paths": {

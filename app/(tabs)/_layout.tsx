@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Bed as Seed, ShoppingBag, Calendar, Settings } from 'lucide-react-native';
+import React from 'react';
 
 export default function TabLayout() {
   return (

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +20,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
       if (Platform.OS === 'web') {
         const result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
+
           allowsEditing: true,
           aspect: [4, 3],
           quality: 0.8,
@@ -83,7 +85,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-      
+
       <View style={styles.buttonContainer}>
         <Pressable
           style={({ pressed }) => [
@@ -92,7 +94,8 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
             isLoading && styles.buttonDisabled,
           ]}
           onPress={takePhoto}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           {isLoading ? (
             <Loader size={24} color="#ffffff" />
           ) : (
@@ -110,7 +113,8 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
             isLoading && styles.buttonDisabled,
           ]}
           onPress={uploadPhoto}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           {isLoading ? (
             <Loader size={24} color="#ffffff" />
           ) : (
