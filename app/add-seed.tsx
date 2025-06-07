@@ -734,6 +734,18 @@ export default function AddOrEditSeedScreen() {
                   style={{ width: '100%' }} // Ensure full width on mobile
                 />
               )}
+
+              {/* Modal Date Picker */}
+              <DateTimePickerModal
+                isVisible={isDatePickerVisible}
+                mode="date"
+                date={formData.date_purchased || new Date()}
+                onConfirm={(date) => {
+                  setFormData((prev) => ({ ...prev, date_purchased: date }));
+                  setDatePickerVisibility(false);
+                }}
+                onCancel={() => setDatePickerVisibility(false)}
+              />
             </View>
             {/* Price Input */}
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
@@ -1270,6 +1282,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333333',
   },
   dateText: {
     flex: 1,
