@@ -138,7 +138,7 @@ export default function InventoryScreen() {
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const isMounted = useRef(true);
-  const lastPressRef = useRef<number>(0);
+  const lastPressTimestamps = useRef<Record<string, number>>({});
 
   // --- 2. Modify Data Loading Logic ---
   const loadSeeds = useCallback(
@@ -401,7 +401,11 @@ export default function InventoryScreen() {
     // Navigate to calendar with params to open add event modal and pre-fill seed name
     router.push({
       pathname: '/calendar',
-      params: { openAddEvent: 'true', seedName: seed.seed_name },
+      params: {
+        openAddEvent: 'true',
+        seedName: seed.seed_name,
+        seedId: seed.id,
+      },
     });
   };
 
@@ -426,14 +430,14 @@ export default function InventoryScreen() {
       return 'https://via.placeholder.com/80?text=No+Image';
     }
 
-    // Double press handler
-    let lastPress = 0;
+    // Double press handler using lastPressTimestamps ref in parent
     const handlePress = () => {
       const now = Date.now();
+      const lastPress = lastPressTimestamps.current[seed.id] || 0;
       if (now - lastPress < 350) {
         handleSeedDoublePress(seed);
       }
-      lastPress = now;
+      lastPressTimestamps.current[seed.id] = now;
     };
 
     return (

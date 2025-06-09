@@ -28,11 +28,7 @@ import {
   // ... other icons ...
 } from 'lucide-react-native';
 import ImageCapture from '@/components/ImageCapture';
-import { SupplierSelect } from '@/components/SupplierSelect';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import ReactDatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import 'react-native-get-random-values'; // Import for uuid
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 import type { Supplier, Seed as SeedTypeFromDB } from '@/types/database'; // Renamed to avoid conflict
@@ -68,24 +64,27 @@ export default function AddOrEditSeedScreen() {
     try {
       const parsed = JSON.parse(params.seed as string) as SeedTypeFromDB;
       // Convert date strings to Date objects
-      if (parsed.date_purchased) {
-        parsed.date_purchased = new Date(parsed.date_purchased as string);
+      if (
+        parsed.date_purchased &&
+        typeof parsed.date_purchased === 'string'
+      ) {
+        parsed.date_purchased = new Date(parsed.date_purchased);
       }
       // Transform old seed_image or existing images array into ImageInfo[]
       let initialImages: ImageInfo[] = [];
-      if (parsed.images && Array.isArray(parsed.images)) {
+      if (parsed.seed_images && Array.isArray(parsed.seed_images)) {
         // New structure: { images: [{ type, url }, ...] }
         initialImages = (
-          parsed.images as Array<{ type: 'supabase' | 'url'; url: string }>
+          parsed.seed_images as Array<{ type: 'supabase' | 'url'; url: string }>
         ).map((img, index) => ({
           id: uuidv4(), // Assign new client ID
           type: img.type,
           url: img.url,
         }));
-      } else if (parsed.seed_image) {
+      } else if (parsed.seed_images) {
         // Old structure: { seed_image: "some_url" } - assume it's an external URL
         initialImages = [
-          { id: uuidv4(), type: 'url', url: parsed.seed_image as string },
+          { id: uuidv4(), type: 'url', url: parsed.seed_images as string },
         ];
       }
       return { ...parsed, images: initialImages } as SeedTypeFromDB & {
@@ -102,6 +101,7 @@ export default function AddOrEditSeedScreen() {
     isEditing && editingSeedData
       ? editingSeedData
       : {
+          id: uuidv4(), // Generate a new ID for new seeds
           images: [], // Initialize with an empty array for images
           seed_name: '',
           type: '',
@@ -116,11 +116,17 @@ export default function AddOrEditSeedScreen() {
   );
 
   const [webImageUrlInput, setWebImageUrlInput] = useState(''); // For the URL input field
+  const [errors, setErrors] = useState<{ [key: string]: string }>({}); // For form validation errors
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null); // Add this line
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
+  const [showSuccess, setShowSuccess] = useState(false); // Track success message
+  const [showImageCapture, setShowImageCapture] = useState(false); // Track image capture modal
   // ... (other state variables: errors, isSubmitting, showSuccess, showImageCapture, etc.)
   // Remove: previewImage, isImageUploaded (these are now part of ImageInfo)
 
   const clearForm = () => {
     setSeedPackage({
+      id: 'uuid', // Reset ID for new seed
       seed_images: [], // Clear images
       seed_name: '',
       type: '',
@@ -275,7 +281,7 @@ export default function AddOrEditSeedScreen() {
   // --- Submit Handler ---
   const handleSubmit = async () => {
     if (isSubmitting) return;
-    if (!validateForm()) return; // Ensure validateForm is adapted if needed
+    if (!validateForm(seedPackage, setErrors)) return; // Pass state and setter
 
     setIsSubmitting(true);
     setErrors({});
@@ -337,7 +343,7 @@ export default function AddOrEditSeedScreen() {
         if (router.canGoBack()) {
           router.back();
         } else {
-          router.replace(params.returnTo || '/(tabs)');
+          router.replace((params.returnTo || '/(tabs)') as any);
         }
         setShowSuccess(false);
       }, 1500);
@@ -354,7 +360,7 @@ export default function AddOrEditSeedScreen() {
 
   // --- JSX ---
   return (
-    <View style={styles.container}>
+    <View style={styles.imagePreviewContainer}>
       {/* Header, Success/Error Messages ... */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -446,7 +452,7 @@ export default function AddOrEditSeedScreen() {
             <Text style={styles.label}>Seed Name *</Text>
             <TextInput
               style={[styles.input, errors.name && styles.inputError]}
-              value={seedPackage.name || ''} // Handle potential null/undefined
+              value={seedPackage.seed_name || ''} // Handle potential null/undefined
               onChangeText={(text) =>
                 setSeedPackage((prev) => ({ ...prev, seed_name: text }))
               }
@@ -668,3 +674,23 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+function setShowImageCapture(arg0: boolean)
+{
+  throw new Error('Function not implemented.');
+}
+
+function validateForm(seedPackage: SeedFormData, setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>) {
+  // Example validation: check if seed_name is present
+  let valid = true;
+  const newErrors: { [key: string]: string } = {};
+
+  if (!seedPackage.seed_name || seedPackage.seed_name.trim() === '') {
+    newErrors.name = 'Seed name is required.';
+    valid = false;
+  }
+  // Add more validation as needed...
+
+  setErrors(newErrors);
+  return valid;
+}
+

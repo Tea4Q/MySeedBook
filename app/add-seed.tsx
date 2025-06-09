@@ -46,8 +46,8 @@ import {
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierSelect } from '@/components/SupplierSelect';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import ReactDatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import DateTimePickerModal from 'react-native-modal-datetime-picker'; // For mobile date picker
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 
@@ -203,7 +203,7 @@ export default function AddOrEditSeedScreen() {
           storage_requirements: '',
           germination_rate: 0,
           fertilizer_requirements: '',
-          days_to_germinate: '',// Allow string for range <input type="text"/>
+          days_to_germinate: '', // Allow string for range <input type="text"/>
           days_to_harvest: '',
           planting_season: '',
           harvest_season: '',
@@ -365,6 +365,8 @@ export default function AddOrEditSeedScreen() {
   const [priceInput, setPriceInput] = useState<string>(
     String(editingSeed?.seed_price ?? seedPackage.seed_price ?? '')
   );
+  // --- Date Picker Modal State ---
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   // --- Supplier Fetching Logic ---
 
   // State for image modal and selected image URL
@@ -708,14 +710,14 @@ export default function AddOrEditSeedScreen() {
               {/* Web Date Picker */}
               {Platform.OS === 'web' && showDatePicker && (
                 <View style={styles.datePickerWebWrapper}>
-                  <ReactDatePicker
-                    selected={seedPackage.date_purchased}
-                    onChange={(date: Date | null) => {
+                  <DateTimePicker
+                    value={seedPackage.date_purchased || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(_event, date) => {
                       if (date) handleDateChange(date);
                     }}
-                    onClickOutside={() => setShowDatePicker(false)}
-                    inline
-                    calendarClassName="custom-calendar"
+                    style={{ width: '100%' }}
                   />
                 </View>
               )}
@@ -739,9 +741,9 @@ export default function AddOrEditSeedScreen() {
               <DateTimePickerModal
                 isVisible={isDatePickerVisible}
                 mode="date"
-                date={formData.date_purchased || new Date()}
+                date={seedPackage.date_purchased || new Date()}
                 onConfirm={(date) => {
-                  setFormData((prev) => ({ ...prev, date_purchased: date }));
+                  setSeedPackage((prev) => ({ ...prev, date_purchased: date }));
                   setDatePickerVisibility(false);
                 }}
                 onCancel={() => setDatePickerVisibility(false)}
@@ -764,7 +766,8 @@ export default function AddOrEditSeedScreen() {
                   // Limit to two decimal places
                   if (cleaned.includes('.')) {
                     const [intPart, decPart] = cleaned.split('.');
-                    cleaned = intPart + '.' + (decPart ? decPart.slice(0, 2) : '');
+                    cleaned =
+                      intPart + '.' + (decPart ? decPart.slice(0, 2) : '');
                   }
                   // Format as currency (e.g., $3.50)
                   let formatted = cleaned;
@@ -820,7 +823,11 @@ export default function AddOrEditSeedScreen() {
                 <Text style={styles.timelineLabel}>Days to Germinate</Text>
                 <TextInput
                   style={styles.timelineInput}
-                  value={seedPackage.days_to_germinate ? String(seedPackage.days_to_germinate) : ''}
+                  value={
+                    seedPackage.days_to_germinate
+                      ? String(seedPackage.days_to_germinate)
+                      : ''
+                  }
                   onChangeText={(text) => {
                     setSeedPackage((prev) => ({
                       ...prev,
@@ -838,7 +845,11 @@ export default function AddOrEditSeedScreen() {
                 <Text style={styles.timelineLabel}>Days to Harvest</Text>
                 <TextInput
                   style={styles.timelineInput}
-                  value={seedPackage.days_to_harvest ? String(seedPackage.days_to_harvest) : ''} // Ensure string value
+                  value={
+                    seedPackage.days_to_harvest
+                      ? String(seedPackage.days_to_harvest)
+                      : ''
+                  } // Ensure string value
                   onChangeText={(text) => {
                     setSeedPackage((prev) => ({
                       ...prev,
@@ -1288,11 +1299,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
   },
-  dateText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333333',
-  },
+
   datePicker: {
     flex: 1,
     backgroundColor: '#ffffff',
