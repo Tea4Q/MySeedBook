@@ -138,6 +138,7 @@ export default function InventoryScreen() {
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const isMounted = useRef(true);
+  const lastPressRef = useRef<number>(0);
 
   // --- 2. Modify Data Loading Logic ---
   const loadSeeds = useCallback(
@@ -395,9 +396,18 @@ export default function InventoryScreen() {
     // return <Sprout size={20} color="#795548" />;
   };
 
+  // Helper to handle double press on a seed item
+  const handleSeedDoublePress = (seed: Seed) => {
+    // Navigate to calendar with params to open add event modal and pre-fill seed name
+    router.push({
+      pathname: '/calendar',
+      params: { openAddEvent: 'true', seedName: seed.seed_name },
+    });
+  };
+
   const renderSeedItem = ({ item: seed }: { item: Seed }) => {
     const isHighlighted = seed.id === highlightedSeedId;
-    const highlightStyle = isHighlighted ? { backgroundColor: '#e6ffed' } : {}; // Example highlight
+    const highlightStyle = isHighlighted ? { backgroundColor: '#e6ffed' } : {};
 
     // Determine the image URI
     function getSeedImageUri(seed: Seed): string {
@@ -416,6 +426,16 @@ export default function InventoryScreen() {
       return 'https://via.placeholder.com/80?text=No+Image';
     }
 
+    // Double press handler
+    let lastPress = 0;
+    const handlePress = () => {
+      const now = Date.now();
+      if (now - lastPress < 350) {
+        handleSeedDoublePress(seed);
+      }
+      lastPress = now;
+    };
+
     return (
       <Swipeable
         ref={(ref) => (swipeableRefs.current[seed.id] = ref)}
@@ -433,12 +453,7 @@ export default function InventoryScreen() {
       >
         <Pressable
           style={[styles.seedItem, highlightStyle]}
-          // onPress={() =>
-          //   router.push({
-          //     pathname: '/add-seed',
-          //     params: { seedId: seed.id, seedName: seed.name },
-          //   })
-          // }
+          onPress={handlePress}
         >
           <Image
             source={{ uri: getSeedImageUri(seed) }}

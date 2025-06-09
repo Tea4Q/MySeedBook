@@ -1,5 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Bed as Seed, ShoppingBag, Calendar, Settings } from 'lucide-react-native';
+import {
+  Sprout as Seed,
+  Tractor,
+  Calendar,
+  Settings,
+  Users,
+} from 'lucide-react-native';
 import React from 'react';
 
 export default function TabLayout() {
@@ -16,7 +22,8 @@ export default function TabLayout() {
           backgroundColor: '#262A2B',
         },
         headerTintColor: '#BCAB92',
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -35,7 +42,14 @@ export default function TabLayout() {
         name="suppliers"
         options={{
           title: 'Suppliers',
-          tabBarIcon: ({ color }) => <ShoppingBag size={24} color={color} />,
+          tabBarIcon: ({ color }) => <Tractor size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="manage-suppliers"
+        options={{
+          title: 'Manage Suppliers',
+          tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Platform,
   Platform,
   View,
   Text,
@@ -29,13 +27,13 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { supabase } from '@../../lib/supabase';
-import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import ReactDatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+
+const lastCalendarClick = useRef<number>(0);
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -120,22 +118,17 @@ export default function CalendarScreen() {
     end: null,
   });
   const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
-  const [isViewEventModalVisible, setIsViewEventModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isEventModalVisible, setIsEventModalVisible] = useState(false);
-  const [lastTap, setLastTap] = useState<number | null>(null);
-  const [markedRange, setMarkedRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({
-    start: null,
-    end: null,
+  const lastTap = useRef<number | null>(null);
+  const [newEvent, setNewEvent] = useState<Partial<PlantingEvent>>({
+    category: 'sow',
+    date: new Date(),
+    seedId: params.seedId as string,
+    seedName: params.seedName as string,
   });
-  const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
-  const [isViewEventModalVisible, setIsViewEventModalVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isEventModalVisible, setIsEventModalVisible] = useState(false);
-  const [lastTap, setLastTap] = useState<number | null>(null);
+  const [daysToGerminate, setDaysToGerminate] = useState('7');
+  const [daysToHarvest, setDaysToHarvest] = useState('80');
 
   // Fetch event when component loads
   useEffect(() => {
@@ -165,10 +158,8 @@ export default function CalendarScreen() {
       if (!data) return;
 
       // Convert date string from database to date
-      const formattedEvents = data.map((event) => ({
-      const formattedEvents = data.map((event) => ({
+      const formattedEvents = data.map((event: any) => ({
         ...event,
-        date: new Date(event.date), // Convert event_date to Date
         date: new Date(event.date), // Convert event_date to Date
         category: event.category as EventCategory,
       }));
@@ -185,9 +176,6 @@ export default function CalendarScreen() {
   const fetchEventsForMonth = async (date: Date) => {
     const startDate = startOfMonth(date).toISOString();
     const endDate = endOfMonth(date).toISOString();
-    const startDate = startOfMonth(date).toISOString();
-    const endDate = endOfMonth(date).toISOString();
-
     try {
       const { data, error } = await supabase
         .from('calendar_events')
@@ -199,7 +187,7 @@ export default function CalendarScreen() {
       if (error) throw error;
       if (!data) return;
 
-      const formattedEvents = data.map((event) => ({
+      const formattedEvents = data.map((event: any) => ({
         ...event,
         id: event.id,
         date: new Date(event.event_date),
@@ -214,15 +202,6 @@ export default function CalendarScreen() {
       console.error('Error fetching events:', error);
     }
   };
-
-  const [newEvent, setNewEvent] = useState<Partial<PlantingEvent>>({
-    category: 'sow',
-    date: new Date(),
-    seedId: params.seedId as string,
-    seedName: params.seedName as string,
-  });
-  const [daysToGerminate, setDaysToGerminate] = useState('7');
-  const [daysToHarvest, setDaysToHarvest] = useState('80');
 
   useEffect(() => {
     const fetchSeedGrowthData = async (seedId: string) => {
@@ -239,7 +218,7 @@ export default function CalendarScreen() {
         }
 
         if (seedData) {
-          setDaysToGerminate(String(seedData.days_to_germination ?? '65'));
+          setDaysToGerminate(String(seedData.days_to_germinate ?? '65'));
           setDaysToHarvest(String(seedData.days_to_harvest ?? '80'));
         } else {
           // Seed not found, keep default values
@@ -250,15 +229,21 @@ export default function CalendarScreen() {
       }
     };
 
-    if (params.seedId && params.seedName) {
+    // Open add event modal if coming from double press in inventory
+    if (params.openAddEvent === 'true') {
+      setIsAddEventModalVisible(true);
+      setNewEvent((prev) => ({
+        ...prev,
+        seedName: params.seedName as string,
+        date: new Date(),
+      }));
+    } else if (params.seedId && params.seedName) {
       setIsModalVisible(true);
       setNewEvent((prev) => ({
         ...prev,
-        ...newEvent,
         seedId: params.seedId as string,
         seedName: params.seedName as string,
       }));
-
       // Fetch seed growth data if seedId is available
       fetchSeedGrowthData(params.seedId as string);
     } else {
@@ -266,7 +251,7 @@ export default function CalendarScreen() {
       // setDaysToGerminate('7');
       // setDaysToHarvest('80');
     }
-  }, [params.seedId, params.seedName]);
+  }, [params.openAddEvent, params.seedId, params.seedName]);
 
   const days = eachDayOfInterval({
     start: startOfMonth(currentDate),
@@ -289,38 +274,14 @@ export default function CalendarScreen() {
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300; // Time in milliseconds
 
-    if (lastTap && now - lastTap < DOUBLE_TAP_DELAY) {
-      // Double-tap detected
-      setSelectedDate(date);
-      setIsEventModalVisible(true);
+    if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
+      // Double-tap detected: open add event modal and pre-fill date
+      setNewEvent((prev) => ({ ...prev, date }));
+      setIsAddEventModalVisible(true);
+      lastTap.current = null; // Reset lastTap to prevent repeated triggers
     } else {
       // Single tap detected, update lastTap
-      setLastTap(now);
-      setMarkedRange({ start: date, end: null }); // Highlight the tapped date
-    }
-  };
-
-  const getEventsForSelectedDate = () => {
-    if (!selectedDate) return [];
-    return events.filter(
-      (event) =>
-        event.date.getDate() === selectedDate.getDate() &&
-        event.date.getMonth() === selectedDate.getMonth() &&
-        event.date.getFullYear() === selectedDate.getFullYear()
-    );
-  };
-
-  const handleDatePress = (date: Date) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300; // Time in milliseconds
-
-    if (lastTap && now - lastTap < DOUBLE_TAP_DELAY) {
-      // Double-tap detected
-      setSelectedDate(date);
-      setIsEventModalVisible(true);
-    } else {
-      // Single tap detected, update lastTap
-      setLastTap(now);
+      lastTap.current = now;
       setMarkedRange({ start: date, end: null }); // Highlight the tapped date
     }
   };
@@ -336,13 +297,6 @@ export default function CalendarScreen() {
   };
 
   const handleAddEvent = async () => {
-    try {
-      //Logic for creating the event
-      if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
-        alert('Please fill in all fields.');
-        return;
-      }
-
     try {
       //Logic for creating the event
       if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
@@ -368,12 +322,6 @@ export default function CalendarScreen() {
       }
 
       console.log('Inserted event:', mainEventData);
-      if (mainEventError) {
-        console.error('Error inserting event:', mainEventError);
-        throw mainEventError;
-      }
-
-      console.log('Inserted event:', mainEventData);
 
       // If it's a sow event, calculate germination and harvest dates
       // and insert them as well
@@ -384,7 +332,6 @@ export default function CalendarScreen() {
           parseInt(daysToHarvest, 10)
         );
 
-        // Insert germination event
         // Insert germination event
         await supabase.from('calendar_events').insert({
           seed_id: newEvent.seedId,
@@ -411,20 +358,12 @@ export default function CalendarScreen() {
       alert('Error adding event. Please try again.');
     }
   };
-  // Your existing logic for adding events
-  // and handling date changes goes here
+
   const handleDateChange = (date: Date) => {
     setNewEvent((prev) => ({ ...prev, date }));
     setShowDatePicker(false);
   };
-    }
-  };
-  // Your existing logic for adding events
-  // and handling date changes goes here
-  const handleDateChange = (date: Date) => {
-    setNewEvent((prev) => ({ ...prev, date }));
-    setShowDatePicker(false);
-  };
+
   const handleDeleteEvent = async (eventId: string) => {
     try {
       const { error } = await supabase
@@ -446,174 +385,165 @@ export default function CalendarScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={previousMonth} style={styles.iconButton}>
-          <ChevronLeft size={24} color="#2f9e44" />
-        </Pressable>
-        <Text style={styles.monthText}>{format(currentDate, 'MMMM yyyy')}</Text>
-        <Pressable onPress={nextMonth} style={styles.iconButton}>
-          <ChevronRight size={24} color="#2f9e44" />
-        </Pressable>
-      </View>
-
-      <View style={styles.calendar}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <Text key={day} style={styles.weekDay}>
-            {day}
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={styles.header}>
+          <Pressable onPress={previousMonth} style={styles.iconButton}>
+            <ChevronLeft size={24} color="#2f9e44" />
+          </Pressable>
+          <Text style={styles.monthText}>
+            {format(currentDate, 'MMMM yyyy')}
           </Text>
-        ))}
+          <Pressable onPress={nextMonth} style={styles.iconButton}>
+            <ChevronRight size={24} color="#2f9e44" />
+          </Pressable>
+        </View>
 
-        {Array.from({ length: startOfMonth(currentDate).getDay() }).map(
-          (_, index) => (
-            <View key={`empty-${index}`} style={styles.emptyDay} />
-          )
-        )}
-        {days.map((date) => {
-          const isInRange =
-            markedRange.start &&
-            markedRange.end &&
-            date >= markedRange.start &&
-            date <= markedRange.end;
-          const isStart =
-            markedRange.start && date.getTime() === markedRange.start.getTime();
-          const isEnd =
-            markedRange.end && date.getTime() === markedRange.end.getTime();
+        <View style={styles.calendar}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <Text key={day} style={styles.weekDay}>
+              {day}
+            </Text>
+          ))}
 
-          const dateEvents = events.filter(
-            (event) =>
-              event.date.getDate() === date.getDate() &&
-              event.date.getMonth() === date.getMonth() &&
-              event.date.getFullYear() === date.getFullYear()
-          );
-          const isInRange =
-            markedRange.start &&
-            markedRange.end &&
-            date >= markedRange.start &&
-            date <= markedRange.end;
-          const isStart =
-            markedRange.start && date.getTime() === markedRange.start.getTime();
-          const isEnd =
-            markedRange.end && date.getTime() === markedRange.end.getTime();
+          {Array.from({ length: startOfMonth(currentDate).getDay() }).map(
+            (_, index) => (
+              <View key={`empty-${index}`} style={styles.emptyDay} />
+            )
+          )}
+          {days.map((date) => {
+            const isInRange =
+              markedRange.start &&
+              markedRange.end &&
+              date >= markedRange.start &&
+              date <= markedRange.end;
+            const isStart =
+              markedRange.start &&
+              date.getTime() === markedRange.start.getTime();
+            const isEnd =
+              markedRange.end && date.getTime() === markedRange.end.getTime();
 
-          const dateEvents = events.filter(
-            (event) =>
-              event.date.getDate() === date.getDate() &&
-              event.date.getMonth() === date.getMonth() &&
-              event.date.getFullYear() === date.getFullYear()
-          );
-          return (
-            <Pressable
-            <Pressable
-              key={date.toISOString()}
-              style={[
-                styles.day,
-                isInRange && styles.dayInRange,
-                isStart && styles.dayStart,
-                isEnd && styles.dayEnd,
-              ]}
-              onPress={() => handleDatePress(date)}
-              style={[
-                styles.day,
-                isInRange && styles.dayInRange,
-                isStart && styles.dayStart,
-                isEnd && styles.dayEnd,
-              ]}
-              onPress={() => handleDatePress(date)}
-            >
-              <Text style={styles.dayText}>{date.getDate()}</Text>
-              <View style={styles.eventIndicators}>
-                {dateEvents.map((event) => (
+            const dateEvents = events.filter(
+              (event) =>
+                event.date.getDate() === date.getDate() &&
+                event.date.getMonth() === date.getMonth() &&
+                event.date.getFullYear() === date.getFullYear()
+            );
+
+            // Use custom double-click detection for web as well
+            const handleDayPress = () => {
+              if (Platform.OS === 'web') {
+                const now = Date.now();
+                const DOUBLE_CLICK_DELAY = 300;
+                if (
+                  lastCalendarClick.current &&
+                  now - lastCalendarClick.current < DOUBLE_CLICK_DELAY
+                ) {
+                  handleDatePress(date);
+                  lastCalendarClick.current = 0;
+                } else {
+                  lastCalendarClick.current = now;
+                  setMarkedRange({ start: date, end: null });
+                }
+              } else {
+                handleDatePress(date);
+              }
+            };
+
+            return (
+              <Pressable
+                key={date.toISOString()}
+                style={[
+                  styles.day,
+                  isInRange && styles.dayInRange,
+                  isStart && styles.dayStart,
+                  isEnd && styles.dayEnd,
+                ]}
+                onPress={handleDayPress}
+              >
+                <Text style={styles.dayText}>{date.getDate()}</Text>
+                <View style={styles.eventIndicators}>
+                  {dateEvents.map((event) => (
+                    <View
+                      key={event.id}
+                      style={[
+                        styles.eventIndicator,
+                        { backgroundColor: CATEGORY_COLORS[event.category] },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Pressable
+          style={styles.resetButton}
+          onPress={() => setMarkedRange({ start: null, end: null })}
+        >
+          <Text style={styles.resetButtonText}>Reset Range</Text>
+        </Pressable>
+
+        <View style={styles.addEventContainer}>
+          <Pressable
+            style={styles.addEventButton}
+            onPress={() => setIsAddEventModalVisible(true)}
+          >
+            <Plus size={24} color="#ffffff" />
+            <Text style={styles.addEventText}>Add Event</Text>
+          </Pressable>
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2f9e44" />
+            <Text style={styles.loadingText}>Loading events...</Text>
+          </View>
+        ) : (
+          <ScrollView style={styles.eventList}>
+            <Text style={styles.eventListTitle}>Events this month</Text>
+            {events
+              .filter(
+                (event) =>
+                  event.date.getMonth() === currentDate.getMonth() &&
+                  event.date.getFullYear() === currentDate.getFullYear()
+              )
+              .map((event) => (
+                <View key={event.id} style={styles.eventItem}>
                   <View
-                    key={event.id}
                     style={[
-                      styles.eventIndicator,
+                      styles.eventDot,
                       { backgroundColor: CATEGORY_COLORS[event.category] },
                     ]}
                   />
-                ))}
-              </View>
-            </Pressable>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Pressable
-        style={styles.resetButton}
-        onPress={() => setMarkedRange({ start: null, end: null })}
-      >
-        <Text style={styles.resetButtonText}>Reset Range</Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.resetButton}
-        onPress={() => setMarkedRange({ start: null, end: null })}
-      >
-        <Text style={styles.resetButtonText}>Reset Range</Text>
-      </Pressable>
-
-      <View style={styles.addEventContainer}>
-        <Pressable
-          style={styles.addEventButton}
-          onPress={() => setIsAddEventModalVisible(true)}
-          onPress={() => setIsAddEventModalVisible(true)}
-        >
-          <Plus size={24} color="#ffffff" />
-          <Text style={styles.addEventText}>Add Event</Text>
-        </Pressable>
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2f9e44" />
-          <Text style={styles.loadingText}>Loading events...</Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.eventList}>
-          <Text style={styles.eventListTitle}>Events this month</Text>
-          {events
-            .filter(
-              (event) =>
-                event.date.getMonth() === currentDate.getMonth() &&
-                event.date.getFullYear() === currentDate.getFullYear()
-            )
-            .map((event) => (
-              <View key={event.id} style={styles.eventItem}>
-                <View
-                  style={[
-                    styles.eventDot,
-                    { backgroundColor: CATEGORY_COLORS[event.category] },
-                  ]}
-                />
-                <View style={styles.eventDetails}>
-                  <Text style={styles.eventCategory}>
-                    {CATEGORY_LABELS[event.category]}
-                  </Text>
-                  <Text style={styles.eventDate}>
-                    {format(event.date, 'MMMM d, yyyy')}
-                  </Text>
-                  <Text style={styles.eventText}>{event.seedName}</Text>
-                  {event.notes && (
-                    <Text style={styles.eventNotes}>{event.notes}</Text>
-                  )}
+                  <View style={styles.eventDetails}>
+                    <Text style={styles.eventCategory}>
+                      {CATEGORY_LABELS[event.category]}
+                    </Text>
+                    <Text style={styles.eventDate}>
+                      {format(event.date, 'MMMM d, yyyy')}
+                    </Text>
+                    <Text style={styles.eventText}>{event.seedName}</Text>
+                    {event.notes && (
+                      <Text style={styles.eventNotes}>{event.notes}</Text>
+                    )}
+                  </View>
+                  <Pressable
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteEvent(event.id)}
+                  >
+                    <Trash2 size={20} color="#e03131" />
+                  </Pressable>
                 </View>
-                <Pressable
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteEvent(event.id)}
-                >
-                  <Trash2 size={20} color="#e03131" />
-                </Pressable>
-              </View>
-            ))}
-        </ScrollView>
-      )}
+              ))}
+          </ScrollView>
+        )}
+      </ScrollView>
 
       <Modal
         visible={isAddEventModalVisible}
-        visible={isAddEventModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsAddEventModalVisible(false)}
         onRequestClose={() => setIsAddEventModalVisible(false)}
       >
         <View style={styles.modalContainer}>
@@ -623,7 +553,6 @@ export default function CalendarScreen() {
               <Pressable
                 style={styles.closeButton}
                 onPress={() => setIsAddEventModalVisible(false)}
-                onPress={() => setIsAddEventModalVisible(false)}
               >
                 <X size={24} color="#666666" />
               </Pressable>
@@ -631,17 +560,15 @@ export default function CalendarScreen() {
 
             <ScrollView style={styles.modalScroll}>
               {/* Add Event Form */}
-              {/* Add Event Form */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Seed Name</Text>
                 <TextInput
                   style={styles.input}
-                  value={newEvent.seedName}
+                  value={newEvent.seedName ?? ''}
                   onChangeText={(text) =>
                     setNewEvent({ ...newEvent, seedName: text })
                   }
                   placeholder="Enter seed name"
-                  editable={!params.seedName}
                   editable={!params.seedName}
                 />
               </View>
@@ -694,13 +621,6 @@ export default function CalendarScreen() {
                       setShowDatePicker(true); // For mobile, show the native DateTimePicker
                     }
                   }}
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      setShowDatePicker(true); // For web, show the ReactDatePicker
-                    } else {
-                      setShowDatePicker(true); // For mobile, show the native DateTimePicker
-                    }
-                  }}
                 >
                   <Text style={styles.dateText}>
                     {newEvent.date
@@ -712,14 +632,16 @@ export default function CalendarScreen() {
 
                 {/* Web Date Picker */}
                 {Platform.OS === 'web' && showDatePicker && (
-                  <ReactDatePicker
-                    selected={newEvent.date}
-                    onChange={(date: Date | null) => {
-                      if (date) handleDateChange(date);
-                    }}
-                    onClickOutside={() => setShowDatePicker(false)}
-                    inline
-                  />
+                  <View style={styles.modalDatePickerWrapper}>
+                    <ReactDatePicker
+                      selected={newEvent.date}
+                      onChange={(date: Date | null) => {
+                        if (date) handleDateChange(date);
+                      }}
+                      onClickOutside={() => setShowDatePicker(false)}
+                      inline
+                    />
+                  </View>
                 )}
 
                 {/* Mobile Date Picker */}
@@ -730,7 +652,6 @@ export default function CalendarScreen() {
                     display="default"
                     onChange={(event, selectedDate) => {
                       if (selectedDate) {
-                        handleDateChange(selectedDate);
                         handleDateChange(selectedDate);
                       }
                     }}
@@ -781,56 +702,6 @@ export default function CalendarScreen() {
               <Pressable style={styles.addButton} onPress={handleAddEvent}>
                 <Text style={styles.addButtonText}>Add Event</Text>
               </Pressable>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isEventModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsEventModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Events for{' '}
-                {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : ''}
-              </Text>
-              <Pressable
-                style={styles.closeButton}
-                onPress={() => setIsEventModalVisible(false)}
-              >
-                <X size={24} color="#666666" />
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.modalScroll}>
-              {getEventsForSelectedDate().length > 0 ? (
-                getEventsForSelectedDate().map((event) => (
-                  <View key={event.id} style={styles.eventItem}>
-                    <View
-                      style={[
-                        styles.eventDot,
-                        { backgroundColor: CATEGORY_COLORS[event.category] },
-                      ]}
-                    />
-                    <View style={styles.eventDetails}>
-                      <Text style={styles.eventCategory}>
-                        {CATEGORY_LABELS[event.category]}
-                      </Text>
-                      <Text style={styles.eventText}>{event.seedName}</Text>
-                      {event.notes && (
-                        <Text style={styles.eventNotes}>{event.notes}</Text>
-                      )}
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noEventsText}>No events for this day.</Text>
-              )}
             </ScrollView>
           </View>
         </View>
@@ -958,18 +829,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff8787',
     borderRadius: 8,
   },
-  dayInRange: {
-    backgroundColor: '#d3f9d8',
-    borderRadius: 8,
-  },
-  dayStart: {
-    backgroundColor: '#74c0fc',
-    borderRadius: 8,
-  },
-  dayEnd: {
-    backgroundColor: '#ff8787',
-    borderRadius: 8,
-  },
   eventIndicators: {
     flexDirection: 'row',
     gap: 2,
@@ -995,18 +854,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addEventText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  resetButton: {
-    backgroundColor: '#e03131',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    margin: 16,
-  },
-  resetButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
@@ -1077,7 +924,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center', // Changed from 'flex-end' to 'center'
   },
   modalContent: {
     backgroundColor: '#ffffff',
@@ -1176,6 +1023,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
+  // Add a compact, centered modal date picker wrapper
+  modalDatePickerWrapper: {
+    alignSelf: 'center',
+    maxWidth: 320,
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   dateText: {
     fontSize: 16,
     color: '#212529',
@@ -1189,12 +1051,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     color: '#666666',
-  },
-  noEventsText: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 16,
   },
   noEventsText: {
     fontSize: 16,

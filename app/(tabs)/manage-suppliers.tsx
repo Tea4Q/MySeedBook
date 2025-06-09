@@ -8,7 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { Search, Plus, CreditCard as Edit2 } from 'lucide-react-native';
+import { Search, Plus, CreditCard as Pencil } from 'lucide-react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
@@ -138,7 +138,7 @@ export default function ManageSuppliersScreen() {
                   asChild
                 >
                   <Pressable style={styles.editButton}>
-                    <Edit2 size={20} color="#336633" />
+                    <Pencil size={20} color="#336633" />
                   </Pressable>
                 </Link>
               </View>
@@ -156,11 +156,6 @@ export default function ManageSuppliersScreen() {
                   Address: {supplier.address}
                 </Text>
               )}
-              {/* {supplier.payment_terms && (
-                <Text style={styles.detailText}>
-                  Payment Terms: {supplier.payment_terms}
-                </Text>
-              )} */}
             </View>
 
             {supplier.notes && (
