@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import DatePicker from 'react-native-date-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
 
 interface DatePickerFieldProps {
@@ -36,7 +37,8 @@ export default function DatePickerField({
       </Text>
       <Pressable
         style={[styles.button, error && styles.buttonError]}
-        onPress={() => setOpen(true)}>
+        onPress={() => setOpen(true)}
+      >
         <Text style={[styles.buttonText, !value && styles.placeholder]}>
           {value ? formatDate(value) : 'Select date'}
         </Text>
@@ -44,19 +46,19 @@ export default function DatePickerField({
       </Pressable>
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <DatePicker
-        modal
-        mode="date"
-        open={open}
-        date={value || new Date()}
-        onConfirm={(date) => {
-          setOpen(false);
-          onChange(date);
-        }}
-        onCancel={() => {
-          setOpen(false);
-        }}
-      />
+      {open && (
+        <DateTimePicker
+          value={value || new Date()}
+          mode="date"
+          display="default"
+          onChange={(_, selectedDate) => {
+            setOpen(false);
+            if (selectedDate) {
+              onChange(selectedDate);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }

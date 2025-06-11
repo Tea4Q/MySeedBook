@@ -11,7 +11,7 @@ import { useTheme } from '@/lib/theme';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
   const router = useRouter(); // Get router instance
   const [fontsLoaded, fontError] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
@@ -21,7 +21,7 @@ function RootLayoutNav() {
   const byPassLoginOnAndroid = true; // Your bypass flag
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
-  const isAppReady = !authLoading && (fontsLoaded || fontError);
+  const isAppReady = (fontsLoaded || fontError);
   // Determine authentication status (considering bypass)
   const isAuthenticated =
     !!session || (byPassLoginOnAndroid && Platform.OS === 'android');
@@ -58,7 +58,7 @@ function RootLayoutNav() {
         <Stack.Screen name="add-seed" />
         <Stack.Screen name="add-supplier" />
         <Stack.Screen name="edit-supplier/[id]" />
-        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth" />
         {/* Add signup if needed */}
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />

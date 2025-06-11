@@ -102,11 +102,12 @@ export default function AddSupplierForm({
         error: userError,
       } = await supabase.auth.getUser();
       if (userError || !user) throw new Error(userError?.message || 'User not authenticated');
-      const imagesToSave = supplierData.supplier_images.map((img) => img.url);
+      // Save full image objects, not just URLs
+      const imagesToSave = supplierData.supplier_images.map((img) => ({ type: img.type, url: img.url }));
       const supplierDataToSave = {
         ...formData,
         user_id: user.id,
-        supplier_images: imagesToSave,
+        supplier_images: imagesToSave, // Save as array of objects
         updated_at: new Date().toISOString(),
       };
       const { data: createdSupplier, error: insertError } = await supabase

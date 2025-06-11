@@ -32,8 +32,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import {useRouter} from 'expo-router';
 
-const lastCalendarClick = useRef<number>(0);
-
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
 interface PlantingEvent {
@@ -123,8 +121,6 @@ export default function CalendarScreen() {
   const [newEvent, setNewEvent] = useState<Partial<PlantingEvent>>({
     category: 'sow',
     date: new Date(),
-    seedId: params.seedId as string,
-    seedName: params.seedName as string,
   });
   const [daysToGerminate, setDaysToGerminate] = useState('7');
   const [daysToHarvest, setDaysToHarvest] = useState('80');
@@ -202,54 +198,46 @@ export default function CalendarScreen() {
     }
   };
 
-  useEffect(() => {
-    const fetchSeedGrowthData = async (seedId: string) => {
-      try {
-        const { data: seedData, error } = await supabase
-          .from('seeds')
-          .select('days_to_germinate, days_to_harvest')
-          .eq('id', seedId)
-          .maybeSingle(); //Use maybeSingle as we expect one or zero results
-        if (error) {
-          console.error('Error fetching seed data:', error);
-          // Keep default values if fetch fails
-          return;
-        }
-
-        if (seedData) {
-          setDaysToGerminate(String(seedData.days_to_germinate ?? '65'));
-          setDaysToHarvest(String(seedData.days_to_harvest ?? '80'));
-        } else {
-          // Seed not found, keep default values
-          console.warn(`Seed with ID ${seedId} not found.`);
-        }
-      } catch (error) {
+  // Fetch seed growth data (days to germinate/harvest) by seedId
+  const fetchSeedGrowthData = async (seedId: string) => {
+    try {
+      const { data: seedData, error } = await supabase
+        .from('seeds')
+        .select('days_to_germinate, days_to_harvest')
+        .eq('id', seedId)
+        .maybeSingle();
+      if (error) {
         console.error('Error fetching seed data:', error);
+        // Keep default values if fetch fails
+        setDaysToGerminate('7');
+        setDaysToHarvest('80');
+        return;
       }
-    };
-
-    // Open add event modal if coming from double press in inventory
-    if (params.openAddEvent === 'true') {
-      setIsAddEventModalVisible(true);
-      setNewEvent((prev) => ({
-        ...prev,
-        seedName: params.seedName as string,
-        date: new Date(),
-      }));
-    } else if (params.seedId && params.seedName) {
-      setIsModalVisible(true);
-      setNewEvent((prev) => ({
-        ...prev,
-        seedId: params.seedId as string,
-        seedName: params.seedName as string,
-      }));
-      // Fetch seed growth data if seedId is available
-      fetchSeedGrowthData(params.seedId as string);
-    } else {
-      // Reset to defaults if navigating without seed params (optional)
-      // setDaysToGerminate('7');
-      // setDaysToHarvest('80');
+      if (seedData) {
+        setDaysToGerminate(String(seedData.days_to_germinate ?? '7'));
+        setDaysToHarvest(String(seedData.days_to_harvest ?? '80'));
+      } else {
+        // Seed not found, keep default values
+        setDaysToGerminate('7');
+        setDaysToHarvest('80');
+        console.warn(`Seed with ID ${seedId} not found.`);
+      }
+    } catch (error) {
+      setDaysToGerminate('7');
+      setDaysToHarvest('80');
+      console.error('Error fetching seed data:', error);
     }
+  };
+
+  // Open add event modal if coming from double press in inventory
+  useEffect(() => {
+    if (params.openAddEvent === 'true') {
+      openAddEventModal({ seedId: params.seedId as string, seedName: params.seedName as string });
+    } else if (params.seedId && params.seedName) {
+      setIsModalVisible(true); // If you still want to show the event list modal
+      openAddEventModal({ seedId: params.seedId as string, seedName: params.seedName as string });
+    }
+    // else do nothing (default state)
   }, [params.openAddEvent, params.seedId, params.seedName]);
 
   const days = eachDayOfInterval({
@@ -274,8 +262,7 @@ export default function CalendarScreen() {
     const DOUBLE_TAP_DELAY = 300;
     if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
       // Double-tap detected: open add event modal and pre-fill date
-      setNewEvent((prev) => ({ ...prev, date }));
-      setIsAddEventModalVisible(true);
+      openAddEventModal({ date });
       lastTap.current = null;
     } else {
       // Single tap: highlight the date
@@ -397,10 +384,23 @@ export default function CalendarScreen() {
     }
   };
 
-  // Debug: log when Add Event modal visibility changes
-  useEffect(() => {
-    console.log('Add Event Modal visible:', isAddEventModalVisible);
-  }, [isAddEventModalVisible]);
+  // Centralized function to open Add Event modal with pre-filled data
+  const openAddEventModal = ({ seedId, seedName, date }: { seedId?: string; seedName?: string; date?: Date }) => {
+    setNewEvent({
+      category: 'sow',
+      date: date || new Date(),
+      seedId: seedId || '',
+      seedName: seedName || '',
+    });
+    setIsAddEventModalVisible(true);
+    // Optionally fetch seed growth data if seedId is provided
+    if (seedId) {
+      fetchSeedGrowthData(seedId);
+    } else {
+      setDaysToGerminate('7');
+      setDaysToHarvest('80');
+    }
+  };
 
   // Inject responsive CSS for web to ensure row wraps vertically on mobile devices
   useEffect(() => {
@@ -497,6 +497,7 @@ export default function CalendarScreen() {
             );
 
             return (
+              
               <Pressable
                 key={date.toISOString()}
                 style={[
@@ -531,12 +532,12 @@ export default function CalendarScreen() {
           <Text style={styles.resetButtonText}>Reset Range</Text>
         </Pressable>
 
+        {/* Add Event Button */}
         <View style={styles.addEventContainer}>
           <Pressable
             style={styles.addEventButton}
             onPress={() => {
-              console.log('Add Event button pressed');
-              setIsAddEventModalVisible(true);
+              openAddEventModal({});
             }}
           >
             <Plus size={24} color="#ffffff" />
@@ -590,6 +591,7 @@ export default function CalendarScreen() {
         )}
       </ScrollView>
 
+      {/* Add Event Modal */}
       <Modal
         visible={isAddEventModalVisible}
         animationType="slide"
@@ -608,6 +610,7 @@ export default function CalendarScreen() {
               </Pressable>
             </View>
 
+            { /* Show Event List */}
             <ScrollView style={styles.modalScroll}>
               {/* Add Event Form */}
               <View style={styles.inputGroup}>
@@ -623,6 +626,7 @@ export default function CalendarScreen() {
                 />
               </View>
 
+              {/* Event Type  Event Date Row */}
               <View style={styles.row}>
                 <View style={styles.rowInputGroup}>
                   <Text style={styles.label}>Event Type</Text>
@@ -709,6 +713,8 @@ export default function CalendarScreen() {
                 </View>
               </View>
 
+              {/* Days to Germination and Harvest */}
+
               {newEvent.category === 'sow' && (
                 <View style={styles.calculationContainer}>
                   <View style={styles.inputGroup}>
@@ -735,6 +741,7 @@ export default function CalendarScreen() {
                 </View>
               )}
 
+              {/* Notes */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Notes</Text>
                 <TextInput
@@ -749,6 +756,8 @@ export default function CalendarScreen() {
                 />
               </View>
 
+
+              {/* Submit Button */}
               <Pressable style={styles.addButton} onPress={handleAddEvent}>
                 <Text style={styles.addButtonText}>Add Event</Text>
               </Pressable>
@@ -757,6 +766,7 @@ export default function CalendarScreen() {
         </View>
       </Modal>
 
+      {/* Events Modal*/}
       <Modal
         visible={isEventModalVisible}
         animationType="slide"
@@ -922,21 +932,15 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16, // Add space between columns
-    marginBottom: 8,
+    gap: 8, // Add space between columns
     flexWrap: 'wrap', // Allow wrapping on small screens
   },
   rowInputGroup: {
     flex: 1,
+    gap: 8, // Add space between label and input
     alignItems: 'center', // Center content horizontally
-    justifyContent: 'center', // Center content vertically
-    minWidth: 200,
-    maxWidth: 260,
-    width: '100%',
-    paddingVertical: 12, // Add vertical space
-    marginBottom: 8,
   },
   eventList: {
     flex: 1,

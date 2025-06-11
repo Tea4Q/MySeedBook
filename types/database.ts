@@ -39,7 +39,6 @@ export interface Seed {
   notes?: string;
   user_id: string;
   description?: string;
-  suppliers: Supplier | null; // The nested object after joining suppliers table
   deleted_at?: string | null; // Soft delete field
 }
 

@@ -151,7 +151,10 @@ export default function SupplierListScreen() {
       style={styles.itemContainer}
     >
       {item.supplier_images && (
-        <Image source={{ uri: item.supplier_images }} style={styles.itemImage} />
+        <Image
+          source={{ uri: item.supplier_images }}
+          style={styles.itemImage}
+        />
       )}
       <View style={styles.itemTextContainer}>
         <Text style={styles.itemText}>{item.supplier_name}</Text>
