@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Expo App (Attach to Packager)",
+      "request": "attach",
+      "type": "reactnative",
+      "cwd": "${workspaceFolder}",
+      "port": 19000,
+      "sourceMaps": true,
+      "preLaunchTask": "startExpo"
+    }
+  ]
+}
