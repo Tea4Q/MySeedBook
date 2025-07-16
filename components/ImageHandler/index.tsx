@@ -15,29 +15,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
 
-// Utility function to safely log URIs (truncates data URIs to prevent performance issues)
-const safeLogUri = (uri: string | undefined, label: string = 'URI') => {
-  if (!uri) {
-    console.log(`${label}: undefined`);
-    return;
-  }
-
-  // Check for very large data URIs that might cause performance issues
-  if (uri.startsWith('data:') && uri.length > 100000) {
-    console.log(
-      `${label}: Large data URI (${Math.round(
-        uri.length / 1024
-      )}KB) - truncated for logging`
-    );
-    return;
-  }
-
-  const logUri = uri.startsWith('data:')
-    ? `${uri.substring(0, 50)}... (data URI truncated)`
-    : uri;
-  console.log(`${label}:`, logUri);
-};
-
 // Define the Imageinfo interface
 interface Imageinfo {
   id: string;
@@ -74,15 +51,10 @@ const validateImageUrl = async (url: string, retries = 2): Promise<boolean> => {
       ]);
       
       if (response instanceof Response && (response.ok || response.status === 206)) {
-        console.log('Image URL validation successful');
         return true;
       }
-      console.log(
-        `Image validation attempt ${i + 1} failed with status:`,
-        response instanceof Response ? response.status : 'Unknown'
-      );
     } catch (error) {
-      console.log(`Image validation attempt ${i + 1} failed:`, error);
+      // Silent failure, will retry
     }
 
     // Wait before retry (longer delay for Supabase URLs)
@@ -91,7 +63,6 @@ const validateImageUrl = async (url: string, retries = 2): Promise<boolean> => {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  console.log('Image URL validation failed after all retries');
   return false;
 };
 
@@ -117,8 +88,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     async (localUri: string) => {
       if (!localUri) return;
 
-      safeLogUri(localUri, 'handleLocalImageSelected called with localUri');
-
       const imageId = uuidv4();
       const newImage = {
         id: imageId,
@@ -128,11 +97,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         isLoading: true,
       };
 
-      console.log('Adding new image to state with ID:', imageId); // Debug log (safe)
-
       setImages((prevImages) => {
-        const newImages = [...prevImages, newImage];
-        console.log('Updated images array:', newImages); // Debug log
+        // Check if we should replace all existing images with this new one
+        // This happens when the user uploads their first image to replace defaults/mock data
+        const shouldReplaceAll = prevImages.length > 0 && 
+          prevImages.every(img => 
+            // Replace if all existing images are external URLs (likely mock/default data)
+            img.type === 'url' || 
+            // Or if any existing image URLs contain common stock photo domains
+            (img.url && (
+              img.url.includes('unsplash.com') || 
+              img.url.includes('pexels.com') || 
+              img.url.includes('pixabay.com') ||
+              img.url.includes('butterfly-pea-blue')
+            ))
+          );
+
+        const newImages = shouldReplaceAll ? [newImage] : [...prevImages, newImage];
         return newImages;
       });
       try {
@@ -154,10 +135,8 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         const fileName = `${Date.now()}_${uuidv4().substring(
           0,
           8
-        )}.${extensionToUse}`; // Organize files in user-specific folders for better security
+        )}.${extensionToUse}`;        // Organize files in user-specific folders for better security
         const filePath = `${user.id}/${fileName}`;
-
-        console.log('Uploading to path:', filePath); // Debug log
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(bucketName) // Use bucketName prop
@@ -168,15 +147,12 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           });
         if (uploadError) throw uploadError;
 
-        console.log('Upload data:', uploadData); // Debug log
-
         const { data: publicUrlData } = supabase.storage
           .from(bucketName) // Use bucketName prop
           .getPublicUrl(filePath);
         if (!publicUrlData?.publicUrl) {
           throw new Error('Could not get public URL for the uploaded image.');
         }
-        console.log('Upload success, public URL:', publicUrlData.publicUrl); // Log the public URL
 
         // Set the image as uploaded with the URL
         // Skip validation for now since Supabase URLs may not be immediately accessible
@@ -192,13 +168,9 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                 }
               : img
           );
-          console.log('Image state updated after upload, image with ID', imageId, 'now has URL:', publicUrlData.publicUrl);
           return updatedImages;
         });
 
-        console.log('Image upload completed successfully');
-        console.log('Note: In development mode, Supabase URLs may be blocked by browser security policies');
-        console.log('If the Supabase URL fails to load, the component will automatically fall back to the local preview');
       } catch (error: any) {
         console.error('Upload failed:', error);
         setImages((prevImages) =>
@@ -247,7 +219,25 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       localUri: webImageUrlInput.trim(),
       isLoading: true,
     };
-    setImages((prevImages) => [...prevImages, newImageEntry]);
+    
+    setImages((prevImages) => {
+      // Check if we should replace all existing images with this new one
+      // This happens when the user adds their first image to replace defaults/mock data
+      const shouldReplaceAll = prevImages.length > 0 && 
+        prevImages.every(img => 
+          // Replace if all existing images are external URLs (likely mock/default data)
+          img.type === 'url' || 
+          // Or if any existing image URLs contain common stock photo domains
+          (img.url && (
+            img.url.includes('unsplash.com') || 
+            img.url.includes('pexels.com') || 
+            img.url.includes('pixabay.com') ||
+            img.url.includes('butterfly-pea-blue')
+          ))
+        );
+
+      return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
+    });
 
     try {
       const response = await fetch(webImageUrlInput.trim());
@@ -355,8 +345,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         return;
       }
 
-      console.log('Launching image picker...'); // Debug log
-
       // Use Expo ImagePicker or any other library to select an image
       // Example using Expo ImagePicker:
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -366,14 +354,9 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         quality: 1,
       });
 
-      console.log('Image picker result:', result); // Debug log
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const localUri = result.assets[0].uri;
-        safeLogUri(localUri, 'Selected image URI');
         handleLocalImageSelected(localUri);
-      } else {
-        console.log('Image picker was canceled or no assets found'); // Debug log
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -384,33 +367,16 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   useEffect(() => {
     // Only notify parent when images actually change
     // Don't include onImagesChange in dependencies to prevent infinite loops
-    console.log('onImagesChange called with', images.length, 'images');
-    console.log('Images being passed to parent:', images.map(img => ({
-      id: img.id,
-      type: img.type,
-      url: img.url,
-      isLoading: img.isLoading,
-      error: img.error
-    })));
     onImagesChange(images);
   }, [images]); // Only depend on images, not onImagesChange
 
   // --- Render ---
   return (
     <View>
-      {/* Display Images */}
-      {images.map((image) => {
-        console.log(
-          'Rendering image:',
-          image.id,
-          'type:',
-          image.type,
-          'loading:',
-          image.isLoading
-        ); // Debug log (safe)
+      {/* Display Images - Limit to first 3 images to prevent excessive scrolling */}
+      {images.slice(0, 3).map((image) => {
         // Try Supabase URL first, fallback to localUri if available
         const imageUri = image.url || image.localUri;
-        safeLogUri(imageUri, 'Image URI'); // Debug log with safe URI logging
         return (
           <View key={image.id} style={styles.imageContainer}>
             {imageUri ? (
@@ -427,7 +393,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                   }}
                   style={styles.previewImage}
                   onError={(error) => {
-                    safeLogUri(imageUri, 'Image load error for URI');
                     // If Supabase URL fails and we have a localUri, try to fallback
                     if (image.url && image.localUri && imageUri === image.url) {
                       console.log('Supabase URL failed to load, falling back to localUri');
@@ -454,7 +419,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                     }
                   }}
                   onLoad={() => {
-                    safeLogUri(imageUri, 'Image loaded successfully');
                     // No state updates needed on successful load - this prevents unnecessary re-renders
                   }}
                 />
@@ -513,7 +477,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                 {image.url && (
                   <Pressable
                     onPress={async () => {
-                      console.log('Retrying image load for:', image.url);
                       const isValid = await validateImageUrl(image.url);
                       if (isValid) {
                         setImages((prevImages) =>
@@ -546,6 +509,20 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           </View>
         );
       })}
+      {/* Show notification if there are more than 3 images */}
+      {images.length > 3 && (
+        <View style={{ 
+          backgroundColor: '#f3f4f6', 
+          padding: 8, 
+          borderRadius: 8, 
+          marginBottom: 12,
+          alignItems: 'center' 
+        }}>
+          <Text style={{ color: '#6b7280', fontSize: 14 }}>
+            {images.length - 3} more image(s) not shown. First 3 displayed for performance.
+          </Text>
+        </View>
+      )}
       {/* Add Image from Web URL */}
       <View style={styles.addUrlSection}>
         <TextInput
@@ -578,6 +555,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
+    maxHeight: 250, // Prevent images from taking up too much space
   },
   imageloadingIndicator: {
     position: 'absolute',
@@ -598,7 +576,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   addUrlSection: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,

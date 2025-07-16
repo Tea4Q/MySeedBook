@@ -3,6 +3,9 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
@@ -10,11 +13,13 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const { session } = useAuth();
   const router = useRouter(); // Get router instance
+  const insets = useSafeAreaInsets();
   const [fontsLoaded, fontError] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
-  });  const byPassLoginOnAndroid = false; // Disable bypass to show login screen
-  
+  });
+  const byPassLoginOnAndroid = false; // Disable bypass to show login screen
+
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
   const isAppReady = fontsLoaded || fontError;
   // Determine authentication status - only consider actual session
@@ -45,6 +50,18 @@ function RootLayoutNav() {
   // Include all possible screens that can be navigated to directly.
   return (
     <>
+      {/* Status bar background */}
+      <View 
+        style={{ 
+          height: insets.top, 
+          backgroundColor: '#000000',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000
+        }} 
+      />
       <Stack screenOptions={{ headerShown: false }}>
         {/* Screens accessible regardless of auth state initially */}
         {/* Let the useEffect handle redirecting */}
@@ -57,15 +74,17 @@ function RootLayoutNav() {
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="light" backgroundColor="#000000" />
+      <StatusBar style="light" />
     </>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

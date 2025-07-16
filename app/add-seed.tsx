@@ -44,6 +44,8 @@ import {
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
+import SmartImage from '@/components/SmartImage'; // Import SmartImage
+import DevBanner from '@/components/DevBanner'; // Import DevBanner
 import { SupplierSelect } from '@/components/SupplierSelect';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker'; // For mobile date picker
@@ -269,12 +271,8 @@ export default function AddOrEditSeedScreen() {
     setIsSubmitting(true);
     setErrors({}); // Clear previous submit errors    
     
-    // Debug: Log the raw seed_images data
-    console.log('Raw seedPackage.seed_images:', seedPackage.seed_images);
-    
     // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
-    console.log('Image array to process:', imageArray);
     
     const imagesToSave = imageArray
       .filter((img) => {
@@ -284,24 +282,12 @@ export default function AddOrEditSeedScreen() {
         const notLoading = !img.isLoading;
         const isUploadError = img.error && !img.error.includes('Using local preview');
         
-        console.log('Filtering image:', {
-          id: img.id,
-          url: img.url,
-          hasValidUrl,
-          notLoading,
-          isUploadError,
-          error: img.error,
-          willInclude: hasValidUrl && notLoading && !isUploadError
-        });
-        
         return hasValidUrl && notLoading && !isUploadError;
       })
       .map((img) => ({
         type: img.type,
         url: img.url,
       }));
-
-    console.log('Images to save after filtering:', imagesToSave);
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
@@ -320,9 +306,6 @@ export default function AddOrEditSeedScreen() {
 
     // Remove client-side only fields or fields not directly in 'seeds' table
     delete payload.suppliers; // Remove joined supplier data - not a column in seeds table
-
-    console.log('Final payload to be saved:', payload);
-    console.log('Payload seed_images specifically:', payload.seed_images);
 
     if (!isEditing) {
       delete payload.id; // Remove ID for new seed creation
@@ -551,6 +534,7 @@ export default function AddOrEditSeedScreen() {
   // --- Render the component ---
   return (
     <View style={styles.container}>
+      <DevBanner />
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -594,23 +578,29 @@ export default function AddOrEditSeedScreen() {
           seedPackage.seed_images.length > 0 && (
             <View style={styles.thumbnailRow}>
               {(seedPackage.seed_images as Imageinfo[])
-                .filter((img) => img.url && img.url.trim() !== '') // Only show thumbnails for images with valid URLs
-                .map((img) => (
-                <TouchableOpacity
-                  key={img.id}
-                  onPress={() => {
-                    setSelectedImageUrl(img.url);
-                    setModalVisible(true);
-                  }}
-                  style={styles.thumbnailWrapper}
-                >
-                  <Image
-                    source={{ uri: img.url }}
-                    style={styles.thumbnailImage}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              ))}
+                .filter((img) => (img.url && img.url.trim() !== '') || (img.localUri && img.localUri.trim() !== '')) // Show thumbnails for images with valid URLs or localUri
+                .map((img) => {
+                  return (
+                    <TouchableOpacity
+                      key={img.id}
+                      onPress={() => {
+                        // Use localUri for modal if available, otherwise use url
+                        const selectedUri = img.localUri || img.url;
+                        setSelectedImageUrl(selectedUri);
+                        setModalVisible(true);
+                      }}
+                      style={styles.thumbnailWrapper}
+                    >
+                      <SmartImage
+                        uri={img.url}
+                        localUri={img.localUri}
+                        style={styles.thumbnailImage}
+                        resizeMode="cover"
+                        showDebugInfo={false} // Reduce console noise
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
             </View>
           )}
         <Modal
@@ -626,10 +616,11 @@ export default function AddOrEditSeedScreen() {
             />
             <View style={styles.modalContent}>
               {selectedImageUrl && (
-                <Image
-                  source={{ uri: selectedImageUrl }}
+                <SmartImage
+                  uri={selectedImageUrl}
                   style={styles.fullImage}
                   resizeMode="contain"
+                  showDebugInfo={false}
                 />
               )}
             </View>
@@ -1099,6 +1090,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
+    maxHeight: 300, // Prevent image section from taking up too much space on mobile
   },
   imageloadingIndicator: {
     position: 'absolute',

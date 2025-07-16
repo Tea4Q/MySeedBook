@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,6 @@ export default function EditSupplierScreen() {
     email: '',
     phone: '',
     address: '',
-    payment_terms: '',
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +61,6 @@ export default function EditSupplierScreen() {
           email: data.email || '',
           phone: data.phone || '',
           address: data.address || '',
-          payment_terms: data,
           notes: data.notes || '',
         });
       }
@@ -208,21 +206,6 @@ export default function EditSupplierScreen() {
               placeholder="Enter physical address"
               multiline
               numberOfLines={3}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <View style={styles.labelContainer}>
-              <CreditCard size={20} color="#336633" />
-              <Text style={styles.label}>Payment Terms</Text>
-            </View>
-            <TextInput
-              style={styles.input}
-              value={formData.payment_terms}
-              onChangeText={(text) =>
-                setFormData({ ...formData, payment_terms: text })
-              }
-              placeholder="Enter payment terms"
             />
           </View>
 

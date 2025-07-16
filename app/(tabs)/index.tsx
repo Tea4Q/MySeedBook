@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
+import SmartImage from '@/components/SmartImage'; // Import SmartImage
 import { Seed, Supplier } from '@/types/database'; // Adjust path if needed
 import { Link, useFocusEffect, useRouter, useNavigation } from 'expo-router';
 import {
@@ -241,6 +242,7 @@ export default function InventoryScreen() {
   const handleEdit = (seed: Seed) => {
     closeAllSwipeables();
     setHighlightedSeedId(seed.id); // Set for potential highlight on return
+    
     // Pass the full seed as JSON for editing
     router.push({
       pathname: '/add-seed',
@@ -250,7 +252,6 @@ export default function InventoryScreen() {
 
   const confirmDelete = (seedId: string) => {
     closeAllSwipeables();
-    console.log('confirmDelete called for seedId:', seedId);
     if (Platform.OS === 'web') {
       // Use window.confirm for web
       if (
@@ -277,7 +278,6 @@ export default function InventoryScreen() {
   };
 
   const handleDelete = async (seedId: string) => {
-    console.log('handleDelete called for seedId:', seedId);
     setDeletingSeedId(seedId);
     let timeoutId: number | null = null;
     try {
@@ -471,16 +471,11 @@ export default function InventoryScreen() {
           onPress={handlePress}
         >
           <View style={styles.imageContainer}>
-            <Image
-              source={{ 
-                uri: imageUri.includes('supabase.co') 
-                  ? `${imageUri}?t=${Date.now()}` // Add timestamp to force refresh for Supabase URLs
-                  : imageUri,
-                cache: imageUri.includes('supabase.co') ? 'reload' : 'default'
-              }}
+            <SmartImage
+              uri={imageUri}
               style={styles.seedImage}
               resizeMode="cover"
-              defaultSource={{ uri: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60' }}
+              showDebugInfo={false} // Reduce console noise
             />
           </View>
           <View style={styles.seedContent}>
