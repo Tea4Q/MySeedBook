@@ -210,6 +210,7 @@ export default function AddOrEditSeedScreen() {
   );
 
   const handleImagesChange = useCallback((newImages: Imageinfo[]) => {
+   
     setSeedPackage((prev) => ({ ...prev, seed_images: newImages }));
   }, []);
 
@@ -266,13 +267,41 @@ export default function AddOrEditSeedScreen() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    setErrors({}); // Clear previous submit errors
+    setErrors({}); // Clear previous submit errors    
+    
+    // Debug: Log the raw seed_images data
+    console.log('Raw seedPackage.seed_images:', seedPackage.seed_images);
+    
+    // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
+    const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
+    console.log('Image array to process:', imageArray);
+    
+    const imagesToSave = imageArray
+      .filter((img) => {
+        // Include images that have a URL (successful upload) and are not currently loading
+        // Allow images with development-related errors since they were uploaded successfully
+        const hasValidUrl = !!(img.url && img.url.trim() !== '');
+        const notLoading = !img.isLoading;
+        const isUploadError = img.error && !img.error.includes('Using local preview');
+        
+        console.log('Filtering image:', {
+          id: img.id,
+          url: img.url,
+          hasValidUrl,
+          notLoading,
+          isUploadError,
+          error: img.error,
+          willInclude: hasValidUrl && notLoading && !isUploadError
+        });
+        
+        return hasValidUrl && notLoading && !isUploadError;
+      })
+      .map((img) => ({
+        type: img.type,
+        url: img.url,
+      }));
 
-    // Prepare images array for saving (strip client-only fields)
-    const imagesToSave = (seedPackage.seed_images || []).map((img) => ({
-      type: img.type,
-      url: img.url,
-    }));
+    console.log('Images to save after filtering:', imagesToSave);
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
@@ -290,7 +319,10 @@ export default function AddOrEditSeedScreen() {
     };
 
     // Remove client-side only fields or fields not directly in 'seeds' table
-    // No need to delete 'suppliers' anymore
+    delete payload.suppliers; // Remove joined supplier data - not a column in seeds table
+
+    console.log('Final payload to be saved:', payload);
+    console.log('Payload seed_images specifically:', payload.seed_images);
 
     if (!isEditing) {
       delete payload.id; // Remove ID for new seed creation
@@ -485,6 +517,14 @@ export default function AddOrEditSeedScreen() {
       errors.quantity = 'Quantity must be greater than 0';
     if (!seedPackage.type) errors.type = 'Seed type is required';
     if (!seedPackage.supplier_id) errors.supplier = 'Supplier is required';
+    
+    // Check if any images are still loading
+    const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
+    const loadingImages = imageArray.filter(img => img.isLoading);
+    if (loadingImages.length > 0) {
+      errors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
+    }
+    
     // Add more validation rules as needed
     setErrors(errors);
     return Object.keys(errors).length === 0;
@@ -544,12 +584,18 @@ export default function AddOrEditSeedScreen() {
             onImagesChange={handleImagesChange}
             bucketName="seed-images"
           />
+          {/* Show image loading error if any */}
+          {errors.images && (
+            <Text style={styles.errorText}>{errors.images}</Text>
+          )}
         </View>
         {/* Thumbnails and Modal for viewing images */}
         {Array.isArray(seedPackage.seed_images) &&
           seedPackage.seed_images.length > 0 && (
             <View style={styles.thumbnailRow}>
-              {(seedPackage.seed_images as Imageinfo[]).map((img) => (
+              {(seedPackage.seed_images as Imageinfo[])
+                .filter((img) => img.url && img.url.trim() !== '') // Only show thumbnails for images with valid URLs
+                .map((img) => (
                 <TouchableOpacity
                   key={img.id}
                   onPress={() => {
@@ -679,9 +725,9 @@ export default function AddOrEditSeedScreen() {
             {/* Date Purchased Input */}
             <View style={[styles.inputGroup]}>
               <Text style={styles.label}>Purchase Date</Text>
-
               {/* Web Date Picker */}
               {Platform.OS === 'web' ? (
+                // eslint-disable-next-line react/forbid-dom-props
                 <input
                   type="date"
                   className="date-input"
@@ -693,9 +739,8 @@ export default function AddOrEditSeedScreen() {
                     color: '#333',
                     borderWidth: 1,
                     borderColor: '#e0e0e0',
-                    height: 56, // Match native input height
-                    boxSizing: 'border-box', // Ensure padding doesn't affect height
-                    
+                    height: 56,
+                    boxSizing: 'border-box',
                   }}
                   value={
                     seedPackage.date_purchased
@@ -1500,8 +1545,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 1,
-  },
-  fullImage: {
+  },  fullImage: {
     width: 320,
     height: 320,
     borderRadius: 12,

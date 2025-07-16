@@ -2,10 +2,7 @@ import { Stack, SplashScreen, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
 import { useFonts } from 'expo-font';
-import { useColorScheme } from 'react-native-appearance';
-import { useTheme } from '@/lib/theme';
 
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();

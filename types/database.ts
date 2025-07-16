@@ -14,7 +14,7 @@ export interface Supplier {
 }
 
 export interface Seed {
-  seed_images: Array<{ type: 'supabase' | 'url'; url: string }>;
+  seed_images: Array<{ type: 'supabase' | 'url'; url: string }> | string;
   id: string;
   seed_name: string;
   type: string;
@@ -40,6 +40,7 @@ export interface Seed {
   user_id: string;
   description?: string;
   deleted_at?: string | null; // Soft delete field
+  suppliers?: Supplier; // Optional joined supplier data
 }
 
 export interface SeedInventoryHistory {

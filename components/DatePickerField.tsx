@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -45,7 +45,6 @@ export default function DatePickerField({
         <Calendar size={20} color="#666666" />
       </Pressable>
       {error && <Text style={styles.errorText}>{error}</Text>}
-
       {open && (
         <DateTimePicker
           value={value || new Date()}

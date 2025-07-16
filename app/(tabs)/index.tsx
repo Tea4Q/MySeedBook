@@ -200,24 +200,25 @@ export default function InventoryScreen() {
         if (isRefresh) setRefreshing(false);
       }
     },
-    [session, searchTerm, supabase]
+    [session, searchTerm] // Removed supabase from dependencies
   );
 
   // Initial load and re-load on focus
   useFocusEffect(
     useCallback(() => {
       loadSeeds();
-      // Optional: Scroll to highlighted seed if coming back from edit
-      if (highlightedSeedId && seeds.length > 0) {
-        const index = seeds.findIndex((s) => s.id === highlightedSeedId);
-        if (index !== -1 && flatListRef.current) {
-          flatListRef.current.scrollToIndex({ animated: true, index });
-        }
-        // Clear highlight after use
-        // setTimeout(() => setHighlightedSeedId(null), 2000); // Keep highlight for a bit
-      }
-    }, [loadSeeds, highlightedSeedId, seeds]) // Ensure dependencies are correct
+    }, [loadSeeds]) // Include loadSeeds dependency to ensure fresh data on focus
   );
+
+  // Handle highlighted seed scrolling separately
+  useEffect(() => {
+    if (highlightedSeedId && seeds.length > 0) {
+      const index = seeds.findIndex((s) => s.id === highlightedSeedId);
+      if (index !== -1 && flatListRef.current) {
+        flatListRef.current.scrollToIndex({ animated: true, index });
+      }
+    }
+  }, [highlightedSeedId, seeds.length]); // Only depend on highlightedSeedId and seeds.length, not the full seeds array
 
   // Handle search term changes
   useEffect(() => {
@@ -225,13 +226,13 @@ export default function InventoryScreen() {
       loadSeeds();
     }, 300); // Debounce search
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, loadSeeds]);
+  }, [searchTerm]); // Removed loadSeeds from dependencies
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setSearchTerm(''); // Optionally clear search on pull-to-refresh
     loadSeeds(true);
-  }, [loadSeeds]); // loadSeeds dependency
+  }, []); // Removed loadSeeds dependency
 
   const handleAddSeed = () => {
     router.push('/add-seed');
@@ -392,7 +393,7 @@ export default function InventoryScreen() {
   };
 
   // Helper to handle double press on a seed item
-  const handleSeedDoublePress = (seed: Seed) => {
+  const handleSeedDoublePress = useCallback((seed: Seed) => {
     // Navigate to calendar with params to open add event modal and pre-fill seed name
     router.push({
       pathname: '/calendar',
@@ -402,28 +403,41 @@ export default function InventoryScreen() {
         seedId: seed.id,
       },
     });
-  };
+  }, [router]);
 
-  const renderSeedItem = ({ item: seed }: { item: Seed }) => {
+  const renderSeedItem = useCallback(({ item: seed }: { item: Seed }) => {
     const isHighlighted = seed.id === highlightedSeedId;
     const highlightStyle = isHighlighted ? { backgroundColor: '#e6ffed' } : {};
 
-    // Determine the image URI
+    // Determine the image URI with better error handling
     function getSeedImageUri(seed: Seed): string {
       if (seed.seed_images) {
         if (Array.isArray(seed.seed_images) && seed.seed_images.length > 0) {
-          if (
-            seed.seed_images[0] &&
-            typeof seed.seed_images[0].url === 'string'
-          ) {
-            return seed.seed_images[0].url;
+          const firstImage = seed.seed_images[0];
+          if (firstImage && typeof firstImage === 'object' && firstImage.url && typeof firstImage.url === 'string') {
+            // Validate URL format
+            try {
+              new URL(firstImage.url);
+              return firstImage.url;
+            } catch (e) {
+              console.warn('Invalid image URL for seed:', seed.id, firstImage.url);
+            }
           }
-        } else if (typeof seed.seed_images === 'string') {
-          return seed.seed_images;
+        } else if (typeof seed.seed_images === 'string' && seed.seed_images.trim()) {
+          // Handle case where seed_images is a string URL
+          try {
+            new URL(seed.seed_images);
+            return seed.seed_images;
+          } catch (e) {
+            console.warn('Invalid image URL string for seed:', seed.id, seed.seed_images);
+          }
         }
       }
-      return 'https://via.placeholder.com/80?text=No+Image';
+      // Use a more reliable placeholder
+      return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
     }
+
+    const imageUri = getSeedImageUri(seed);
 
     // Double press handler using lastPressTimestamps ref in parent
     const handlePress = () => {
@@ -456,10 +470,19 @@ export default function InventoryScreen() {
           style={[styles.seedItem, highlightStyle]}
           onPress={handlePress}
         >
-          <Image
-            source={{ uri: getSeedImageUri(seed) }}
-            style={styles.seedImage}
-          />
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ 
+                uri: imageUri.includes('supabase.co') 
+                  ? `${imageUri}?t=${Date.now()}` // Add timestamp to force refresh for Supabase URLs
+                  : imageUri,
+                cache: imageUri.includes('supabase.co') ? 'reload' : 'default'
+              }}
+              style={styles.seedImage}
+              resizeMode="cover"
+              defaultSource={{ uri: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60' }}
+            />
+          </View>
           <View style={styles.seedContent}>
             <View style={styles.seedHeader}>
               <Text style={styles.seedName}>{seed.seed_name}</Text>
@@ -502,7 +525,6 @@ export default function InventoryScreen() {
                     Supplier ID:
                   </Text>
                   <Text style={styles.detailValue}>
-                    {' '}
                     (Details not loaded) {seed.supplier_id}
                   </Text>
                 </View>
@@ -525,7 +547,7 @@ export default function InventoryScreen() {
         </Pressable>
       </Swipeable>
     );
-  };
+  }, [highlightedSeedId]); // Only depend on highlightedSeedId
 
   if (loading && seeds.length === 0 && !searchTerm) {
     // Show full screen loader only on very first load when no seeds (mock or real) are set yet
@@ -719,6 +741,11 @@ const styles = StyleSheet.create({
     elevation: 3, // Align items vertically
   },
   seedImage: {
+    width: '100%',
+    height: 200,
+  },
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 200,
   },

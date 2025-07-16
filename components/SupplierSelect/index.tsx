@@ -180,8 +180,7 @@ export function SupplierSelect({
             <Text
               style={styles.contactTextBetter}
               numberOfLines={1}
-              ellipsizeMode="tail"
-            >
+              ellipsizeMode="tail"            >
               {supplier.webaddress}
             </Text>
           </View>
@@ -192,8 +191,7 @@ export function SupplierSelect({
             <Text
               style={styles.contactTextBetter}
               numberOfLines={1}
-              ellipsizeMode="tail"
-            >
+              ellipsizeMode="tail"            >
               {supplier.email}
             </Text>
           </View>
@@ -274,12 +272,10 @@ export function SupplierSelect({
               />
             </View>
 
-            {error && (
-              <View style={styles.errorContainer}>
+            {error && (              <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
-
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#2d7a3a" />
