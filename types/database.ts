@@ -1,5 +1,5 @@
 export interface Supplier {
-  supplier_images: string;
+  supplier_image: string;
   id: string;
   supplier_name?: string;
   webaddress?: string;
@@ -56,6 +56,18 @@ export interface SeedInventoryHistory {
   created_at: Date;
 }
 
+export interface CalendarEvent {
+  id: string;
+  seed_id: string;
+  seed_name: string;
+  event_date: Date;
+  category: 'sow' | 'purchase' | 'harvest' | 'germination';
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+  user_id: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -73,6 +85,11 @@ export interface Database {
         Row: SeedInventoryHistory;
         Insert: Omit<SeedInventoryHistory, 'id' | 'created_at'>;
         Update: never;
+      };
+      calendar_events: {
+        Row: CalendarEvent;
+        Insert: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

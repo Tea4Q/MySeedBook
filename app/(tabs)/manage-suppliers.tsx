@@ -254,6 +254,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1a472a',
   },
+  webaddress: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 4,
+  },
   contactPerson: {
     fontSize: 14,
     color: '#666666',

@@ -50,13 +50,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="suppliers"
-        options={{
-          title: 'Suppliers',
-          tabBarIcon: ({ color }) => <Tractor size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="manage-suppliers"
         options={{
           title: 'Manage Suppliers',
@@ -68,6 +61,14 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="select-supplier"
+        options={{
+          href: null, // Hide from tabs - only accessible via direct navigation
+          title: 'Select Supplier',
+          tabBarIcon: ({ color }) => <Tractor size={24} color={color} />,
         }}
       />
     </Tabs>

@@ -622,7 +622,7 @@ export default function CalendarScreen() {
                     setNewEvent({ ...newEvent, seedName: text })
                   }
                   placeholder="Enter seed name"
-                  editable={!params.seedName}
+                  editable={true}
                 />
               </View>
 

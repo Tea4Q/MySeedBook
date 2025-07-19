@@ -24,7 +24,7 @@ type Supplier = {
   address?: string;
   specialties?: string[];
   rating?: number;
-  supplier_images?: string;
+  supplier_image?: string;
   user_id?: string;
 };
 
@@ -45,7 +45,7 @@ const mockSuppliers: Supplier[] = [
       'Historic Varieties',
     ],
     rating: 4.8,
-    supplier_images:
+    supplier_image:
       'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&auto=format&fit=crop',
   },
   {
@@ -59,12 +59,12 @@ const mockSuppliers: Supplier[] = [
     address: 'Winslow, ME 04901',
     specialties: ['Vegetables', 'Flowers', 'Herbs', 'Tools', 'Organic'],
     rating: 4.7,
-    supplier_images:
+    supplier_image:
       'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=800&auto=format&fit=crop',
   },
 ];
 
-export default function SupplierListScreen() {
+export default function SelectSupplierScreen() {
   const router = useRouter();
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
@@ -132,8 +132,17 @@ export default function SupplierListScreen() {
 
   const handleSelectSupplier = (supplier: Supplier) => {
     console.log('Selected supplier:', supplier);
+    
+    // Navigate back to add-seed with selected supplier data
     if (router.canGoBack()) {
       router.back();
+      // Note: In a real app, you'd want to pass the selected supplier data back
+      // This could be done through:
+      // 1. URL params 
+      // 2. Global state management (Redux, Zustand, etc.)
+      // 3. Context API
+      // 4. Event emitters
+      // For now, we'll just navigate back
     }
   };
 
@@ -150,9 +159,9 @@ export default function SupplierListScreen() {
       onPress={() => handleSelectSupplier(item)}
       style={styles.itemContainer}
     >
-      {item.supplier_images && (
+      {item.supplier_image && (
         <Image
-          source={{ uri: item.supplier_images }}
+          source={{ uri: item.supplier_image }}
           style={styles.itemImage}
         />
       )}
@@ -179,7 +188,7 @@ export default function SupplierListScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Suppliers</Text>
+        <Text style={styles.title}>Select Supplier</Text>
         <Pressable onPress={handleAddSupplier} style={styles.iconButton}>
           <Plus size={24} color="#007AFF" />
         </Pressable>

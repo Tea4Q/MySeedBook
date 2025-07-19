@@ -69,7 +69,7 @@ const mockSeedsData: Seed[] = [
     suppliers: {
       id: 'supplier-mock-1',
       supplier_name: 'Baker Creek Seeds',
-      supplier_images: '',
+      supplier_image: '',
       webaddress: 'rareseeds.com',
       email: 'support@rareseeds.com',
       phone: '(417) 924-8917',
@@ -103,7 +103,7 @@ const mockSeedsData: Seed[] = [
     suppliers: {
       id: 'supplier-mock-2',
       supplier_name: "Johnny's Selected Seeds",
-      supplier_images: '',
+      supplier_image: '',
       webaddress: 'johnnyseeds.com',
       email: 'support@johnnyseeds.com',
       phone: '(877) 564-6697',

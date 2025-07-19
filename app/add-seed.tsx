@@ -89,6 +89,7 @@ export default function AddOrEditSeedScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [autoAddToCalendar, setAutoAddToCalendar] = useState(true); // New state for calendar toggle
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -313,6 +314,8 @@ export default function AddOrEditSeedScreen() {
 
     try {
       let responseError = null;
+      let savedSeedId: string | null = null;
+      
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -326,21 +329,40 @@ export default function AddOrEditSeedScreen() {
           .update(payload) // Pass prepared payload
           .eq('id', editingSeed.id); // Use the ID from the original seedPackage state
         responseError = error;
+        savedSeedId = editingSeed.id;
       } else {
         // Add a new seed
-        // const {
-        //   data: { user },
-        // } = await supabase.auth.getUser();
-        // if (!user) throw new Error('User not authenticated');
-
-        const { error } = await supabase.from('seeds').insert({
+        const { data: newSeedData, error } = await supabase.from('seeds').insert({
           ...payload,
           user_id: user?.id, // Add user_id for new seeds
-        });
+        }).select('id').single();
         responseError = error;
+        if (newSeedData) {
+          savedSeedId = newSeedData.id;
+        }
       }
 
       if (responseError) throw responseError;
+
+      // Automatically add purchase date to calendar if date is provided and user wants it
+      if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name) {
+        try {
+          await supabase
+            .from('calendar_events')
+            .insert({
+              seed_id: savedSeedId,
+              seed_name: seedPackage.seed_name,
+              event_date: seedPackage.date_purchased.toISOString(),
+              category: 'purchase',
+              notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
+              user_id: user?.id, // Add user_id for RLS
+            });
+          console.log('Purchase date automatically added to calendar');
+        } catch (calendarError) {
+          console.error('Error adding purchase date to calendar:', calendarError);
+          // Don't fail the seed creation if calendar addition fails
+        }
+      }
 
       // Reset form state
       setShowSuccess(true);
@@ -550,7 +572,7 @@ export default function AddOrEditSeedScreen() {
           <Text style={styles.successText}>
             {isEditing
               ? 'Seed updated successfully'
-              : ' Seed added successfully!'}
+              : `Seed added successfully!${autoAddToCalendar && seedPackage.date_purchased ? ' Purchase date added to calendar.' : ''}`}
           </Text>
         </View>
       )}
@@ -716,6 +738,9 @@ export default function AddOrEditSeedScreen() {
             {/* Date Purchased Input */}
             <View style={[styles.inputGroup]}>
               <Text style={styles.label}>Purchase Date</Text>
+              <Text style={styles.helpText}>
+                💡 Purchase date will be automatically added to your calendar
+              </Text>
               {/* Web Date Picker */}
               {Platform.OS === 'web' ? (
                 // eslint-disable-next-line react/forbid-dom-props
@@ -1282,6 +1307,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1a472a',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#666666',
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
   input: {
     backgroundColor: '#ffffff',
