@@ -1,15 +1,50 @@
 {
   "expo": {
     "name": "QTea Seed Catalogue",
-    "slug": "bolt-expo-nativewind",
+    "slug": "qtea-seed-catalogue",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "qtea-seed-catalogue",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "A comprehensive gardening application for managing your seed collection and supplier information. Track planting seasons, harvest times, and maintain detailed records of your gardening inventory.",
+    "keywords": [
+      "gardening",
+      "seeds",
+      "agriculture",
+      "planting",
+      "harvest",
+      "suppliers",
+      "organic"
+    ],
+    "primaryColor": "#336633",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f0f9f0"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.qtea.seedcatalogue",
+      "buildNumber": "1",
+      "icon": "./assets/images/icon.png"
+    },
+    "android": {
+      "package": "com.qtea.seedcatalogue",
+      "versionCode": 1,
+      "icon": "./assets/images/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#f0f9f0"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -17,13 +52,29 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow QTea Seed Catalogue to access your camera to capture photos of your seeds and plants."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow QTea Seed Catalogue to access your photo library to select images of your seeds and plants."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
-    "android": {
-      "package": "com.qtea.boltexponativewind"
+    "privacy": "public",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2cbce42b-a629-4052-8e0e-81df4793aa88"
+      }
     }
   }
 }

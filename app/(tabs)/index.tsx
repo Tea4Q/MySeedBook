@@ -221,6 +221,17 @@ export default function InventoryScreen() {
     }
   }, [highlightedSeedId, seeds.length]); // Only depend on highlightedSeedId and seeds.length, not the full seeds array
 
+  // Auto-clear highlight after 3 seconds
+  useEffect(() => {
+    if (highlightedSeedId) {
+      const clearHighlight = setTimeout(() => {
+        setHighlightedSeedId(null);
+      }, 3000);
+      
+      return () => clearTimeout(clearHighlight);
+    }
+  }, [highlightedSeedId]);
+
   // Handle search term changes
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -309,7 +320,10 @@ export default function InventoryScreen() {
   };
 
   const closeAllSwipeables = () => {
-    Object.values(swipeableRefs.current).forEach((ref) => ref?.close());
+    // Only close swipeables on mobile platforms
+    if (Platform.OS !== 'web') {
+      Object.values(swipeableRefs.current).forEach((ref) => ref?.close());
+    }
   };
 
   const renderRightActions = (
@@ -449,6 +463,119 @@ export default function InventoryScreen() {
       lastPressTimestamps.current[seed.id] = now;
     };
 
+    // Main content component that will be conditionally wrapped
+    const seedItemContent = (
+      <Pressable
+        style={[styles.seedItem, highlightStyle]}
+        onPress={handlePress}
+      >
+        <View style={styles.imageContainer}>
+          <SmartImage
+            uri={imageUri}
+            style={styles.seedImage}
+            resizeMode="cover"
+            showDebugInfo={false} // Reduce console noise
+          />
+        </View>
+        <View style={styles.seedContent}>
+          <View style={styles.seedHeader}>
+            <Text style={styles.seedName}>{seed.seed_name}</Text>
+            <View
+              style={[
+                styles.seedTypeContainer,
+                { flexDirection: 'row', alignItems: 'center', gap: 6 },
+              ]}
+            >
+              {getSeedTypeIcon(seed.type)}
+              <Text style={styles.seedType}>{seed.type}</Text>
+            </View>
+          </View>
+          <Text style={styles.seedDescription}>{seed.description}</Text>
+          <View style={styles.seedDetails}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>
+                <Tally4 style={styles.iconsView} /> Quantity:
+              </Text>
+              <Text style={styles.detailValue}>
+                {seed.quantity} {seed.quantity_unit}
+              </Text>
+            </View>
+            {/* Accessing seed.suppliers safely */}
+            {seed.suppliers && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>
+                  <Truck style={styles.iconsView} /> Supplier:
+                </Text>
+                <Text style={styles.detailValue}>
+                  {seed.suppliers.supplier_name}
+                </Text>
+              </View>
+            )}
+            {/*Fallback for when suppliers is not loaded as an object or is null */}
+            {!seed.suppliers && seed.supplier_id && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>
+                  <Truck style={styles.iconsView} />
+                  Supplier ID:
+                </Text>
+                <Text style={styles.detailValue}>
+                  (Details not loaded) {seed.supplier_id}
+                </Text>
+              </View>
+            )}
+            <View style={styles.seasonContainer}>
+              <View style={[styles.seasonTag, styles.plantTag]}>
+                <Text style={styles.seasonText}>
+                  Plant: {seed.planting_season}
+                </Text>
+              </View>
+              <View style={[styles.seasonTag, styles.harvestTag]}>
+                <Text style={styles.seasonText}>
+                  Harvest: {seed.harvest_season}
+                </Text>
+              </View>
+            </View>
+          </View>
+          {/* Show action buttons on web, hint about double-click */}
+          {Platform.OS === 'web' && (
+            <View style={styles.webActionButtons}>
+              <Text style={styles.webHint}>Double-click for calendar • Buttons below for edit/delete</Text>
+              <View style={styles.webButtonRow}>
+                <Pressable
+                  style={[styles.webActionButton, styles.editButton]}
+                  onPress={() => handleEdit(seed)}
+                >
+                  <Edit3 size={16} color="#fff" />
+                  <Text style={styles.webButtonText}>Edit</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.webActionButton, styles.deleteButton]}
+                  onPress={() => confirmDelete(seed.id)}
+                  disabled={deletingSeedId === seed.id}
+                >
+                  {deletingSeedId === seed.id ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Trash2 size={16} color="#fff" />
+                  )}
+                  <Text style={styles.webButtonText}>Delete</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </View>
+        {/* Show chevron only on mobile (where swipe is available) */}
+        {Platform.OS !== 'web' && (
+          <ChevronRight size={24} color="#ccc" style={styles.chevronIcon} />
+        )}
+      </Pressable>
+    );
+
+    // Conditionally wrap with Swipeable only on mobile platforms
+    if (Platform.OS === 'web') {
+      return seedItemContent;
+    }
+
     return (
       <Swipeable
         ref={(ref) => {
@@ -466,80 +593,7 @@ export default function InventoryScreen() {
           });
         }}
       >
-        <Pressable
-          style={[styles.seedItem, highlightStyle]}
-          onPress={handlePress}
-        >
-          <View style={styles.imageContainer}>
-            <SmartImage
-              uri={imageUri}
-              style={styles.seedImage}
-              resizeMode="cover"
-              showDebugInfo={false} // Reduce console noise
-            />
-          </View>
-          <View style={styles.seedContent}>
-            <View style={styles.seedHeader}>
-              <Text style={styles.seedName}>{seed.seed_name}</Text>
-              <View
-                style={[
-                  styles.seedTypeContainer,
-                  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-                ]}
-              >
-                {getSeedTypeIcon(seed.type)}
-                <Text style={styles.seedType}>{seed.type}</Text>
-              </View>
-            </View>
-            <Text style={styles.seedDescription}>{seed.description}</Text>
-            <View style={styles.seedDetails}>
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>
-                  <Tally4 style={styles.iconsView} /> Quantity:
-                </Text>
-                <Text style={styles.detailValue}>
-                  {seed.quantity} {seed.quantity_unit}
-                </Text>
-              </View>
-              {/* Accessing seed.suppliers safely */}
-              {seed.suppliers && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>
-                    <Truck style={styles.iconsView} /> Supplier:
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {seed.suppliers.supplier_name}
-                  </Text>
-                </View>
-              )}
-              {/*Fallback for when suppliers is not loaded as an object or is null */}
-              {!seed.suppliers && seed.supplier_id && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>
-                    <Truck style={styles.iconsView} />
-                    Supplier ID:
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    (Details not loaded) {seed.supplier_id}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.seasonContainer}>
-                <View style={[styles.seasonTag, styles.plantTag]}>
-                  <Text style={styles.seasonText}>
-                    Plant: {seed.planting_season}
-                  </Text>
-                </View>
-                <View style={[styles.seasonTag, styles.harvestTag]}>
-                  <Text style={styles.seasonText}>
-                    Harvest: {seed.harvest_season}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <ChevronRight size={24} color="#ccc" style={styles.chevronIcon} />
-        </Pressable>
+        {seedItemContent}
       </Swipeable>
     );
   }, [highlightedSeedId]); // Only depend on highlightedSeedId
@@ -889,5 +943,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 5,
+  },
+  // Web-specific action button styles
+  webActionButtons: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: '#f8faf8',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  webHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  webButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  webActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    gap: 4,
+  },
+  editButton: {
+    backgroundColor: '#FFC107',
+  },
+  deleteButton: {
+    backgroundColor: '#F44336',
+  },
+  webButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

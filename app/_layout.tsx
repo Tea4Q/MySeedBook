@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible
@@ -19,11 +19,13 @@ function RootLayoutNav() {
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
   });
   const byPassLoginOnAndroid = false; // Disable bypass to show login screen
+  const byPassAuthForTesting = false; // Set to true to skip authentication during development
+  const byPassWebAuth = false; // Set to true to skip authentication on web only
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
   const isAppReady = fontsLoaded || fontError;
-  // Determine authentication status - only consider actual session
-  const isAuthenticated = !!session;
+  // Determine authentication status - consider session OR bypass flags
+  const isAuthenticated = !!session || byPassAuthForTesting || (Platform.OS === 'web' && byPassWebAuth);
 
   useEffect(() => {
     if (isAppReady) {
@@ -80,11 +82,20 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  // Conditionally wrap with GestureHandlerRootView only on mobile platforms
+  const AppContent = (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
+
+  if (Platform.OS === 'web') {
+    return AppContent;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
+      {AppContent}
     </GestureHandlerRootView>
   );
 }
