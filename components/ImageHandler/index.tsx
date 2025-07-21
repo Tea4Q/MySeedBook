@@ -374,10 +374,11 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   return (
     <View>
       {/* Display Images - Limit to first 3 images to prevent excessive scrolling */}
-      {images.slice(0, 3).map((image) => {
-        // Try Supabase URL first, fallback to localUri if available
-        const imageUri = image.url || image.localUri;
-        return (
+      <View style={images.length > 1 ? styles.multipleImagesContainer : styles.singleImageContainer}>
+        {images.slice(0, 3).map((image) => {
+          // Try Supabase URL first, fallback to localUri if available
+          const imageUri = image.url || image.localUri;
+          return (
           <View key={image.id} style={styles.imageContainer}>
             {imageUri ? (
               <>
@@ -391,7 +392,11 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                       },
                     }),
                   }}
-                  style={styles.previewImage}
+                  style={[
+                    styles.previewImage,
+                    // Make images smaller when there are multiple
+                    images.length > 1 && styles.previewImageSmall
+                  ]}
                   onError={(error) => {
                     // If Supabase URL fails and we have a localUri, try to fallback
                     if (image.url && image.localUri && imageUri === image.url) {
@@ -523,6 +528,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           </Text>
         </View>
       )}
+      </View>
       {/* Add Image from Web URL */}
       <View style={styles.addUrlSection}>
         <TextInput
@@ -550,12 +556,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
 };
 
 const styles = StyleSheet.create({
+  multipleImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  singleImageContainer: {
+    flexDirection: 'column',
+  },
   imageContainer: {
-    marginBottom: 16,
+    marginBottom: 12, // Reduced from 16
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
-    maxHeight: 250, // Prevent images from taking up too much space
+    maxHeight: 150, // Reduced from 250 to make images smaller
+    flex: 1, // Allow flexible sizing in row layout
+    minWidth: '45%', // Ensure minimum width when in horizontal layout
   },
   imageloadingIndicator: {
     position: 'absolute',
@@ -646,9 +663,12 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: 200,
+    height: 120, // Reduced from 200 to make images more compact
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8, // Reduced from 12
+  },
+  previewImageSmall: {
+    height: 80, // Even smaller for multiple images
   },
 });
 

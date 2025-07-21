@@ -82,17 +82,14 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    // Configure shorter build directory to avoid Windows path length issues
-    buildDir = "C:/tmp/build"
-    
     ndkVersion rootProject.ext.ndkVersion
 
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.qtea.boltexponativewind'
+    namespace 'com.qtea.seedcatalogue'
     defaultConfig {
-        applicationId 'com.qtea.boltexponativewind'
+        applicationId 'com.qtea.seedcatalogue'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

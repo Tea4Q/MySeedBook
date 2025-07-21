@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, ImageProps, ImageStyle, StyleProp } from 'react-native';
-import { ENV, getImageUrl, isSupabaseUrl } from '@/config/env';
+import { ENV, isSupabaseUrl } from '@/config/env';
 import { logger } from '@/config/logger';
 
 interface SmartImageProps extends Omit<ImageProps, 'source'> {
@@ -26,7 +26,6 @@ export const SmartImage: React.FC<SmartImageProps> = ({
   ...imageProps
 }) => {
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Determine the best URI to use
   const getOptimalUri = (): string => {
@@ -38,39 +37,47 @@ export const SmartImage: React.FC<SmartImageProps> = ({
       return localUri;
     }
 
-    // If there was an error or we should use fallback, use fallback
-    if (hasError || (ENV.isDevelopment && isSupabaseUrl(uri))) {
+    // In development, immediately use fallback for Supabase URLs to avoid network failures
+    if (ENV.isDevelopment && isSupabaseUrl(uri) && ENV.images.useFallbackInDev) {
+      const fallback = fallbackUri || ENV.images.fallbackUrl;
+      // Only log once per session to reduce console spam
+      if (showDebugInfo) {
+        logger.debug('SmartImage: Using fallback for Supabase URL in development');
+      }
+      return fallback;
+    }
+
+    // If there was an error, use fallback
+    if (hasError) {
       const fallback = fallbackUri || ENV.images.fallbackUrl;
       if (showDebugInfo) {
-        logger.debug(`SmartImage: Using fallback URI for ${isSupabaseUrl(uri) ? 'Supabase URL' : 'failed image'}`);
+        logger.debug('SmartImage: Using fallback URI due to load error');
       }
       return fallback;
     }
 
     // Use the original URI
     if (showDebugInfo) {
-      logger.debug('SmartImage: Using original URI');
+      logger.debug(`SmartImage: Using original URI: ${uri}`);
     }
     return uri;
   };
 
   const handleLoadStart = () => {
-    setIsLoading(true);
     onLoadStart?.();
   };
 
   const handleLoadEnd = () => {
-    setIsLoading(false);
     setHasError(false);
     onLoadEnd?.();
   };
 
   const handleError = (error: any) => {
-    setIsLoading(false);
     setHasError(true);
     
-    if (showDebugInfo) {
-      logger.error(`SmartImage: Load error for URI: ${uri}`);
+    // Only log errors in development mode to reduce console spam
+    if (showDebugInfo && ENV.isDevelopment) {
+      logger.warn(`SmartImage: Load error for URI: ${uri}, falling back to placeholder`);
     }
     
     onError?.(error);

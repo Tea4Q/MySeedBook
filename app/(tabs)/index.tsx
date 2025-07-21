@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,17 @@ import {
   StyleSheet,
   ActivityIndicator,
   Pressable,
-  Image,
   TextInput,
   RefreshControl,
   Alert,
   Animated,
-  Dimensions,
   Platform,
 } from 'react-native';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
-import SmartImage from '@/components/SmartImage'; // Import SmartImage
-import { Seed, Supplier } from '@/types/database'; // Adjust path if needed
-import { Link, useFocusEffect, useRouter, useNavigation } from 'expo-router';
+import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
+import { Seed } from '@/types/database'; // Adjust path if needed
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useTheme } from '@/lib/theme';
 import {
   PlusCircle,
   Search,
@@ -120,6 +119,7 @@ const mockSeedsData: Seed[] = [
 
 export default function InventoryScreen() {
   const { session } = useAuth(); // Get user session
+  const { colors } = useTheme(); // Get theme colors
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +130,6 @@ export default function InventoryScreen() {
   );
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const router = useRouter();
-  const navigation = useNavigation();
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const isMounted = useRef(true);
@@ -219,7 +218,7 @@ export default function InventoryScreen() {
         flatListRef.current.scrollToIndex({ animated: true, index });
       }
     }
-  }, [highlightedSeedId, seeds.length]); // Only depend on highlightedSeedId and seeds.length, not the full seeds array
+  }, [highlightedSeedId, seeds.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-clear highlight after 3 seconds
   useEffect(() => {
@@ -238,13 +237,13 @@ export default function InventoryScreen() {
       loadSeeds();
     }, 300); // Debounce search
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm]); // Removed loadSeeds from dependencies
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setSearchTerm(''); // Optionally clear search on pull-to-refresh
     loadSeeds(true);
-  }, []); // Removed loadSeeds dependency
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddSeed = () => {
     router.push('/add-seed');
@@ -290,7 +289,6 @@ export default function InventoryScreen() {
 
   const handleDelete = async (seedId: string) => {
     setDeletingSeedId(seedId);
-    let timeoutId: number | null = null;
     try {
       const deletedAt = new Date().toISOString();
       const { error: updateError } = await supabase
@@ -311,10 +309,6 @@ export default function InventoryScreen() {
         );
       }
     } finally {
-      // Fallback: always clear deletingSeedId after 5 seconds in case of stuck state
-      timeoutId = setTimeout(() => {
-        if (isMounted.current) setDeletingSeedId(null);
-      }, 5000);
       if (isMounted.current) setDeletingSeedId(null);
     }
   };
@@ -425,30 +419,51 @@ export default function InventoryScreen() {
 
     // Determine the image URI with better error handling
     function getSeedImageUri(seed: Seed): string {
+      // Helper function to construct proper Supabase URL
+      const constructSupabaseUrl = (path: string): string => {
+        const supabaseUrl = 'https://fodtwysfcqltykejkffn.supabase.co';
+        const bucketName = 'seed-images';
+        
+        // If it's already a full URL, return as-is
+        if (path.startsWith('http')) {
+          return path;
+        }
+        
+        // If it starts with /storage, prepend the domain
+        if (path.startsWith('/storage')) {
+          return `${supabaseUrl}${path}`;
+        }
+        
+        // If it's just a path, construct the full URL
+        return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${path}`;
+      };
+      
       if (seed.seed_images) {
         if (Array.isArray(seed.seed_images) && seed.seed_images.length > 0) {
           const firstImage = seed.seed_images[0];
           if (firstImage && typeof firstImage === 'object' && firstImage.url && typeof firstImage.url === 'string') {
-            // Validate URL format
-            try {
-              new URL(firstImage.url);
-              return firstImage.url;
-            } catch (e) {
-              console.warn('Invalid image URL for seed:', seed.id, firstImage.url);
-            }
+            return constructSupabaseUrl(firstImage.url);
           }
         } else if (typeof seed.seed_images === 'string' && seed.seed_images.trim()) {
           // Handle case where seed_images is a string URL
-          try {
-            new URL(seed.seed_images);
-            return seed.seed_images;
-          } catch (e) {
-            console.warn('Invalid image URL string for seed:', seed.id, seed.seed_images);
-          }
+          return constructSupabaseUrl(seed.seed_images);
         }
       }
-      // Use a more reliable placeholder
-      return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      
+      // Return a varied garden-themed placeholder based on seed type
+      const type = (seed.type || '').toLowerCase();
+      if (type.includes('tomato')) {
+        return 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      } else if (type.includes('pea')) {
+        return 'https://images.unsplash.com/photo-1587049693270-c7560da11218?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      } else if (type.includes('herb')) {
+        return 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      } else if (type.includes('flower')) {
+        return 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      } else {
+        // Default garden/seeds image
+        return 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
+      }
     }
 
     const imageUri = getSeedImageUri(seed);
@@ -474,7 +489,8 @@ export default function InventoryScreen() {
             uri={imageUri}
             style={styles.seedImage}
             resizeMode="cover"
-            showDebugInfo={false} // Reduce console noise
+            showDebugInfo={false} // Disable debug info now that image loading is working
+            fallbackUri="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60"
           />
         </View>
         <View style={styles.seedContent}>
@@ -596,7 +612,7 @@ export default function InventoryScreen() {
         {seedItemContent}
       </Swipeable>
     );
-  }, [highlightedSeedId]); // Only depend on highlightedSeedId
+  }, [highlightedSeedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && seeds.length === 0 && !searchTerm) {
     // Show full screen loader only on very first load when no seeds (mock or real) are set yet
@@ -610,26 +626,28 @@ export default function InventoryScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Seed Inventory</Text>
-        <Pressable onPress={handleAddSeed} style={styles.addButton}>
-          <PlusCircle size={32} color="#fff" />
-        </Pressable>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.title, { color: colors.primaryText }]}>My Seed Inventory</Text>
+        <View style={styles.headerButtons}>
+          <Pressable onPress={handleAddSeed} style={styles.addButton}>
+            <PlusCircle size={32} color={colors.primaryText} />
+          </Pressable>
+        </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#888" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+        <Search size={20} color={colors.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.inputText }]}
           placeholder="Search seeds, type, supplier..."
           value={searchTerm}
           onChangeText={setSearchTerm}
-          placeholderTextColor="#aaa"
+          placeholderTextColor={colors.textSecondary}
         />
         {searchTerm ? (
           <Pressable onPress={() => setSearchTerm('')}>
-            <XCircle size={20} color="#888" style={styles.clearSearchIcon} />
+            <XCircle size={20} color={colors.textSecondary} style={styles.clearSearchIcon} />
           </Pressable>
         ) : null}
       </View>
@@ -692,14 +710,12 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0', // Light green background
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#336633',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     shadowColor: '#000',
@@ -711,7 +727,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
   },
   row: {
     flexDirection: 'row',
@@ -728,7 +743,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 25,
     marginHorizontal: 15,
     marginVertical: 10,
@@ -738,6 +752,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
+    borderWidth: 1,
   },
   searchIcon: {
     marginRight: 10,

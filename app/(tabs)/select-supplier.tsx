@@ -213,7 +213,7 @@ export default function SelectSupplierScreen() {
         suppliers.length === 0 &&
         (hasFetchedUserData ? (
           <Text style={styles.emptyText}>
-            You haven't added any suppliers yet. Add one!
+            You haven&apos;t added any suppliers yet. Add one!
           </Text>
         ) : (
           <Text style={styles.emptyText}>Loading suppliers...</Text>

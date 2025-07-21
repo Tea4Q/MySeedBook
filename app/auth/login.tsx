@@ -13,8 +13,10 @@ import {
 import { router } from 'expo-router';
 import { Mail, Lock, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 
 export default function AuthScreen() {
+  const { colors } = useTheme();
   const { signIn, signUp } = useAuth();
   const [isLogin, setIsLogin] = useState(true); // true for login, false for signup
   const [email, setEmail] = useState('');
@@ -76,10 +78,10 @@ export default function AuthScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#BCAB92" />
+        <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: `${colors.primary}20` }]}>
+          <ArrowLeft size={24} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -90,20 +92,20 @@ export default function AuthScreen() {
           }}
           style={styles.logo}
         />
-        <Text style={styles.logoText}>Q-Tea Seed Catalogue</Text>
+        <Text style={[styles.logoText, { color: colors.primary }]}>Q-Tea Seed Catalogue</Text>
       </View>
 
-      <View style={styles.formContainer}>
+      <View style={[styles.formContainer, { backgroundColor: colors.surface }]}>
         {/* Toggle Section */}
         <View style={styles.toggleContainer}>
-          <Text style={styles.toggleLabel}>Sign up</Text>
-          <View style={styles.toggleWrapper}>
-            <View style={[styles.toggleSlider, isLogin && styles.toggleSliderActive]} />
+          <Text style={[styles.toggleLabel, { color: colors.text }]}>Choose Your Action</Text>
+          <View style={[styles.toggleWrapper, { backgroundColor: colors.inputBackground }]}>
+            <View style={[styles.toggleSlider, { backgroundColor: colors.card }, isLogin && styles.toggleSliderActive]} />
             <Pressable 
               style={styles.toggleOption}
               onPress={() => toggleMode(true)}
             >
-              <Text style={[styles.toggleText, isLogin && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, { color: colors.primary }, isLogin && styles.toggleTextActive]}>
                 Login
               </Text>
             </Pressable>
@@ -111,7 +113,7 @@ export default function AuthScreen() {
               style={styles.toggleOption}
               onPress={() => toggleMode(false)}
             >
-              <Text style={[styles.toggleText, !isLogin && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, { color: colors.primary }, !isLogin && styles.toggleTextActive]}>
                 Sign up
               </Text>
             </Pressable>
@@ -119,49 +121,49 @@ export default function AuthScreen() {
         </View>
 
         {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorContainer, { backgroundColor: `${colors.error}20`, borderColor: `${colors.error}40` }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         )}
 
-        <View style={styles.inputContainer}>
-          <Mail size={20} color="#dc2626" />
+        <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+          <Mail size={20} color={colors.primary} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.inputText }]}
             placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!isLoading}
-            placeholderTextColor="#999"
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#dc2626" />
+        <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+          <Lock size={20} color={colors.primary} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.inputText }]}
             placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             editable={!isLoading}
-            placeholderTextColor="#999"
           />
         </View>
 
         {!isLogin && (
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#dc2626" />
+          <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+            <Lock size={20} color={colors.primary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.inputText }]}
               placeholder="Confirm Password"
+              placeholderTextColor={colors.textSecondary}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
               editable={!isLoading}
-              placeholderTextColor="#999"
             />
           </View>
         )}
@@ -169,15 +171,16 @@ export default function AuthScreen() {
         <Pressable
           style={[
             styles.authButton,
+            { backgroundColor: colors.primary },
             isLoading && styles.authButtonDisabled,
           ]}
           onPress={handleAuth}
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={styles.authButtonText}>
+            <Text style={[styles.authButtonText, { color: colors.primaryText }]}>
               {isLogin ? 'Login' : 'Sign up'}
             </Text>
           )}
@@ -190,7 +193,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2B54', // Dark purple background like the screenshot
   },
   header: {
     padding: 16,
@@ -200,7 +202,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -216,11 +217,9 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#BCAB92',
     marginTop: 16,
   },
   formContainer: {
-    backgroundColor: '#E5E5E5', // Light gray background for the form
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 32,
@@ -237,13 +236,12 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 18,
-    color: '#333',
     marginBottom: 16,
     textAlign: 'center',
-  },  toggleWrapper: {
+  },
+  toggleWrapper: {
     position: 'relative',
     flexDirection: 'row',
-    backgroundColor: '#E5E5E5',
     borderRadius: 25,
     padding: 4,
     width: 200,
@@ -255,7 +253,6 @@ const styles = StyleSheet.create({
     right: 4, // Start at signup position (right side)
     width: 96,
     height: 42,
-    backgroundColor: '#fff',
     borderRadius: 21,
     zIndex: 1,
     elevation: 2,
@@ -282,40 +279,33 @@ const styles = StyleSheet.create({
     color: '#8B5A99', // Purple color to match the screenshot
   },
   toggleTextActive: {
-    color: '#8B5A99', // Same color for active state
+    // Color applied dynamically through JSX
   },
   errorContainer: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.2)',
   },
   errorText: {
-    color: '#ef4444',
     fontSize: 14,
     textAlign: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D0D0D0',
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#C0C0C0',
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#333',
   },
   authButton: {
-    backgroundColor: '#8B5A99', // Purple button to match the screenshot
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -325,7 +315,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   authButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },

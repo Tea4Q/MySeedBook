@@ -11,10 +11,11 @@ export interface Supplier {
   created_at: Date;
   updated_at: Date;
   user_id: string;
+  deleted_at?: string | null; // Soft delete field (optional for backward compatibility)
 }
 
 export interface Seed {
-  seed_images: Array<{ type: 'supabase' | 'url'; url: string }> | string;
+  seed_images: ({ type: 'supabase' | 'url'; url: string }[]) | string;
   id: string;
   seed_name: string;
   type: string;

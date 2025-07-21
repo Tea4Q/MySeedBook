@@ -1,65 +1,116 @@
 import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
 import { Bell, Sun, Moon, CloudRain } from 'lucide-react-native';
-import React from 'react';
+import { useTheme } from '@/lib/theme';
+import React, { useState } from 'react';
 
 export default function SettingsScreen() {
+  const { theme, colors, setTheme } = useTheme();
+  const [notifications, setNotifications] = useState({
+    plantingReminders: false,
+    weatherAlerts: false,
+  });
+
+  const handleThemeChange = (selectedTheme: 'light' | 'dark') => {
+    setTheme(selectedTheme);
+  };
+
+  const toggleNotification = (type: 'plantingReminders' | 'weatherAlerts') => {
+    setNotifications(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.headerText }]}>Settings</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.setting}>
+      <View style={[styles.section, { borderBottomColor: colors.border }, styles.disabledSection]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
+          <Text style={[styles.comingSoonLabel, { color: colors.textSecondary }]}>Coming Soon</Text>
+        </View>
+        <View style={[styles.setting, styles.disabledSetting]}>
           <View style={styles.settingInfo}>
-            <Bell size={24} color="#2f9e44" />
-            <Text style={styles.settingText}>Planting Reminders</Text>
+            <Bell size={24} color={colors.textSecondary} />
+            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Planting Reminders</Text>
           </View>
           <Switch
-            trackColor={{ false: '#dee2e6', true: '#8ce99a' }}
-            thumbColor="#ffffff"
-            ios_backgroundColor="#dee2e6"
+            value={notifications.plantingReminders}
+            onValueChange={() => {}} // Disabled
+            trackColor={{ false: colors.border, true: colors.textSecondary }}
+            thumbColor={colors.textSecondary}
+            ios_backgroundColor={colors.border}
+            disabled={true}
           />
         </View>
-        <View style={styles.setting}>
+        <View style={[styles.setting, styles.disabledSetting]}>
           <View style={styles.settingInfo}>
-            <CloudRain size={24} color="#2f9e44" />
-            <Text style={styles.settingText}>Weather Alerts</Text>
+            <CloudRain size={24} color={colors.textSecondary} />
+            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Weather Alerts</Text>
           </View>
           <Switch
-            trackColor={{ false: '#dee2e6', true: '#8ce99a' }}
-            thumbColor="#ffffff"
-            ios_backgroundColor="#dee2e6"
+            value={notifications.weatherAlerts}
+            onValueChange={() => {}} // Disabled
+            trackColor={{ false: colors.border, true: colors.textSecondary }}
+            thumbColor={colors.textSecondary}
+            ios_backgroundColor={colors.border}
+            disabled={true}
           />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Appearance</Text>
+      <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
         <View style={styles.setting}>
           <View style={styles.settingInfo}>
-            <Sun size={24} color="#2f9e44" />
-            <Text style={styles.settingText}>Light Mode</Text>
+            <Sun size={24} color={colors.icon} />
+            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Light Mode</Text>
           </View>
-          <Pressable style={[styles.themeButton, styles.activeTheme]}>
-            <Text style={styles.themeButtonText}>On</Text>
+          <Pressable 
+            style={[
+              styles.themeButton, 
+              { backgroundColor: colors.surface },
+              theme === 'light' && [styles.activeTheme, { backgroundColor: colors.primary }]
+            ]}
+            onPress={() => handleThemeChange('light')}
+          >
+            <Text style={[
+              styles.themeButtonText, 
+              { color: theme === 'light' ? colors.primaryText : colors.text }
+            ]}>
+              {theme === 'light' ? 'On' : 'Off'}
+            </Text>
           </Pressable>
         </View>
         <View style={styles.setting}>
           <View style={styles.settingInfo}>
-            <Moon size={24} color="#2f9e44" />
-            <Text style={styles.settingText}>Dark Mode</Text>
+            <Moon size={24} color={colors.icon} />
+            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Dark Mode</Text>
           </View>
-          <Pressable style={styles.themeButton}>
-            <Text style={styles.themeButtonText}>Off</Text>
+          <Pressable 
+            style={[
+              styles.themeButton, 
+              { backgroundColor: colors.surface },
+              theme === 'dark' && [styles.activeTheme, { backgroundColor: colors.primary }]
+            ]}
+            onPress={() => handleThemeChange('dark')}
+          >
+            <Text style={[
+              styles.themeButtonText, 
+              { color: theme === 'dark' ? colors.primaryText : colors.text }
+            ]}>
+              {theme === 'dark' ? 'On' : 'Off'}
+            </Text>
           </Pressable>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.version}>Version 1.0.0</Text>
+      <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+        <Text style={[styles.version, { color: colors.textSecondary }]}>Version 1.0.0</Text>
       </View>
     </View>
   );
@@ -68,35 +119,48 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   header: {
     padding: 16,
-    backgroundColor: '#f8f9fa',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#212529',
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+  },
+  disabledSection: {
+    opacity: 0.6,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#212529',
-    marginBottom: 16,
+  },
+  comingSoonLabel: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(128, 128, 128, 0.2)',
   },
   setting: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  disabledSetting: {
+    opacity: 0.8,
   },
   settingInfo: {
     flexDirection: 'row',
@@ -105,24 +169,20 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 16,
-    color: '#495057',
   },
   themeButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#f1f3f5',
   },
   activeTheme: {
-    backgroundColor: '#e6f3e6',
+    // Active styling is handled dynamically
   },
   themeButtonText: {
     fontSize: 14,
-    color: '#2f9e44',
     fontWeight: '500',
   },
   version: {
     fontSize: 14,
-    color: '#868e96',
   },
 });

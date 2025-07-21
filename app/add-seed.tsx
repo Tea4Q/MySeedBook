@@ -1,9 +1,7 @@
 import {
-  Link,
   useRouter,
   useLocalSearchParams,
-  useFocusEffect,
-} from 'expo-router'; // Added useFocusEffect if needed
+} from 'expo-router';
 import React, {
   useMemo,
   useState,
@@ -18,18 +16,12 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Image,
-  FlatList,
-  Alert, // Added Alert
+  Alert,
   ActivityIndicator,
-  Platform, // Added Platform
-  Modal, // Add Modal
-  TouchableOpacity, // Add TouchableOpacity
+  Platform,
 } from 'react-native';
 import {
-  Tally4,
   ArrowLeft,
-  Camera,
   Calendar,
   Droplets,
   Sun,
@@ -37,19 +29,13 @@ import {
   Clock,
   Sprout,
   Mountain,
-  Upload,
-  Trash2,
-  Globe,
   FlaskRound as Flask,
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
-import SmartImage from '@/components/SmartImage'; // Import SmartImage
-import DevBanner from '@/components/DevBanner'; // Import DevBanner
+import { DevBanner } from '@/components/DevBanner'; // Import DevBanner
 import { SupplierSelect } from '@/components/SupplierSelect';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import DateTimePickerModal from 'react-native-modal-datetime-picker'; // For mobile date picker
-import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 
@@ -89,7 +75,7 @@ export default function AddOrEditSeedScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [autoAddToCalendar, setAutoAddToCalendar] = useState(true); // New state for calendar toggle
+  const [autoAddToCalendar] = useState(true); // New state for calendar toggle
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -247,6 +233,7 @@ export default function AddOrEditSeedScreen() {
     } as Seed); // Reset to initial state
     setErrors({});
     setSelectedSupplier(null);
+    setPriceInput(''); // Reset price input display
   };
 
   const router = useRouter();
@@ -275,6 +262,8 @@ export default function AddOrEditSeedScreen() {
     // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     
+    console.log('Debug: Raw image array before filtering:', imageArray);
+    
     const imagesToSave = imageArray
       .filter((img) => {
         // Include images that have a URL (successful upload) and are not currently loading
@@ -283,12 +272,16 @@ export default function AddOrEditSeedScreen() {
         const notLoading = !img.isLoading;
         const isUploadError = img.error && !img.error.includes('Using local preview');
         
+        console.log(`Debug: Image ${img.id} - hasValidUrl: ${hasValidUrl}, notLoading: ${notLoading}, isUploadError: ${isUploadError}, url: ${img.url}`);
+        
         return hasValidUrl && notLoading && !isUploadError;
       })
       .map((img) => ({
         type: img.type,
         url: img.url,
       }));
+
+    console.log('Debug: Images to save:', imagesToSave);
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
@@ -357,7 +350,6 @@ export default function AddOrEditSeedScreen() {
               notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
               user_id: user?.id, // Add user_id for RLS
             });
-          console.log('Purchase date automatically added to calendar');
         } catch (calendarError) {
           console.error('Error adding purchase date to calendar:', calendarError);
           // Don't fail the seed creation if calendar addition fails
@@ -366,22 +358,7 @@ export default function AddOrEditSeedScreen() {
 
       // Reset form state
       setShowSuccess(true);
-      if (!isEditing) clearForm(); // Clear form only on successful add
-
-      // Navigate back after a delay
-      // setTimeout(() =>
-      // {
-      //   if (routerReadyRef.current) {
-      //     // Only navigate if router is ready
-      //     if (navigationTarget) {
-      //       router.push(navigationTarget); // Navigate to the target
-      //     } else {
-      //       router.back(); // Go back if no target set
-      //     }
-      //   }
-      //   // Set navigation target instead of navigating directly
-      // }, 1000); /
-      // Delay for success message visibility
+      if (!isEditing) clearForm(); // Clear form only if adding new seed
       setNavigationTarget(params.returnTo || '/(tabs)'); // Set navigation target
     } catch (error: any) {
       console.error('Error saving seed:', error);
@@ -392,17 +369,20 @@ export default function AddOrEditSeedScreen() {
     }
   };
 
-  const [seeds, setSeeds] = useState<Seed[]>([]); // Assuming Seed type for the list
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Helper function to format price with dollar sign
+  const formatPriceForDisplay = useCallback((price: number | string): string => {
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numericPrice)) return '';
+    if (numericPrice === 0) return ''; // Keep empty for zero to match current UX
+    return `$${numericPrice.toFixed(2)}`;
+  }, []);
+
   const [priceInput, setPriceInput] = useState<string>(
-    String(editingSeed?.seed_price ?? seedPackage.seed_price ?? '')
+    formatPriceForDisplay(editingSeed?.seed_price ?? seedPackage.seed_price ?? 0)
   );
   // --- Supplier Fetching Logic ---
-
-  // State for image modal and selected image URL
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (params.newSupplierID) {
@@ -440,7 +420,7 @@ export default function AddOrEditSeedScreen() {
     if (params.reloadSuppliers === 'true') {
       setReloadSuppliers(true);
     }
-  }, [params.newSupplierID, params.reloadSuppliers, supabase]);
+  }, [params.newSupplierID, params.reloadSuppliers]);
 
   // Fetch supplier details when seedPackage.supplier_id changes
   useEffect(() => {
@@ -488,22 +468,22 @@ export default function AddOrEditSeedScreen() {
       }
     };
     fetchSupplierDetails();
-  }, [seedPackage.supplier_id, supabase]);
+  }, [seedPackage.supplier_id]);
 
   // Add useEffect to sync input state if seedPackage.seed_price changes externally
   // (Important for initial load when editing)
   useEffect(() => {
-    const numericPriceString = String(seedPackage.seed_price ?? '');
+    const formattedPrice = formatPriceForDisplay(seedPackage.seed_price ?? 0);
     // Update input only if it's different to avoid potential loops
     // and ensure it reflects the underlying numeric state initially or if reset
     if (
-      priceInput !== numericPriceString &&
-      parseFloat(priceInput) !== seedPackage.seed_price
+      priceInput !== formattedPrice &&
+      parseFloat(priceInput.replace('$', '')) !== seedPackage.seed_price
     ) {
-      setPriceInput(numericPriceString);
+      setPriceInput(formattedPrice);
     }
     // Dependency array ensures this runs when the numeric value changes
-  }, [seedPackage.seed_price]);
+  }, [seedPackage.seed_price, priceInput, formatPriceForDisplay]);
 
   // --- Navigation useEffect ---
   useEffect(() => {
@@ -595,60 +575,6 @@ export default function AddOrEditSeedScreen() {
             <Text style={styles.errorText}>{errors.images}</Text>
           )}
         </View>
-        {/* Thumbnails and Modal for viewing images */}
-        {Array.isArray(seedPackage.seed_images) &&
-          seedPackage.seed_images.length > 0 && (
-            <View style={styles.thumbnailRow}>
-              {(seedPackage.seed_images as Imageinfo[])
-                .filter((img) => (img.url && img.url.trim() !== '') || (img.localUri && img.localUri.trim() !== '')) // Show thumbnails for images with valid URLs or localUri
-                .map((img) => {
-                  return (
-                    <TouchableOpacity
-                      key={img.id}
-                      onPress={() => {
-                        // Use localUri for modal if available, otherwise use url
-                        const selectedUri = img.localUri || img.url;
-                        setSelectedImageUrl(selectedUri);
-                        setModalVisible(true);
-                      }}
-                      style={styles.thumbnailWrapper}
-                    >
-                      <SmartImage
-                        uri={img.url}
-                        localUri={img.localUri}
-                        style={styles.thumbnailImage}
-                        resizeMode="cover"
-                        showDebugInfo={false} // Reduce console noise
-                      />
-                    </TouchableOpacity>
-                  );
-                })}
-            </View>
-          )}
-        <Modal
-          visible={modalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalBackground}>
-            <TouchableOpacity
-              style={styles.modalCloseArea}
-              onPress={() => setModalVisible(false)}
-            />
-            <View style={styles.modalContent}>
-              {selectedImageUrl && (
-                <SmartImage
-                  uri={selectedImageUrl}
-                  style={styles.fullImage}
-                  resizeMode="contain"
-                  showDebugInfo={false}
-                />
-              )}
-            </View>
-          </View>
-        </Modal>
-
         {/* Form Section */}
         <View style={styles.formSection}>
           {/* Seed Name */}
@@ -712,10 +638,10 @@ export default function AddOrEditSeedScreen() {
             />
           </View>
 
-          {/* Row: Quantity, Date Purchased , Price*/}
-          <View style={styles.row}>
+          {/* Quantity and Price Row */}
+          <View style={styles.quantityPriceRow}>
             {/* Quantity Input */}
-            <View style={[styles.inputGroup, { flex: 1 }]}>
+            <View style={[styles.inputGroup, styles.quantityInput]}>
               <Text style={styles.label}>Quantity *</Text>
               <TextInput
                 style={[styles.input, errors.quantity && styles.inputError]}
@@ -735,86 +661,15 @@ export default function AddOrEditSeedScreen() {
                 <Text style={styles.errorText}>{errors.quantity}</Text>
               )}
             </View>
-            {/* Date Purchased Input */}
-            <View style={[styles.inputGroup]}>
-              <Text style={styles.label}>Purchase Date</Text>
-              <Text style={styles.helpText}>
-                💡 Purchase date will be automatically added to your calendar
-              </Text>
-              {/* Web Date Picker */}
-              {Platform.OS === 'web' ? (
-                // eslint-disable-next-line react/forbid-dom-props
-                <input
-                  type="date"
-                  className="date-input"
-                  style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    padding: 16,
-                    fontSize: 16,
-                    color: '#333',
-                    borderWidth: 1,
-                    borderColor: '#e0e0e0',
-                    height: 56,
-                    boxSizing: 'border-box',
-                  }}
-                  value={
-                    seedPackage.date_purchased
-                      ? seedPackage.date_purchased.toISOString().split('T')[0]
-                      : ''
-                  }
-                  onChange={(e) => {
-                    const date = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(date.getTime())) handleDateChange(date);
-                  }}
-                  placeholder="Select a date"
-                  title="Select event date"
-                />
-              ) : (
-                <>
-                  <Pressable
-                    style={styles.datePickerContainer}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text style={styles.dateText}>
-                      {seedPackage.date_purchased
-                        ? seedPackage.date_purchased.toLocaleDateString(
-                            'en-US',
-                            {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            }
-                          )
-                        : 'Select a date'}
-                    </Text>
-                    <Calendar size={20} color="#2d7a3a" />
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={seedPackage.date_purchased || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={(event, selectedDate) => {
-                          if (selectedDate) {
-                            handleDateChange(selectedDate);
-                          }
-                          setShowDatePicker(false);
-                        }}
-                      ></DateTimePicker>
-                    )}
-                  </Pressable>
-                </>
-              )}
-            </View>
 
             {/* Price Input */}
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+            <View style={[styles.inputGroup, styles.priceInput]}>
               <Text style={styles.label}>Price</Text>
               <TextInput
                 style={styles.input}
                 value={priceInput}
                 onChangeText={(text) => {
-                  // Remove all non-numeric and non-decimal characters except dot
+                  // Remove dollar sign and all non-numeric characters except dot
                   let cleaned = text.replace(/[^\d.]/g, '');
                   // Only allow one decimal point
                   const parts = cleaned.split('.');
@@ -827,26 +682,95 @@ export default function AddOrEditSeedScreen() {
                     cleaned =
                       intPart + '.' + (decPart ? decPart.slice(0, 2) : '');
                   }
-                  // Format as currency (e.g., $3.50)
-                  let formatted = cleaned;
-                  if (cleaned !== '' && !isNaN(Number(cleaned))) {
-                    formatted = `$${cleaned}`;
-                  } else if (cleaned === '') {
-                    formatted = '';
-                  }
-                  setPriceInput(formatted);
-                  // Store numeric value in state (remove $)
+                  
+                  // Store numeric value in state
                   const numericValue = parseFloat(cleaned) || 0;
                   setSeedPackage((prev) => ({
                     ...prev,
                     seed_price: numericValue,
                   }));
+                  
+                  // Format for display with dollar sign (only if there's a value)
+                  const formatted = cleaned === '' ? '' : `$${cleaned}`;
+                  setPriceInput(formatted);
                 }}
                 placeholder="$3.50"
                 placeholderTextColor="#999"
                 keyboardType="decimal-pad"
               />
             </View>
+          </View>
+
+          {/* Date Purchased Input */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Purchase Date</Text>
+            <Text style={styles.helpText}>
+              💡 Purchase date will be automatically added to your calendar
+            </Text>
+            {/* Web Date Picker */}
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                className="date-input"
+                style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: 16,
+                  fontSize: 16,
+                  color: '#333',
+                  borderWidth: 1,
+                  borderColor: '#e0e0e0',
+                  height: 56,
+                  boxSizing: 'border-box',
+                  width: '100%',
+                } as any}
+                value={
+                  seedPackage.date_purchased
+                    ? seedPackage.date_purchased.toISOString().split('T')[0]
+                    : ''
+                }
+                onChange={(e) => {
+                  const date = new Date(e.target.value + 'T00:00:00');
+                  if (!isNaN(date.getTime())) handleDateChange(date);
+                }}
+                placeholder="Select a date"
+                title="Select event date"
+              />
+            ) : (
+              <>
+                <Pressable
+                  style={styles.datePickerContainer}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {seedPackage.date_purchased
+                      ? seedPackage.date_purchased.toLocaleDateString(
+                          'en-US',
+                          {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          }
+                        )
+                      : 'Select a date'}
+                  </Text>
+                  <Calendar size={20} color="#2d7a3a" />
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={seedPackage.date_purchased || new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          handleDateChange(selectedDate);
+                        }
+                        setShowDatePicker(false);
+                      }}
+                    ></DateTimePicker>
+                  )}
+                </Pressable>
+              </>
+            )}
           </View>
 
           {/* Supplier Selection */}
@@ -1034,8 +958,8 @@ export default function AddOrEditSeedScreen() {
           </View>
 
           {/* Planting/Harvest Season Row */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
+          <View style={styles.seasonRow}>
+            <View style={[styles.inputGroup, styles.seasonInput]}>
               <Text style={styles.label}>Planting Season</Text>
               <TextInput
                 style={styles.input}
@@ -1047,7 +971,7 @@ export default function AddOrEditSeedScreen() {
                 placeholderTextColor="#999"
               />
             </View>
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+            <View style={[styles.inputGroup, styles.seasonInput]}>
               <Text style={styles.label}>Harvest Season</Text>
               <TextInput
                 style={styles.input}
@@ -1113,9 +1037,16 @@ const styles = StyleSheet.create({
   imageContainer: {
     marginBottom: 16,
     position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxHeight: 300, // Prevent image section from taking up too much space on mobile
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    minHeight: 120, // Ensure minimum height for ImageHandler
+    maxHeight: 280, // Reduced from 400 to prevent overflow
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    zIndex: 1, // Ensure it doesn't overlay modals
   },
   imageloadingIndicator: {
     position: 'absolute',
@@ -1365,6 +1296,10 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+    paddingTop: 12, // More padding at top for better text spacing
+    paddingBottom: 12,
+    paddingHorizontal: 16, // Keep horizontal padding consistent
+    lineHeight: 22, // Better line spacing for readability
   },
   typeContainer: {
     flexDirection: 'row',
@@ -1523,56 +1458,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
   },
-  // New styles for image thumbnails and modal
-  thumbnailRow: {
+  // New styles for better mobile layout
+  quantityPriceRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
     marginBottom: 16,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
   },
-  thumbnailWrapper: {
-    marginRight: 8,
-    marginBottom: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  thumbnailImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  modalBackground: {
+  quantityInput: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    minWidth: 100, // Ensure minimum width on mobile
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    maxWidth: '90%',
-    maxHeight: '80%',
+  priceInput: {
+    flex: 1,
+    minWidth: 120, // Slightly wider for price formatting
   },
-  modalCloseArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },  fullImage: {
-    width: 320,
-    height: 320,
-    borderRadius: 12,
-    alignSelf: 'center',
-    backgroundColor: '#fff',
+  seasonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  seasonInput: {
+    flex: 1,
+    minWidth: 140, // Ensure adequate space for season names
   },
 });

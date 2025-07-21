@@ -1,6 +1,7 @@
 import { Stack, SplashScreen, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ThemeProvider } from '@/lib/theme';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -84,9 +85,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   // Conditionally wrap with GestureHandlerRootView only on mobile platforms
   const AppContent = (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </ThemeProvider>
   );
 
   if (Platform.OS === 'web') {

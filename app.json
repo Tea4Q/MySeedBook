@@ -9,15 +9,6 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "A comprehensive gardening application for managing your seed collection and supplier information. Track planting seasons, harvest times, and maintain detailed records of your gardening inventory.",
-    "keywords": [
-      "gardening",
-      "seeds",
-      "agriculture",
-      "planting",
-      "harvest",
-      "suppliers",
-      "organic"
-    ],
     "primaryColor": "#336633",
     "splash": {
       "image": "./assets/images/icon.png",
@@ -28,7 +19,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.qtea.seedcatalogue",
       "buildNumber": "1",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.qtea.seedcatalogue",
@@ -42,7 +36,6 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -64,12 +57,12 @@
         {
           "photosPermission": "Allow QTea Seed Catalogue to access your photo library to select images of your seeds and plants."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
     },
-    "privacy": "public",
     "extra": {
       "router": {},
       "eas": {

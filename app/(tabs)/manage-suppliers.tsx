@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import * as React from 'react';
 import {
   View,
   Text,
@@ -7,29 +7,67 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Platform,
+  Alert,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
-import { Search, Plus, CreditCard as Pencil } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import { Search, Plus, Pencil, Trash2, X } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
 import type { Supplier } from '@/types/database';
-import React from 'react';
 
 export default function ManageSuppliersScreen() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { colors } = useTheme();
+  const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = React.useState<{
+    visible: boolean;
+    supplier: Supplier | null;
+  }>({ visible: false, supplier: null });
 
-  useEffect(() => {
+  // Helper function to convert hex to rgba
+  const hexToRgba = (hex: string, alpha: number) => {
+    // Handle cases where hex might not be a proper hex color
+    if (!hex || !hex.startsWith('#') || hex.length !== 7) {
+      return `rgba(255, 255, 255, ${alpha})`; // fallback
+    }
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  React.useEffect(() => {
     loadSuppliers();
   }, []);
 
   const loadSuppliers = async () => {
     try {
-      const { data, error: supabaseError } = await supabase
+      // Try to load suppliers with soft delete filter first
+      let { data, error: supabaseError } = await supabase
         .from('suppliers')
         .select('*')
+        .is('deleted_at', null) // Only load non-deleted suppliers
         .order('supplier_name');
+
+      // If the query fails (possibly because deleted_at column doesn't exist),
+      // fall back to loading all suppliers without the deleted_at filter
+      if (supabaseError && supabaseError.message.includes('deleted_at')) {
+        console.log(
+          'deleted_at column not found, falling back to loading all suppliers'
+        );
+        const fallbackResult = await supabase
+          .from('suppliers')
+          .select('*')
+          .order('supplier_name');
+
+        data = fallbackResult.data;
+        supabaseError = fallbackResult.error;
+      }
 
       if (supabaseError) throw supabaseError;
       setSuppliers(data || []);
@@ -69,51 +107,207 @@ export default function ManageSuppliersScreen() {
     }
   };
 
+  const deleteSupplier = async (supplier: Supplier) => {
+    // For web and other platforms, use custom modal
+    if (Platform.OS === 'web') {
+      setDeleteConfirmation({ visible: true, supplier });
+      return;
+    }
+
+    // For native platforms, use native Alert
+    Alert.alert(
+      'Delete Supplier',
+      `Are you sure you want to delete "${supplier.supplier_name}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => performDelete(supplier),
+        },
+      ]
+    );
+  };
+
+  const performDelete = async (supplier: Supplier) => {
+    try {
+      console.log(
+        'Attempting to delete supplier:',
+        supplier.id,
+        supplier.supplier_name
+      );
+
+      // Check current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      console.log('Current user:', user?.id);
+      console.log('Supplier user_id:', supplier.user_id);
+
+      // Check if there are any active (non-soft-deleted) seeds referencing this supplier
+      const { data: activeSeeds, error: seedCheckError } = await supabase
+        .from('seeds')
+        .select('id, seed_name')
+        .eq('supplier_id', supplier.id)
+        .is('deleted_at', null); // Only check for non-deleted seeds
+
+      if (seedCheckError) {
+        console.error('Error checking seeds:', seedCheckError);
+        throw new Error('Failed to check associated seeds');
+      }
+
+      if (activeSeeds && activeSeeds.length > 0) {
+        console.log('Found active seeds:', activeSeeds);
+        throw new Error(
+          `Cannot delete supplier: There are ${activeSeeds.length} active seed(s) associated with this supplier. Please delete or reassign these seeds first.`
+        );
+      }
+
+      console.log('No active seeds found, proceeding with supplier deletion');
+
+      // Try soft delete first (if deleted_at column exists)
+      let { error: supabaseError } = await supabase
+        .from('suppliers')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', supplier.id);
+
+      // If soft delete fails (column doesn't exist), fall back to hard delete
+      if (supabaseError && supabaseError.message.includes('deleted_at')) {
+        console.log('deleted_at column not found, performing hard delete');
+        const hardDeleteResult = await supabase
+          .from('suppliers')
+          .delete()
+          .eq('id', supplier.id);
+
+        supabaseError = hardDeleteResult.error;
+      }
+
+      if (supabaseError) {
+        console.error('Supabase delete error:', supabaseError);
+        // Provide more specific error messages
+        if (supabaseError.code === 'PGRST116') {
+          throw new Error('You can only delete suppliers that you created.');
+        } else if (supabaseError.message.includes('foreign key')) {
+          throw new Error(
+            'Cannot delete supplier: There are seeds associated with this supplier. Please remove or reassign the seeds first.'
+          );
+        } else {
+          throw new Error(`Delete failed: ${supabaseError.message}`);
+        }
+      }
+
+      console.log('Supplier deleted successfully');
+
+      // Remove supplier from local state (since we only show non-deleted suppliers)
+      setSuppliers(suppliers.filter((s) => s.id !== supplier.id));
+
+      // Clear any existing errors
+      setError(null);
+
+      // Close confirmation modal
+      setDeleteConfirmation({ visible: false, supplier: null });
+    } catch (err) {
+      console.error('Delete operation failed:', err);
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to delete supplier';
+      console.error('Error message:', errorMessage);
+      setError(errorMessage);
+      setDeleteConfirmation({ visible: false, supplier: null });
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ visible: false, supplier: null });
+  };
+
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#336633" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Manage Suppliers</Text>
-        <Link href="/add-supplier" asChild>
-          <Pressable style={styles.addButton}>
-            <Plus size={24} color="#ffffff" />
-          </Pressable>
-        </Link>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.title, { color: colors.primaryText }]}>
+          Supplier List
+        </Text>
+        <Pressable
+          style={[
+            styles.addButton,
+            { backgroundColor: hexToRgba(colors.primaryText, 0.2) },
+          ]}
+          onPress={() => router.push('/add-supplier')}
+        >
+          <Plus size={24} color={colors.primaryText} />
+        </Pressable>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#666666" />
+      <View
+        style={[
+          styles.searchContainer,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.inputBorder,
+          },
+        ]}
+      >
+        <Search size={20} color={colors.textSecondary} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.inputText }]}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search suppliers..."
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
 
       {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View
+          style={[
+            styles.errorContainer,
+            {
+              backgroundColor: hexToRgba(colors.error, 0.1),
+              borderColor: hexToRgba(colors.error, 0.3),
+            },
+          ]}
+        >
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
+          </Text>
         </View>
       )}
 
       <ScrollView style={styles.content}>
         {filteredSuppliers.map((supplier) => (
-          <View key={supplier.id} style={styles.supplierCard}>
+          <View
+            key={supplier.id}
+            style={[
+              styles.supplierCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.supplierHeader}>
               <View>
-                <Text style={styles.supplierName}>
+                <Text style={[styles.supplierName, { color: colors.text }]}>
                   {supplier.supplier_name}
                 </Text>
                 {supplier.webaddress && (
-                  <Text style={styles.webaddress}>{supplier.webaddress}</Text>
+                  <Text
+                    style={[styles.webaddress, { color: colors.textSecondary }]}
+                  >
+                    {supplier.webaddress}
+                  </Text>
                 )}
               </View>
               <View style={styles.statusContainer}>
@@ -121,52 +315,180 @@ export default function ManageSuppliersScreen() {
                   style={[
                     styles.statusBadge,
                     supplier.is_active
-                      ? styles.activeBadge
-                      : styles.inactiveBadge,
+                      ? [
+                          styles.activeBadge,
+                          { backgroundColor: hexToRgba(colors.success, 0.2) },
+                        ]
+                      : [
+                          styles.inactiveBadge,
+                          { backgroundColor: hexToRgba(colors.error, 0.2) },
+                        ],
                   ]}
                   onPress={() => toggleSupplierStatus(supplier)}
                 >
-                  <Text style={styles.statusText}>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color: supplier.is_active
+                          ? colors.success
+                          : colors.error,
+                      },
+                    ]}
+                  >
                     {supplier.is_active ? 'Active' : 'Inactive'}
                   </Text>
                 </Pressable>
-                <Link
-                  href={{
-                    pathname: '/edit-supplier/[id]',
-                    params: { id: supplier.id },
-                  }}
-                  asChild
+                <Pressable
+                  style={[
+                    styles.editButton,
+                    {
+                      backgroundColor: colors.surface,
+                      marginLeft: 8,
+                    },
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/edit-supplier/[id]',
+                      params: { id: supplier.id },
+                    })
+                  }
                 >
-                  <Pressable style={styles.editButton}>
-                    <Pencil size={20} color="#336633" />
-                  </Pressable>
-                </Link>
+                  <Pencil size={20} color={colors.primary} />
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.deleteButton,
+                    {
+                      backgroundColor: hexToRgba(colors.error, 0.1),
+                      marginLeft: 8,
+                    },
+                  ]}
+                  onPress={() => deleteSupplier(supplier)}
+                >
+                  <Trash2 size={20} color={colors.error} />
+                </Pressable>
               </View>
             </View>
 
             <View style={styles.supplierDetails}>
               {supplier.email && (
-                <Text style={styles.detailText}>Email: {supplier.email}</Text>
+                <Text
+                  style={[
+                    styles.detailText,
+                    { color: colors.textSecondary, marginBottom: 8 },
+                  ]}
+                >
+                  Email: {supplier.email}
+                </Text>
               )}
               {supplier.phone && (
-                <Text style={styles.detailText}>Phone: {supplier.phone}</Text>
+                <Text
+                  style={[
+                    styles.detailText,
+                    { color: colors.textSecondary, marginBottom: 8 },
+                  ]}
+                >
+                  Phone: {supplier.phone}
+                </Text>
               )}
               {supplier.address && (
-                <Text style={styles.detailText}>
+                <Text
+                  style={[styles.detailText, { color: colors.textSecondary }]}
+                >
                   Address: {supplier.address}
                 </Text>
               )}
             </View>
 
             {supplier.notes && (
-              <View style={styles.notesContainer}>
-                <Text style={styles.notesLabel}>Notes:</Text>
-                <Text style={styles.notesText}>{supplier.notes}</Text>
+              <View
+                style={[
+                  styles.notesContainer,
+                  { backgroundColor: colors.surface },
+                ]}
+              >
+                <Text style={[styles.notesLabel, { color: colors.text }]}>
+                  Notes:
+                </Text>
+                <Text
+                  style={[styles.notesText, { color: colors.textSecondary }]}
+                >
+                  {supplier.notes}
+                </Text>
               </View>
             )}
           </View>
         ))}
       </ScrollView>
+
+      {/* Custom Confirmation Modal for Web */}
+      <Modal
+        visible={deleteConfirmation.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View
+          style={[
+            styles.modalOverlay,
+            { backgroundColor: hexToRgba(colors.background, 0.8) },
+          ]}
+        >
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Delete Supplier
+              </Text>
+              <TouchableOpacity
+                onPress={cancelDelete}
+                style={styles.modalCloseButton}
+              >
+                <X size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalMessage, { color: colors.text }]}>
+              Are you sure you want to delete &ldquo;
+              {deleteConfirmation.supplier?.supplier_name}&rdquo;? This action
+              cannot be undone.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { backgroundColor: hexToRgba(colors.text, 0.1) },
+                ]}
+                onPress={cancelDelete}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalDeleteButton,
+                  { marginLeft: 12 },
+                ]}
+                onPress={() =>
+                  deleteConfirmation.supplier &&
+                  performDelete(deleteConfirmation.supplier)
+                }
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -174,7 +496,6 @@ export default function ManageSuppliersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0',
   },
   loadingContainer: {
     flex: 1,
@@ -186,46 +507,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#336633',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
   addButton: {
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     margin: 16,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: '#333333',
   },
   errorContainer: {
     margin: 16,
     padding: 12,
-    backgroundColor: '#fef2f2',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fee2e2',
   },
   errorText: {
-    color: '#dc2626',
     fontSize: 14,
   },
   content: {
@@ -233,15 +545,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   supplierCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
   },
   supplierHeader: {
     flexDirection: 'row',
@@ -252,34 +559,27 @@ const styles = StyleSheet.create({
   supplierName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a472a',
   },
   webaddress: {
     fontSize: 14,
-    color: '#666666',
     marginTop: 4,
   },
   contactPerson: {
     fontSize: 14,
-    color: '#666666',
     marginTop: 4,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    // gap: 8, // Removed gap property - not supported in React Native Web
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  activeBadge: {
-    backgroundColor: '#dcfce7',
-  },
-  inactiveBadge: {
-    backgroundColor: '#fee2e2',
-  },
+  activeBadge: {},
+  inactiveBadge: {},
   statusText: {
     fontSize: 14,
     fontWeight: '600',
@@ -287,30 +587,90 @@ const styles = StyleSheet.create({
   editButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f0f9f0',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 8,
   },
   supplierDetails: {
-    gap: 8,
+    // gap: 8, // Removed gap property - not supported in React Native Web
   },
   detailText: {
     fontSize: 14,
-    color: '#666666',
   },
   notesContainer: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f8faf8',
     borderRadius: 8,
   },
   notesLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a472a',
     marginBottom: 4,
   },
   notesText: {
     fontSize: 14,
-    color: '#666666',
     fontStyle: 'italic',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    // gap: 12, // Removed gap property - not supported in React Native Web
+  },
+  modalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    // Additional styling handled inline
+  },
+  modalDeleteButton: {
+    backgroundColor: '#EF4444',
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

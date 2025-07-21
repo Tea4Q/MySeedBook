@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
 } from 'lucide-react-native';
+import { useTheme } from '@/lib/theme';
 import React from 'react';
 
 
@@ -20,19 +21,21 @@ import React from 'react';
 // export { RootLayout as default };
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: '#262A2B',
-          borderTopColor: '#BCAB92',
+          backgroundColor: colors.tabBarBackground,
+          borderTopColor: colors.tabBarActive,
         },
-        tabBarActiveTintColor: '#BCAB92',
-        tabBarInactiveTintColor: '#8B8776',
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         headerStyle: {
-          backgroundColor: '#262A2B',
+          backgroundColor: colors.tabBarBackground,
         },
-        headerTintColor: '#BCAB92',
+        headerTintColor: colors.tabBarActive,
       }}
     >
       <Tabs.Screen
@@ -52,7 +55,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="manage-suppliers"
         options={{
-          title: 'Manage Suppliers',
+          title: 'Suppliers',
           tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />

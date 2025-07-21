@@ -1,4 +1,4 @@
-package com.qtea.boltexponativewind
+package com.qtea.seedcatalogue
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

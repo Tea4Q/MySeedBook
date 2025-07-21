@@ -58,6 +58,24 @@ export default function AddSupplierForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  
+  // Phone formatting helper function
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-numeric characters
+    const phoneNumber = value.replace(/[^\d]/g, '');
+    
+    // Apply formatting based on length
+    if (phoneNumber.length <= 3) {
+      return phoneNumber;
+    } else if (phoneNumber.length <= 6) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    } else if (phoneNumber.length <= 10) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+    } else {
+      // Handle longer numbers (like international)
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    }
+  };
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, supplier_name: initialSupplierName }));
@@ -249,13 +267,21 @@ export default function AddSupplierForm({
               <Phone size={20} color="#336633" />
               <Text style={styles.label}>Phone Number</Text>
             </View>
-            <TextInput
-              style={styles.input}
-              value={formData.phone}
-              onChangeText={(text) => setFormData({ ...formData, phone: text })}
-              placeholder="Enter phone number"
-              keyboardType="phone-pad"
-            />
+            <View style={styles.phoneInputContainer}>
+              <Text style={styles.countryCode}>+1</Text>
+              <TextInput
+                style={styles.phoneInput}
+                value={formData.phone || ''}
+                onChangeText={(text) => {
+                  const formatted = formatPhoneNumber(text);
+                  setFormData({ ...formData, phone: formatted });
+                }}
+                placeholder="(555) 123-4567"
+                placeholderTextColor="#999"
+                keyboardType="phone-pad"
+                maxLength={14} // Limit to formatted US phone length
+              />
+            </View>
           </View>
           {/* Address */}
           <View style={styles.inputGroup}>
@@ -362,6 +388,30 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingLeft: 16,
+  },
+  countryCode: {
+    fontSize: 16,
+    color: '#333333',
+    fontWeight: '600',
+    paddingRight: 8,
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+    marginRight: 12,
+  },
+  phoneInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#333333',
   },
   submitButton: {
     backgroundColor: '#336633',

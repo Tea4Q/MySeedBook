@@ -17,6 +17,9 @@ import {
   eachDayOfInterval,
   endOfMonth,
   addDays,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
 } from 'date-fns';
 import {
   Calendar,
@@ -28,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams } from 'expo-router';
+import { useTheme } from '@/lib/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import {useRouter} from 'expo-router';
@@ -89,18 +93,43 @@ interface DateCalculation {
   harvestDate: Date;
 }
 
+// Helper function to parse day ranges (e.g., "7-10" becomes 8.5, "7" becomes 7)
+const parseDays = (daysString: string): number => {
+  const trimmed = daysString.trim();
+  if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    if (parts.length === 2) {
+      const min = parseInt(parts[0].trim(), 10);
+      const max = parseInt(parts[1].trim(), 10);
+      if (!isNaN(min) && !isNaN(max)) {
+        return Math.round((min + max) / 2); // Use average and round to nearest whole day
+      }
+    }
+  }
+  const singleValue = parseInt(trimmed, 10);
+  return isNaN(singleValue) ? 7 : singleValue; // Default to 7 if parsing fails
+};
+
 const calculateDates = (
   sowDate: Date,
-  daysToGerminate: number,
-  daysToHarvest: number
+  daysToGerminate: string | number,
+  daysToHarvest: string | number
 ): DateCalculation => {
+  const germinationDays = typeof daysToGerminate === 'string' 
+    ? parseDays(daysToGerminate) 
+    : daysToGerminate;
+  const harvestDays = typeof daysToHarvest === 'string' 
+    ? parseDays(daysToHarvest) 
+    : daysToHarvest;
+
   return {
-    germinationDate: addDays(sowDate, daysToGerminate),
-    harvestDate: addDays(sowDate, daysToHarvest),
+    germinationDate: addDays(sowDate, germinationDays),
+    harvestDate: addDays(sowDate, harvestDays),
   };
 };
 
 export default function CalendarScreen() {
+  const { colors } = useTheme(); // Add theme support
   const params = useLocalSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<PlantingEvent[]>([]);
@@ -241,8 +270,8 @@ export default function CalendarScreen() {
   }, [params.openAddEvent, params.seedId, params.seedName]);
 
   const days = eachDayOfInterval({
-    start: startOfMonth(currentDate),
-    end: endOfMonth(currentDate),
+    start: startOfWeek(startOfMonth(currentDate)),
+    end: endOfWeek(endOfMonth(currentDate)),
   });
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -315,8 +344,8 @@ export default function CalendarScreen() {
       if (newEvent.category === 'sow') {
         const { germinationDate, harvestDate } = calculateDates(
           new Date(newEvent.date),
-          parseInt(daysToGerminate, 10),
-          parseInt(daysToHarvest, 10)
+          daysToGerminate,
+          daysToHarvest
         );
 
         // Insert germination event
@@ -404,12 +433,12 @@ export default function CalendarScreen() {
 
   // Inject responsive CSS for web to ensure row wraps vertically on mobile devices
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const styleId = 'calendar-modal-responsive-row';
       if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
         style.id = styleId;
-        style.innerHTML = `
+        style.textContent = `
           @media (max-width: 600px) {
             .row {
               flex-direction: column !important;
@@ -428,12 +457,12 @@ export default function CalendarScreen() {
 
   // Inject responsive CSS for web to ensure Add Event modal row wraps on mobile
   React.useEffect(() => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
       // Only inject once
       if (!document.getElementById('add-event-modal-responsive-css')) {
         const style = document.createElement('style');
         style.id = 'add-event-modal-responsive-css';
-        style.innerHTML = `
+        style.textContent = `
           /* Responsive: Stack Add Event modal row vertically on small screens */
           .add-event-modal-row {
             flex-direction: row;
@@ -451,33 +480,29 @@ export default function CalendarScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={styles.header}>
-          <Pressable onPress={previousMonth} style={styles.iconButton}>
-            <ChevronLeft size={24} color="#2f9e44" />
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Pressable onPress={previousMonth} style={[styles.iconButton, { backgroundColor: colors.surface }]}>
+            <ChevronLeft size={24} color={colors.icon} />
           </Pressable>
-          <Text style={styles.monthText}>
+          <Text style={[styles.monthText, { color: colors.text }]}>
             {format(currentDate, 'MMMM yyyy')}
           </Text>
-          <Pressable onPress={nextMonth} style={styles.iconButton}>
-            <ChevronRight size={24} color="#2f9e44" />
+          <Pressable onPress={nextMonth} style={[styles.iconButton, { backgroundColor: colors.surface }]}>
+            <ChevronRight size={24} color={colors.icon} />
           </Pressable>
         </View>
 
-        <View style={styles.calendar}>
+        <View style={[styles.calendar, { backgroundColor: colors.card }]}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Text key={day} style={styles.weekDay}>
+            <Text key={day} style={[styles.weekDay, { color: colors.textSecondary }]}>
               {day}
             </Text>
           ))}
 
-          {Array.from({ length: startOfMonth(currentDate).getDay() }).map(
-            (_, index) => (
-              <View key={`empty-${index}`} style={styles.emptyDay} />
-            )
-          )}
           {days.map((date) => {
+            const isCurrentMonth = isSameMonth(date, currentDate);
             const isInRange =
               markedRange.start &&
               markedRange.end &&
@@ -502,13 +527,20 @@ export default function CalendarScreen() {
                 key={date.toISOString()}
                 style={[
                   styles.day,
-                  isInRange && styles.dayInRange,
-                  isStart && styles.dayStart,
-                  isEnd && styles.dayEnd,
+                  !isCurrentMonth && [styles.dayOtherMonth, { opacity: 0.4 }],
+                  isInRange && [styles.dayInRange, { backgroundColor: colors.success + '40' }], // 40 = 25% opacity
+                  isStart && [styles.dayStart, { backgroundColor: colors.primary + '80' }], // 80 = 50% opacity  
+                  isEnd && [styles.dayEnd, { backgroundColor: colors.error + '80' }], // 80 = 50% opacity
+                  dateEvents.length > 0 && [styles.dayWithEvent, { backgroundColor: colors.surface }],
                 ]}
                 onPress={() => handleDatePress(date)}
               >
-                <Text style={styles.dayText}>{date.getDate()}</Text>
+                <Text style={[
+                  styles.dayText, 
+                  { color: isCurrentMonth ? colors.text : colors.textSecondary }
+                ]}>
+                  {date.getDate()}
+                </Text>
                 <View style={styles.eventIndicators}>
                   {dateEvents.map((event) => (
                     <View
@@ -526,33 +558,33 @@ export default function CalendarScreen() {
         </View>
 
         <Pressable
-          style={styles.resetButton}
+          style={[styles.resetButton, { backgroundColor: colors.error }]}
           onPress={() => setMarkedRange({ start: null, end: null })}
         >
-          <Text style={styles.resetButtonText}>Reset Range</Text>
+          <Text style={[styles.resetButtonText, { color: colors.primaryText }]}>Reset Range</Text>
         </Pressable>
 
         {/* Add Event Button */}
-        <View style={styles.addEventContainer}>
+        <View style={[styles.addEventContainer, { borderTopColor: colors.border }]}>
           <Pressable
-            style={styles.addEventButton}
+            style={[styles.addEventButton, { backgroundColor: colors.primary }]}
             onPress={() => {
               openAddEventModal({});
             }}
           >
-            <Plus size={24} color="#ffffff" />
-            <Text style={styles.addEventText}>Add Event</Text>
+            <Plus size={24} color={colors.primaryText} />
+            <Text style={[styles.addEventText, { color: colors.primaryText }]}>Add Event</Text>
           </Pressable>
         </View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2f9e44" />
-            <Text style={styles.loadingText}>Loading events...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading events...</Text>
           </View>
         ) : (
           <ScrollView style={styles.eventList}>
-            <Text style={styles.eventListTitle}>Events this month</Text>
+            <Text style={[styles.eventListTitle, { color: colors.text }]}>Events this month</Text>
             {events
               .filter(
                 (event) =>
@@ -560,7 +592,7 @@ export default function CalendarScreen() {
                   event.date.getFullYear() === currentDate.getFullYear()
               )
               .map((event) => (
-                <View key={event.id} style={styles.eventItem}>
+                <View key={event.id} style={[styles.eventItem, { backgroundColor: colors.surface }]}>
                   <View
                     style={[
                       styles.eventDot,
@@ -568,22 +600,22 @@ export default function CalendarScreen() {
                     ]}
                   />
                   <View style={styles.eventDetails}>
-                    <Text style={styles.eventCategory}>
+                    <Text style={[styles.eventCategory, { color: colors.textSecondary }]}>
                       {CATEGORY_LABELS[event.category]}
                     </Text>
-                    <Text style={styles.eventDate}>
+                    <Text style={[styles.eventDate, { color: colors.textSecondary }]}>
                       {format(event.date, 'MMMM d, yyyy')}
                     </Text>
-                    <Text style={styles.eventText}>{event.seedName}</Text>
+                    <Text style={[styles.eventText, { color: colors.text }]}>{event.seedName}</Text>
                     {event.notes && (
-                      <Text style={styles.eventNotes}>{event.notes}</Text>
+                      <Text style={[styles.eventNotes, { color: colors.textSecondary }]}>{event.notes}</Text>
                     )}
                   </View>
                   <Pressable
                     style={styles.deleteButton}
                     onPress={() => handleDeleteEvent(event.id)}
                   >
-                    <Trash2 size={20} color="#e03131" />
+                    <Trash2 size={20} color={colors.error} />
                   </Pressable>
                 </View>
               ))}
@@ -598,15 +630,15 @@ export default function CalendarScreen() {
         transparent={true}
         onRequestClose={() => setIsAddEventModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Event</Text>
+        <View style={[styles.modalContainer, { backgroundColor: colors.modalBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Event</Text>
               <Pressable
                 style={styles.closeButton}
                 onPress={() => setIsAddEventModalVisible(false)}
               >
-                <X size={24} color="#666666" />
+                <X size={24} color={colors.icon} />
               </Pressable>
             </View>
 
@@ -614,14 +646,19 @@ export default function CalendarScreen() {
             <ScrollView style={styles.modalScroll}>
               {/* Add Event Form */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Seed Name</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Seed Name</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { 
+                    backgroundColor: colors.inputBackground, 
+                    color: colors.inputText,
+                    borderColor: colors.inputBorder 
+                  }]}
                   value={newEvent.seedName ?? ''}
                   onChangeText={(text) =>
                     setNewEvent({ ...newEvent, seedName: text })
                   }
                   placeholder="Enter seed name"
+                  placeholderTextColor={colors.textSecondary}
                   editable={true}
                 />
               </View>
@@ -629,7 +666,7 @@ export default function CalendarScreen() {
               {/* Event Type  Event Date Row */}
               <View style={styles.row}>
                 <View style={styles.rowInputGroup}>
-                  <Text style={styles.label}>Event Type</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Event Type</Text>
                   <View style={styles.categoryContainer}>
                     {(Object.keys(CATEGORY_COLORS) as EventCategory[]).map(
                       (category) => (
@@ -641,7 +678,8 @@ export default function CalendarScreen() {
                               backgroundColor:
                                 newEvent.category === category
                                   ? CATEGORY_COLORS[category]
-                                  : '#ffffff',
+                                  : colors.surface,
+                              borderColor: colors.border,
                             },
                           ]}
                           onPress={() => setNewEvent({ ...newEvent, category })}
@@ -652,8 +690,8 @@ export default function CalendarScreen() {
                               {
                                 color:
                                   newEvent.category === category
-                                    ? '#ffffff'
-                                    : '#666666',
+                                    ? colors.primaryText
+                                    : colors.text,
                               },
                             ]}
                           >
@@ -665,7 +703,7 @@ export default function CalendarScreen() {
                   </View>
                 </View>
                 <View style={styles.rowInputGroup}>
-                  <Text style={styles.label}>Event Date</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>Event Date</Text>
                   {Platform.OS === 'web' ? (
                     <input
                       type="date"
@@ -685,15 +723,18 @@ export default function CalendarScreen() {
                   ) : (
                     <>
                       <Pressable
-                        style={styles.datePickerContainer}
+                        style={[styles.datePickerContainer, {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.inputBorder
+                        }]}
                         onPress={() => setShowDatePicker(true)}
                       >
-                        <Text style={styles.dateText}>
+                        <Text style={[styles.dateText, { color: colors.inputText }]}>
                           {newEvent.date
                             ? format(newEvent.date, 'MMM d, yyyy')
                             : 'Select a date'}
                         </Text>
-                        <Calendar size={20} color="#2d7a3a" />
+                        <Calendar size={20} color={colors.primary} />
                       </Pressable>
                       {showDatePicker && (
                         <DateTimePicker
@@ -716,26 +757,34 @@ export default function CalendarScreen() {
               {/* Days to Germination and Harvest */}
 
               {newEvent.category === 'sow' && (
-                <View style={styles.calculationContainer}>
+                <View style={[styles.calculationContainer, { backgroundColor: colors.surface }]}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Days to Germination</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Days to Germination</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { 
+                        backgroundColor: colors.inputBackground, 
+                        color: colors.inputText,
+                        borderColor: colors.inputBorder 
+                      }]}
                       value={daysToGerminate}
                       onChangeText={setDaysToGerminate}
-                      keyboardType="numeric"
-                      placeholder="Enter days to germination"
+                      placeholder="e.g., 7 or 7-10"
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Days to Harvest</Text>
+                    <Text style={[styles.label, { color: colors.text }]}>Days to Harvest</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { 
+                        backgroundColor: colors.inputBackground, 
+                        color: colors.inputText,
+                        borderColor: colors.inputBorder 
+                      }]}
                       value={daysToHarvest}
                       onChangeText={setDaysToHarvest}
-                      keyboardType="numeric"
-                      placeholder="Enter days to harvest"
+                      placeholder="e.g., 80 or 80-90"
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
                 </View>
@@ -743,14 +792,19 @@ export default function CalendarScreen() {
 
               {/* Notes */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Notes</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { 
+                    backgroundColor: colors.inputBackground, 
+                    color: colors.inputText,
+                    borderColor: colors.inputBorder 
+                  }]}
                   value={newEvent.notes}
                   onChangeText={(text) =>
                     setNewEvent({ ...newEvent, notes: text })
                   }
                   placeholder="Add any notes about this event"
+                  placeholderTextColor={colors.textSecondary}
                   multiline
                   numberOfLines={4}
                 />
@@ -758,8 +812,8 @@ export default function CalendarScreen() {
 
 
               {/* Submit Button */}
-              <Pressable style={styles.addButton} onPress={handleAddEvent}>
-                <Text style={styles.addButtonText}>Add Event</Text>
+              <Pressable style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleAddEvent}>
+                <Text style={[styles.addButtonText, { color: colors.primaryText }]}>Add Event</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -773,10 +827,10 @@ export default function CalendarScreen() {
         transparent={true}
         onRequestClose={() => setIsEventModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.modalBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Events for{' '}
                 {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : ''}
               </Text>
@@ -784,14 +838,14 @@ export default function CalendarScreen() {
                 style={styles.closeButton}
                 onPress={() => setIsEventModalVisible(false)}
               >
-                <X size={24} color="#666666" />
+                <X size={24} color={colors.icon} />
               </Pressable>
             </View>
 
             <ScrollView style={styles.modalScroll}>
               {getEventsForSelectedDate().length > 0 ? (
                 getEventsForSelectedDate().map((event) => (
-                  <View key={event.id} style={styles.eventItem}>
+                  <View key={event.id} style={[styles.eventItem, { backgroundColor: colors.surface }]}>
                     <View
                       style={[
                         styles.eventDot,
@@ -799,18 +853,18 @@ export default function CalendarScreen() {
                       ]}
                     />
                     <View style={styles.eventDetails}>
-                      <Text style={styles.eventCategory}>
+                      <Text style={[styles.eventCategory, { color: colors.textSecondary }]}>
                         {CATEGORY_LABELS[event.category]}
                       </Text>
-                      <Text style={styles.eventText}>{event.seedName}</Text>
+                      <Text style={[styles.eventText, { color: colors.text }]}>{event.seedName}</Text>
                       {event.notes && (
-                        <Text style={styles.eventNotes}>{event.notes}</Text>
+                        <Text style={[styles.eventNotes, { color: colors.textSecondary }]}>{event.notes}</Text>
                       )}
                     </View>
                   </View>
                 ))
               ) : (
-                <Text style={styles.noEventsText}>No events for this day.</Text>
+                <Text style={[styles.noEventsText, { color: colors.textSecondary }]}>No events for this day.</Text>
               )}
             </ScrollView>
           </View>
@@ -823,32 +877,26 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f9fa',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   monthText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#212529',
   },
   iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#e6f3e6',
   },
   calendar: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 8,
-    backgroundColor: '#ffffff',
   },
   weekDay: {
     width: '14.28%',
@@ -856,7 +904,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#868e96',
   },
   day: {
     width: '14.28%',
@@ -865,28 +912,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 4,
   },
-  emptyDay: {
-    width: '14.28%',
-    aspectRatio: 1,
-  },
   dayText: {
     fontSize: 16,
-    color: '#212529',
+  },
+  dayOtherMonth: {
+    // Style for dates from previous/next month
   },
   dayWithEvent: {
-    backgroundColor: '#f1f3f5',
     borderRadius: 8,
   },
   dayInRange: {
-    backgroundColor: '#d3f9d8',
     borderRadius: 8,
   },
   dayStart: {
-    backgroundColor: '#74c0fc',
     borderRadius: 8,
   },
   dayEnd: {
-    backgroundColor: '#ff8787',
     borderRadius: 8,
   },
   eventIndicators: {
@@ -902,10 +943,8 @@ const styles = StyleSheet.create({
   addEventContainer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
   },
   addEventButton: {
-    backgroundColor: '#2f9e44',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -914,19 +953,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addEventText: {
-    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
   resetButton: {
-    backgroundColor: '#e03131',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
     margin: 16,
   },
   resetButtonText: {
-    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -950,13 +986,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#212529',
   },
   eventItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 12,
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -972,22 +1006,18 @@ const styles = StyleSheet.create({
   },
   eventCategory: {
     fontSize: 12,
-    color: '#666666',
     marginBottom: 2,
   },
   eventDate: {
     fontSize: 14,
-    color: '#868e96',
     marginBottom: 4,
   },
   eventText: {
     fontSize: 16,
-    color: '#212529',
     fontWeight: '600',
   },
   eventNotes: {
     fontSize: 14,
-    color: '#666666',
     marginTop: 4,
   },
   deleteButton: {
@@ -999,7 +1029,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', // Changed from 'flex-end' to 'center'
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -1010,12 +1039,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#212529',
   },
   closeButton: {
     padding: 8,
@@ -1029,17 +1056,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212529',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#212529',
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   textArea: {
     height: 100,
@@ -1052,7 +1075,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
     alignItems: 'center',
   },
   categoryButtonText: {
@@ -1060,40 +1082,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   calculationContainer: {
-    backgroundColor: '#f8f9fa',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
   },
   addButton: {
-    backgroundColor: '#2f9e44',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
   },
   addButtonText: {
-    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   datePickerButton: {
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
     alignItems: 'center',
   },
   datePickerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   // Add a compact, centered modal date picker wrapper
   modalDatePickerWrapper: {
@@ -1102,7 +1117,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 12,
     borderRadius: 8,
-    borderColor: '#e9ecef',
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1115,7 +1129,6 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 16,
-    color: '#212529',
   },
   loadingContainer: {
     flex: 1,
@@ -1125,31 +1138,36 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 8,
     fontSize: 16,
-    color: '#666666',
   },
   noEventsText: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     marginTop: 16,
   },
 });
-// Injected CSS for date input on web
-if (Platform.OS === 'web') {
-  const style = document.createElement('style');
-  style.innerHTML = `
-    .date-input {
-      width: 220px;
-      max-width: 90%;
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #e9ecef;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-  `;
-  document.head.appendChild(style);
+
+// Injected CSS for date input on web - using safer CSS injection
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const styleId = 'calendar-date-input-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .date-input {
+        width: 220px !important;
+        max-width: 90% !important;
+        font-size: 16px !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+        border: 1px solid #e9ecef !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        background-color: var(--input-background, #f8f9fa) !important;
+        color: var(--input-text, #212529) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }

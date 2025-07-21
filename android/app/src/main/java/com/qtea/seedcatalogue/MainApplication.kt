@@ -1,4 +1,4 @@
-package com.qtea.boltexponativewind
+package com.qtea.seedcatalogue
 
 import android.app.Application
 import android.content.res.Configuration

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,10 +50,10 @@ export default function SignupScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#BCAB92" />
+        <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.surface }]}>
+          <ArrowLeft size={24} color={colors.text} />
         </Pressable>
       </View>
 
@@ -60,83 +62,93 @@ export default function SignupScreen() {
           source={{ uri: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&auto=format&fit=crop' }}
           style={styles.logo}
         />
-        <Text style={styles.logoText}>Q-Tea Seed Catalogue</Text>
+        <Text style={[styles.logoText, { color: colors.text }]}>Q-Tea Seed Catalogue</Text>
       </View>
 
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Start your gardening journey today</Text>
+      <View style={[styles.formContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Start your gardening journey today</Text>
 
         {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorContainer, { 
+            backgroundColor: `rgba(220, 38, 38, 0.1)`,
+            borderColor: `rgba(220, 38, 38, 0.2)`
+          }]}>
+            <Text style={[styles.errorText, { color: '#ef4444' }]}>{error}</Text>
           </View>
         )}
 
-        <View style={styles.inputContainer}>
-          <Mail size={20} color="#BCAB92" />
+        <View style={[styles.inputContainer, { 
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.border
+        }]}>
+          <Mail size={20} color={colors.textSecondary} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Email"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!isLoading}
-            placeholderTextColor="#8B8776"
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#BCAB92" />
+        <View style={[styles.inputContainer, { 
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.border
+        }]}>
+          <Lock size={20} color={colors.textSecondary} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             editable={!isLoading}
-            placeholderTextColor="#8B8776"
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#BCAB92" />
+        <View style={[styles.inputContainer, { 
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.border
+        }]}>
+          <Lock size={20} color={colors.textSecondary} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Confirm Password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
             editable={!isLoading}
-            placeholderTextColor="#8B8776"
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
-        <Text style={styles.termsText}>
+        <Text style={[styles.termsText, { color: colors.textSecondary }]}>
           By signing up, you agree to our{' '}
-          <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-          <Text style={styles.termsLink}>Privacy Policy</Text>
+          <Text style={[styles.termsLink, { color: colors.primary }]}>Terms of Service</Text> and{' '}
+          <Text style={[styles.termsLink, { color: colors.primary }]}>Privacy Policy</Text>
         </Text>
 
         <Pressable 
-          style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+          style={[styles.signupButton, { backgroundColor: colors.primary }, isLoading && styles.signupButtonDisabled]}
           onPress={handleSignup}
           disabled={isLoading}>
           {isLoading ? (
-            <ActivityIndicator color="#262A2B" />
+            <ActivityIndicator color={colors.background} />
           ) : (
-            <Text style={styles.signupButtonText}>Create Account</Text>
+            <Text style={[styles.signupButtonText, { color: colors.surface }]}>Create Account</Text>
           )}
         </Pressable>
 
         <View style={styles.loginPrompt}>
-          <Text style={styles.loginPromptText}>Already have an account? </Text>
-          <Link href="/auth/login" asChild>
-            <Pressable>
-              <Text style={styles.loginLink}>Sign In</Text>
-            </Pressable>
-          </Link>
+          <Text style={[styles.loginPromptText, { color: colors.textSecondary }]}>Already have an account? </Text>
+          <Pressable onPress={() => router.push('/auth/login')}>
+            <Text style={[styles.loginLink, { color: colors.primary }]}>Sign In</Text>
+          </Pressable>
         </View>
       </View>
     </ScrollView>
@@ -146,7 +158,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#262A2B',
   },
   header: {
     padding: 16,
@@ -156,7 +167,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2D2B24',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
@@ -177,11 +187,9 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#BCAB92',
     marginTop: 16,
   },
   formContainer: {
-    backgroundColor: '#2D2B24',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 32,
@@ -195,56 +203,45 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#BCAB92',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#8B8776',
     marginBottom: 32,
   },
   errorContainer: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.2)',
   },
   errorText: {
-    color: '#ef4444',
     fontSize: 14,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#262A2B',
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#5E6347',
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#BCAB92',
   },
   termsText: {
     fontSize: 14,
-    color: '#8B8776',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   termsLink: {
-    color: '#BCAB92',
     fontWeight: '600',
   },
   signupButton: {
-    backgroundColor: '#BCAB92',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -254,7 +251,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   signupButtonText: {
-    color: '#262A2B',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -265,11 +261,9 @@ const styles = StyleSheet.create({
   },
   loginPromptText: {
     fontSize: 16,
-    color: '#8B8776',
   },
   loginLink: {
     fontSize: 16,
-    color: '#BCAB92',
     fontWeight: '600',
   },
 });
