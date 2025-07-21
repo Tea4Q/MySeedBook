@@ -400,8 +400,6 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                   onError={(error) => {
                     // If Supabase URL fails and we have a localUri, try to fallback
                     if (image.url && image.localUri && imageUri === image.url) {
-                      console.log('Supabase URL failed to load, falling back to localUri');
-                      console.log('Preserving URL for database save:', image.url);
                       setImages((prevImages) =>
                         prevImages.map((img) =>
                           img.id === image.id

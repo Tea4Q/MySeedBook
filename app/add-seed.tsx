@@ -33,7 +33,6 @@ import {
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
-import { DevBanner } from '@/components/DevBanner'; // Import DevBanner
 import { SupplierSelect } from '@/components/SupplierSelect';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
@@ -262,8 +261,6 @@ export default function AddOrEditSeedScreen() {
     // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     
-    console.log('Debug: Raw image array before filtering:', imageArray);
-    
     const imagesToSave = imageArray
       .filter((img) => {
         // Include images that have a URL (successful upload) and are not currently loading
@@ -272,16 +269,12 @@ export default function AddOrEditSeedScreen() {
         const notLoading = !img.isLoading;
         const isUploadError = img.error && !img.error.includes('Using local preview');
         
-        console.log(`Debug: Image ${img.id} - hasValidUrl: ${hasValidUrl}, notLoading: ${notLoading}, isUploadError: ${isUploadError}, url: ${img.url}`);
-        
         return hasValidUrl && notLoading && !isUploadError;
       })
       .map((img) => ({
         type: img.type,
         url: img.url,
       }));
-
-    console.log('Debug: Images to save:', imagesToSave);
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
@@ -536,7 +529,6 @@ export default function AddOrEditSeedScreen() {
   // --- Render the component ---
   return (
     <View style={styles.container}>
-      <DevBanner />
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -583,7 +575,7 @@ export default function AddOrEditSeedScreen() {
             <TextInput
               style={[styles.input, errors.name && styles.inputError]}
               value={seedPackage.seed_name || ''} // Handle potential null/undefined
-              onChangeText={(text) =>
+              onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, seed_name: text }))
               }
               placeholder="e.g., Brandywine Tomato"
@@ -628,7 +620,7 @@ export default function AddOrEditSeedScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={seedPackage.description || ''}
-              onChangeText={(text) =>
+              onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, description: text }))
               }
               placeholder="Describe your seeds..."
@@ -646,7 +638,7 @@ export default function AddOrEditSeedScreen() {
               <TextInput
                 style={[styles.input, errors.quantity && styles.inputError]}
                 value={String(seedPackage.quantity || '')} // Ensure string value
-                onChangeText={(text) => {
+                onChangeText={(text: string) => {
                   const num = parseInt(text, 10);
                   setSeedPackage((prev) => ({
                     ...prev,
@@ -668,7 +660,7 @@ export default function AddOrEditSeedScreen() {
               <TextInput
                 style={styles.input}
                 value={priceInput}
-                onChangeText={(text) => {
+                onChangeText={(text: string) => {
                   // Remove dollar sign and all non-numeric characters except dot
                   let cleaned = text.replace(/[^\d.]/g, '');
                   // Only allow one decimal point
@@ -729,7 +721,7 @@ export default function AddOrEditSeedScreen() {
                     ? seedPackage.date_purchased.toISOString().split('T')[0]
                     : ''
                 }
-                onChange={(e) => {
+                onChange={(e: any) => {
                   const date = new Date(e.target.value + 'T00:00:00');
                   if (!isNaN(date.getTime())) handleDateChange(date);
                 }}
@@ -760,7 +752,7 @@ export default function AddOrEditSeedScreen() {
                       value={seedPackage.date_purchased || new Date()}
                       mode="date"
                       display="default"
-                      onChange={(event, selectedDate) => {
+                      onChange={(event: any, selectedDate?: Date) => {
                         if (selectedDate) {
                           handleDateChange(selectedDate);
                         }
@@ -810,7 +802,7 @@ export default function AddOrEditSeedScreen() {
                       ? String(seedPackage.days_to_germinate)
                       : ''
                   }
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     setSeedPackage((prev) => ({
                       ...prev,
                       // Accept string for range (e.g., '7-10')
@@ -832,7 +824,7 @@ export default function AddOrEditSeedScreen() {
                       ? String(seedPackage.days_to_harvest)
                       : ''
                   } // Ensure string value
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     setSeedPackage((prev) => ({
                       ...prev,
                       //Accepting string for range (eg., '21 - 120')
@@ -857,7 +849,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.instructionInput}
                   value={seedPackage.planting_depth || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
                       ...prev,
                       planting_depth: text,
@@ -877,7 +869,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.instructionInput}
                   value={seedPackage.spacing || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({ ...prev, spacing: text }))
                   }
                   placeholder="e.g., 12 inches"
@@ -892,7 +884,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.instructionInput}
                   value={seedPackage.watering_requirements || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
                       ...prev,
                       watering_requirements: text,
@@ -908,7 +900,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.instructionInput}
                   value={seedPackage.sunlight_requirements || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
                       ...prev,
                       sunlight_requirements: text,
@@ -931,7 +923,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.soilInput}
                   value={seedPackage.soil_type || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({ ...prev, soil_type: text }))
                   }
                   placeholder="e.g., Well-draining"
@@ -944,7 +936,7 @@ export default function AddOrEditSeedScreen() {
                 <TextInput
                   style={styles.soilInput}
                   value={seedPackage.fertilizer_requirements || ''}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
                       ...prev,
                       fertilizer_requirements: text,
@@ -964,7 +956,7 @@ export default function AddOrEditSeedScreen() {
               <TextInput
                 style={styles.input}
                 value={seedPackage.planting_season || ''}
-                onChangeText={(text) =>
+                onChangeText={(text: string) =>
                   setSeedPackage((prev) => ({ ...prev, planting_season: text }))
                 }
                 placeholder="e.g., Spring"
@@ -976,7 +968,7 @@ export default function AddOrEditSeedScreen() {
               <TextInput
                 style={styles.input}
                 value={seedPackage.harvest_season || ''}
-                onChangeText={(text) =>
+                onChangeText={(text: string) =>
                   setSeedPackage((prev) => ({ ...prev, harvest_season: text }))
                 }
                 placeholder="e.g., Summer/Fall"
@@ -991,7 +983,7 @@ export default function AddOrEditSeedScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={seedPackage.notes || ''}
-              onChangeText={(text) =>
+              onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, notes: text }))
               }
               placeholder="Any additional notes..."

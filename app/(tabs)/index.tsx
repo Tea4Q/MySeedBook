@@ -489,7 +489,6 @@ export default function InventoryScreen() {
             uri={imageUri}
             style={styles.seedImage}
             resizeMode="cover"
-            showDebugInfo={false} // Disable debug info now that image loading is working
             fallbackUri="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60"
           />
         </View>
@@ -823,7 +822,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   seedName: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1a472a',
     flex: 1,

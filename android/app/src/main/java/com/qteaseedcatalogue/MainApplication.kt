@@ -1,4 +1,4 @@
-package com.qtea.seedcatalogue
+package com.qteaseedcatalogue
 
 import android.app.Application
 import android.content.res.Configuration

@@ -57,9 +57,6 @@ export default function ManageSuppliersScreen() {
       // If the query fails (possibly because deleted_at column doesn't exist),
       // fall back to loading all suppliers without the deleted_at filter
       if (supabaseError && supabaseError.message.includes('deleted_at')) {
-        console.log(
-          'deleted_at column not found, falling back to loading all suppliers'
-        );
         const fallbackResult = await supabase
           .from('suppliers')
           .select('*')
@@ -134,19 +131,6 @@ export default function ManageSuppliersScreen() {
 
   const performDelete = async (supplier: Supplier) => {
     try {
-      console.log(
-        'Attempting to delete supplier:',
-        supplier.id,
-        supplier.supplier_name
-      );
-
-      // Check current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      console.log('Current user:', user?.id);
-      console.log('Supplier user_id:', supplier.user_id);
-
       // Check if there are any active (non-soft-deleted) seeds referencing this supplier
       const { data: activeSeeds, error: seedCheckError } = await supabase
         .from('seeds')
@@ -160,13 +144,10 @@ export default function ManageSuppliersScreen() {
       }
 
       if (activeSeeds && activeSeeds.length > 0) {
-        console.log('Found active seeds:', activeSeeds);
         throw new Error(
           `Cannot delete supplier: There are ${activeSeeds.length} active seed(s) associated with this supplier. Please delete or reassign these seeds first.`
         );
       }
-
-      console.log('No active seeds found, proceeding with supplier deletion');
 
       // Try soft delete first (if deleted_at column exists)
       let { error: supabaseError } = await supabase
@@ -176,7 +157,6 @@ export default function ManageSuppliersScreen() {
 
       // If soft delete fails (column doesn't exist), fall back to hard delete
       if (supabaseError && supabaseError.message.includes('deleted_at')) {
-        console.log('deleted_at column not found, performing hard delete');
         const hardDeleteResult = await supabase
           .from('suppliers')
           .delete()
@@ -199,8 +179,6 @@ export default function ManageSuppliersScreen() {
         }
       }
 
-      console.log('Supplier deleted successfully');
-
       // Remove supplier from local state (since we only show non-deleted suppliers)
       setSuppliers(suppliers.filter((s) => s.id !== supplier.id));
 
@@ -210,10 +188,8 @@ export default function ManageSuppliersScreen() {
       // Close confirmation modal
       setDeleteConfirmation({ visible: false, supplier: null });
     } catch (err) {
-      console.error('Delete operation failed:', err);
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to delete supplier';
-      console.error('Error message:', errorMessage);
       setError(errorMessage);
       setDeleteConfirmation({ visible: false, supplier: null });
     }
@@ -298,7 +274,7 @@ export default function ManageSuppliersScreen() {
             ]}
           >
             <View style={styles.supplierHeader}>
-              <View>
+              <View style={styles.supplierInfo}>
                 <Text style={[styles.supplierName, { color: colors.text }]}>
                   {supplier.supplier_name}
                 </Text>
@@ -511,7 +487,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   addButton: {
@@ -555,6 +531,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  supplierInfo: {
+    flex: 1,
+    marginRight: 8,
   },
   supplierName: {
     fontSize: 18,
@@ -571,6 +552,7 @@ const styles = StyleSheet.create({
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     // gap: 8, // Removed gap property - not supported in React Native Web
   },
   statusBadge: {

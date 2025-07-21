@@ -53,8 +53,8 @@ export default function AddSupplierForm({
     is_active: true,
   });
   const [supplierData, setSupplierData] = useState<{ supplier_images: Imageinfo[] }>({ supplier_images: [] });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
@@ -93,6 +93,18 @@ export default function AddSupplierForm({
 
   const handleImagesChange = useCallback((newImages: Imageinfo[]) => {
     setSupplierData((prev) => ({ ...prev, supplier_images: newImages }));
+    
+    // Check for image errors
+    const hasErrors = newImages.some(img => img.error);
+    if (hasErrors) {
+      const errorMessages = newImages
+        .filter(img => img.error)
+        .map(img => img.error)
+        .join(', ');
+      setImageError(`Image errors: ${errorMessages}`);
+    } else {
+      setImageError(null);
+    }
   }, []);
 
   const validateForm = () => {
@@ -100,6 +112,14 @@ export default function AddSupplierForm({
       Alert.alert('Validation Error', 'Supplier name is required.');
       return false;
     }
+    
+    // Check if any images are still loading
+    const hasLoadingImages = supplierData.supplier_images.some(img => img.isLoading);
+    if (hasLoadingImages) {
+      Alert.alert('Please Wait', 'Images are still uploading. Please wait for them to finish.');
+      return false;
+    }
+    
     return true;
   };
 
@@ -166,6 +186,12 @@ export default function AddSupplierForm({
             onImagesChange={handleImagesChange}
             bucketName="supplier-images"
           />
+          {/* Show image loading error if any */}
+          {imageError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{imageError}</Text>
+            </View>
+          )}
           {Array.isArray(supplierData.supplier_images) && supplierData.supplier_images.length > 0 && (
             <View style={styles.thumbnailRow}>
               {supplierData.supplier_images.map((img) => (
@@ -175,13 +201,27 @@ export default function AddSupplierForm({
                     setSelectedImageUrl(img.url);
                     setModalVisible(true);
                   }}
-                  style={styles.thumbnailWrapper}
+                  style={[
+                    styles.thumbnailWrapper,
+                    img.error && styles.thumbnailError,
+                    img.isLoading && styles.thumbnailLoading
+                  ]}
                 >
-                  <Image
-                    source={{ uri: img.url }}
-                    style={styles.thumbnailImage}
-                    resizeMode="cover"
-                  />
+                  {img.error ? (
+                    <View style={styles.thumbnailErrorContent}>
+                      <Text style={styles.thumbnailErrorText}>Error</Text>
+                    </View>
+                  ) : img.isLoading ? (
+                    <View style={styles.thumbnailLoadingContent}>
+                      <ActivityIndicator size="small" color="#336633" />
+                    </View>
+                  ) : (
+                    <Image
+                      source={{ uri: img.url }}
+                      style={styles.thumbnailImage}
+                      resizeMode="cover"
+                    />
+                  )}
                 </Pressable>
               ))}
             </View>
@@ -219,7 +259,7 @@ export default function AddSupplierForm({
               placeholder="Enter Supplier Name"
               value={formData.supplier_name || ''}
               onChangeText={(text) => handleInputChange('supplier_name', text)}
-              editable={!loading}
+              editable={!isSubmitting}
             />
           </View>
           {/* WebAddress */}
@@ -235,7 +275,7 @@ export default function AddSupplierForm({
               placeholder="Enter web address"
               keyboardType="url"
               autoCapitalize="none"
-              editable={!loading && !isSubmitting}
+              editable={!isSubmitting}
             />
           </View>
           {/* Email Address */}
@@ -317,12 +357,20 @@ export default function AddSupplierForm({
         {/* Submit/Cancel Buttons */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }}>
           <Pressable
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton, 
+              (isSubmitting || supplierData.supplier_images.some(img => img.isLoading)) && styles.submitButtonDisabled
+            ]}
             onPress={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || supplierData.supplier_images.some(img => img.isLoading)}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Adding Supplier...' : 'Add Supplier'}
+              {isSubmitting 
+                ? 'Adding Supplier...' 
+                : supplierData.supplier_images.some(img => img.isLoading)
+                ? 'Processing Images...'
+                : 'Add Supplier'
+              }
             </Text>
           </Pressable>
           {onCancel && (
@@ -449,6 +497,35 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: 60,
     height: 60,
+    borderRadius: 8,
+  },
+  thumbnailError: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#dc2626',
+  },
+  thumbnailLoading: {
+    backgroundColor: '#f3f4f6',
+    opacity: 0.7,
+  },
+  thumbnailErrorContent: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+  },
+  thumbnailErrorText: {
+    color: '#dc2626',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  thumbnailLoadingContent: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
     borderRadius: 8,
   },
   modalBackground: {

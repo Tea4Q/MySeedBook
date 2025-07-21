@@ -1,13 +1,14 @@
 
-  "version": "2.0.0",
-  "tasks": [
+  {
+    "version": "2.0.0",
+    "tasks": [
     {
       "label": "startExpo",
       "type": "shell",
       "command": "npm",
       "args": [
         "run",
-        "dev"
+        "start"
       ],
       "isBackground": true,
       "problemMatcher": [

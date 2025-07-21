@@ -1,7 +1,7 @@
 // Environment configuration
 export const ENV = {
-  isDevelopment: __DEV__ || process.env.NODE_ENV === 'development',
-  isProduction: !__DEV__ && process.env.NODE_ENV === 'production',
+  isDevelopment: false, // Force production mode
+  isProduction: true, // Force production mode
   
   // Image handling configuration
   images: {

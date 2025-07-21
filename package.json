@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "EXPO_NO_TELEMETRY=1 expo start",
+    "start": "expo start",
     "build:web": "expo export --platform web",
     "lint": "expo lint",
     "android": "expo run:android",
@@ -50,7 +50,7 @@
     "lucide-react-native": "^0.516.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "^0.79.5",
+    "react-native": "0.79.5",
     "react-native-calendars": "^1.1311.0",
     "react-native-date-picker": "^5.0.11",
     "react-native-gesture-handler": "~2.24.0",
