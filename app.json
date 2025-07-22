@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "QTea Seed Catalogue",
-    "slug": "qtea-seed-catalogue",
+    "name": "MySeedBook Catalogue",
+    "slug": "myseedbook-catalogue",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "qtea-seed-catalogue",
+    "scheme": "myseedbook-catalogue",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "A comprehensive gardening application for managing your seed collection and supplier information. Track planting seasons, harvest times, and maintain detailed records of your gardening inventory.",
@@ -17,17 +17,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.qtea.seedcatalogue",
+      "bundleIdentifier": "com.myseedbook.catalogue",
       "buildNumber": "1",
-      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.qtea.seedcatalogue",
+      "package": "com.myseedbook.catalogue",
       "versionCode": 1,
-      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#f0f9f0"
@@ -49,13 +47,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow QTea Seed Catalogue to access your camera to capture photos of your seeds and plants."
+          "cameraPermission": "Allow MySeedBook Catalogue to access your camera to capture photos of your seeds and plants."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow QTea Seed Catalogue to access your photo library to select images of your seeds and plants."
+          "photosPermission": "Allow MySeedBook Catalogue to access your photo library to select images of your seeds and plants."
         }
       ],
       "expo-web-browser"

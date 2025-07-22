@@ -6,10 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Image,
-  Modal,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import {
   Building2,
@@ -56,8 +53,6 @@ export default function AddSupplierForm({
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   
   // Phone formatting helper function
   const formatPhoneNumber = (value: string): string => {
@@ -192,62 +187,6 @@ export default function AddSupplierForm({
               <Text style={styles.errorText}>{imageError}</Text>
             </View>
           )}
-          {Array.isArray(supplierData.supplier_images) && supplierData.supplier_images.length > 0 && (
-            <View style={styles.thumbnailRow}>
-              {supplierData.supplier_images.map((img) => (
-                <Pressable
-                  key={img.id}
-                  onPress={() => {
-                    setSelectedImageUrl(img.url);
-                    setModalVisible(true);
-                  }}
-                  style={[
-                    styles.thumbnailWrapper,
-                    img.error && styles.thumbnailError,
-                    img.isLoading && styles.thumbnailLoading
-                  ]}
-                >
-                  {img.error ? (
-                    <View style={styles.thumbnailErrorContent}>
-                      <Text style={styles.thumbnailErrorText}>Error</Text>
-                    </View>
-                  ) : img.isLoading ? (
-                    <View style={styles.thumbnailLoadingContent}>
-                      <ActivityIndicator size="small" color="#336633" />
-                    </View>
-                  ) : (
-                    <Image
-                      source={{ uri: img.url }}
-                      style={styles.thumbnailImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          )}
-          <Modal
-            visible={modalVisible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <View style={styles.modalBackground}>
-              <Pressable
-                style={styles.modalCloseArea}
-                onPress={() => setModalVisible(false)}
-              />
-              <View style={styles.modalContent}>
-                {selectedImageUrl && (
-                  <Image
-                    source={{ uri: selectedImageUrl }}
-                    style={styles.fullImage}
-                    resizeMode="contain"
-                  />
-                )}
-              </View>
-            </View>
-          </Modal>
           {/* Supplier Name */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
@@ -476,86 +415,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
-  },
-  thumbnailRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
-  thumbnailWrapper: {
-    marginRight: 8,
-    marginBottom: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  thumbnailImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  thumbnailError: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#dc2626',
-  },
-  thumbnailLoading: {
-    backgroundColor: '#f3f4f6',
-    opacity: 0.7,
-  },
-  thumbnailErrorContent: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-  },
-  thumbnailErrorText: {
-    color: '#dc2626',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  thumbnailLoadingContent: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-  },
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    maxWidth: '90%',
-    maxHeight: '80%',
-  },
-  modalCloseArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  fullImage: {
-    width: 320,
-    height: 320,
-    borderRadius: 12,
-    alignSelf: 'center',
-    backgroundColor: '#fff',
   },
 });

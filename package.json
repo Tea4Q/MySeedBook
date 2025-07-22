@@ -1,5 +1,5 @@
 {
-  "name": "q-tea-seed-catalogue",
+  "name": "myseedbook-catalogue",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
@@ -8,7 +8,15 @@
     "build:web": "expo export --platform web",
     "lint": "expo lint",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "build:preview": "eas build --platform android --profile preview",
+    "build:preview:ios": "eas build --platform ios --profile preview",
+    "build:preview:all": "eas build --platform all --profile preview",
+    "build:prod": "eas build --platform android --profile production",
+    "build:prod:ios": "eas build --platform ios --profile production",
+    "build:prod:all": "eas build --platform all --profile production",
+    "test:icon": "powershell -ExecutionPolicy Bypass -File ./scripts/build-and-test.ps1 -IconTest",
+    "quick:preview": "powershell -ExecutionPolicy Bypass -File ./scripts/build-and-test.ps1 -BuildType preview -IconTest"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",

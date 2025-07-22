@@ -120,9 +120,12 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         // Get current user for authentication and folder organization
         const {
           data: { user },
+          error: authError,
         } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
+        
+        if (authError || !user) {
+          console.error('Authentication error during upload:', authError);
+          throw new Error('You must be logged in to upload images. Please sign in and try again.');
         }
 
         const response = await fetch(localUri);
@@ -337,6 +340,31 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   );
   const handleImagePicker = useCallback(async () => {
     try {
+      // First, check if user is authenticated before trying to access storage
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        Alert.alert(
+          'Authentication Required', 
+          'You must be logged in to upload images. Please sign in and try again.'
+        );
+        return;
+      }
+
+      // Request media library permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Sorry, we need camera roll permissions to upload images!'
+        );
+        return;
+      }
+
+      // Test bucket access
       const { data: bucketTest } = supabase.storage
         .from(bucketName)
         .getPublicUrl('dummy');

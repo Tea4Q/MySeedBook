@@ -1,4 +1,4 @@
-package com.qteaseedcatalogue
+package com.myseedbook.catalogue
 
 import android.os.Build
 import android.os.Bundle

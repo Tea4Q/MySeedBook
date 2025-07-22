@@ -1,4 +1,4 @@
-# QTea Seed Catalogue - Pre-Release Checklist
+# MySeedBook Catalogue - Pre-Release Checklist
 
 ## ✅ **Completed Items**
 

@@ -1,24 +1,50 @@
-import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
-import { Bell, Sun, Moon, CloudRain } from 'lucide-react-native';
+import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator } from 'react-native';
+import { Bell, Sun, Moon, CloudRain, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme } = useTheme();
-  const [notifications, setNotifications] = useState({
+  const { signOut } = useAuth();
+  const [notifications] = useState({
     plantingReminders: false,
     weatherAlerts: false,
   });
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleThemeChange = (selectedTheme: 'light' | 'dark') => {
     setTheme(selectedTheme);
   };
 
-  const toggleNotification = (type: 'plantingReminders' | 'weatherAlerts') => {
-    setNotifications(prev => ({
-      ...prev,
-      [type]: !prev[type]
-    }));
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSigningOut(true);
+              await signOut();
+              router.replace('/auth');
+            } catch (err) {
+              console.error('Sign out error:', err);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            } finally {
+              setIsSigningOut(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -112,6 +138,32 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
         <Text style={[styles.version, { color: colors.textSecondary }]}>Version 1.0.0</Text>
       </View>
+
+      <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.setting, 
+            styles.signOutButton,
+            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
+          ]}
+          onPress={() => {
+            handleSignOut();
+          }}
+          disabled={isSigningOut}
+          android_ripple={{ color: colors.error + '20' }}
+        >
+          <View style={styles.settingInfo}>
+            <LogOut size={24} color={colors.error || '#FF6B6B'} />
+            <Text style={[styles.settingText, { color: colors.error || '#FF6B6B' }]}>
+              Sign Out
+            </Text>
+          </View>
+          {isSigningOut && (
+            <ActivityIndicator size="small" color={colors.error || '#FF6B6B'} />
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -184,5 +236,10 @@ const styles = StyleSheet.create({
   },
   version: {
     fontSize: 14,
+  },
+  signOutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    minHeight: 48, // Ensure minimum touch target
   },
 });

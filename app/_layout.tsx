@@ -39,7 +39,7 @@ function RootLayoutNav() {
         router.replace('/(tabs)'); // Or your desired initial authenticated route
       } else {
         // If not authenticated, ensure user is in the auth area
-        router.replace('/auth/login');
+        router.replace('/auth');
       }
     }
   }, [isAppReady, isAuthenticated, router]); // Add dependencies
