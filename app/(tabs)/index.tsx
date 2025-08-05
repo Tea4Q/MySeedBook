@@ -12,6 +12,7 @@ import {
   Alert,
   Animated,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
@@ -42,83 +43,12 @@ import {
 
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '@/lib/auth'; // Assuming you have an auth context
-
-// --- 1. Define Mock Seed Data ---
-// Ensure this mock data structure matches your Seed
-const mockSeedsData: Seed[] = [
-  {
-    id: '1',
-    seed_name: 'Brandywine Tomato',
-    type: 'Heirloom Tomato',
-    quantity: 50,
-    supplier_id: 'supplier-mock-1',
-    planting_season: 'Early Spring',
-    harvest_season: 'Late Summer',
-    seed_images: [
-      {
-        type: 'url',
-        url: 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=800&auto=format&fit=crop',
-      },
-    ],
-    description: 'Large, pink beefsteak tomatoes with rich, intense flavor.',
-    user_id: 'mock-user',
-    quantity_unit: 'seeds',
-    date_purchased: new Date(), // Added property
-    suppliers: {
-      id: 'supplier-mock-1',
-      supplier_name: 'Baker Creek Seeds',
-      supplier_image: '',
-      webaddress: 'rareseeds.com',
-      email: 'support@rareseeds.com',
-      phone: '(417) 924-8917',
-      address: 'Mansfield, MO 65704',
-      notes: '',
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-      user_id: 'mock-user',
-    },
-    deleted_at: null,
-  },
-  {
-    id: '2',
-    seed_name: 'Sugar Snap Peas',
-    type: 'Pea',
-    quantity: 100,
-    supplier_id: 'supplier-mock-2',
-    planting_season: 'Early Spring',
-    harvest_season: 'Early Summer',
-    seed_images: [
-      {
-        type: 'url',
-        url: 'https://images.unsplash.com/photo-1587049693270-c7560da11218?w=800&auto=format&fit=crop',
-      },
-    ],
-    description: 'Sweet, crisp peas perfect for fresh eating or cooking.',
-    user_id: 'mock-user',
-    quantity_unit: 'seeds',
-    date_purchased: new Date(), // Added property
-    suppliers: {
-      id: 'supplier-mock-2',
-      supplier_name: "Johnny's Selected Seeds",
-      supplier_image: '',
-      webaddress: 'johnnyseeds.com',
-      email: 'support@johnnyseeds.com',
-      phone: '(877) 564-6697',
-      address: 'Winslow, ME 04901',
-      notes: '',
-      is_active: true,
-      created_at: new Date(),
-      updated_at: new Date(),
-      user_id: 'mock-user',
-    },
-    deleted_at: null,
-  },
-];
+import { useResponsive } from '@/utils/responsive';
 
 export default function InventoryScreen() {
   const { session } = useAuth(); // Get user session
   const { colors } = useTheme(); // Get theme colors
+  const responsive = useResponsive(); // Get responsive configuration
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +70,7 @@ export default function InventoryScreen() {
       if (!session?.user) {
         setLoading(false);
         setRefreshing(false);
-        setSeeds(mockSeedsData.filter((seed) => !seed.deleted_at)); // Exclude deleted
+        setSeeds([]); // Don't load mock data, just show empty state
         return;
       }
 
@@ -168,32 +98,16 @@ export default function InventoryScreen() {
         if (seedError) throw seedError;
 
         if (seedData) {
-          if (seedData.length > 0) {
-            setSeeds(seedData);
-          } else {
-            if (!searchTerm) {
-              setSeeds(mockSeedsData.filter((seed) => !seed.deleted_at));
-            } else {
-              setSeeds([]);
-            }
-          }
+          setSeeds(seedData);
         } else {
-          if (!searchTerm) {
-            setSeeds(mockSeedsData.filter((seed) => !seed.deleted_at));
-          } else {
-            setSeeds([]);
-          }
+          setSeeds([]);
         }
       } catch (e: any) {
         console.error('Error loading seeds:', e);
         setError(
           e.message || 'An unexpected error occurred while fetching seeds.'
         );
-        if (!searchTerm) {
-          setSeeds(mockSeedsData.filter((seed) => !seed.deleted_at));
-        } else {
-          setSeeds([]);
-        }
+        setSeeds([]);
       } finally {
         if (!isRefresh) setLoading(false);
         if (isRefresh) setRefreshing(false);
@@ -486,6 +400,8 @@ export default function InventoryScreen() {
           { 
             backgroundColor: colors.card,
             shadowColor: colors.shadowColor,
+            width: responsive.gridColumns > 1 ? responsive.cardWidth : undefined,
+            marginHorizontal: responsive.gridColumns > 1 ? 8 : 10,
           }
         ]}
         onPress={handlePress}
@@ -516,7 +432,23 @@ export default function InventoryScreen() {
               <Text style={[styles.seedType, { color: colors.primary }]}>{seed.type}</Text>
             </View>
           </View>
-          <Text style={[styles.seedDescription, { color: colors.textSecondary }]}>{seed.description}</Text>
+          <ScrollView 
+            style={[styles.seedDescription, { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8 }]}
+            contentContainerStyle={styles.seedDescriptionContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            scrollEventThrottle={16}
+            bounces={true}
+            alwaysBounceVertical={false}
+          >
+            <Text style={[styles.seedDescriptionScrollable, { color: colors.textSecondary }]}>
+              {seed.description || 'No description available. This is a placeholder text to show how the scrollable description area works. You can add detailed information about your seeds here, including growing instructions, harvest times, special care notes, and any other relevant details about the variety. Add more content here to test scrolling functionality. This should be long enough to require scrolling when displayed in the description area of the seed card.'}
+            </Text>
+          </ScrollView>
+        </View>
+        
+        {/* Move seed details and web actions to bottom */}
+        <View style={styles.cardBottom}>
           <View style={[styles.seedDetails, { backgroundColor: colors.surface }]}>
             <View style={styles.detailItem}>
               <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
@@ -562,7 +494,8 @@ export default function InventoryScreen() {
               </View>
             </View>
           </View>
-          {/* Show action buttons on web, hint about double-click */}
+          
+          {/* Show action buttons on web only, hint about double-click */}
           {Platform.OS === 'web' && (
             <View style={[
               styles.webActionButtons,
@@ -596,8 +529,9 @@ export default function InventoryScreen() {
             </View>
           )}
         </View>
-        {/* Show chevron only on mobile (where swipe is available) */}
-        {Platform.OS !== 'web' && (
+        
+        {/* Show chevron only on mobile (where swipe is available) and not on tablets */}
+        {Platform.OS !== 'web' && !responsive.isTablet && (
           <ChevronRight size={24} color={colors.textSecondary} style={styles.chevronIcon} />
         )}
       </Pressable>
@@ -710,6 +644,8 @@ export default function InventoryScreen() {
           data={seeds}
           renderItem={renderSeedItem}
           keyExtractor={(item) => item.id.toString()} // Ensure ID is a string
+          numColumns={responsive.gridColumns}
+          key={responsive.gridColumns} // Force re-render when columns change
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -808,7 +744,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   listContentContainer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 24,
     paddingBottom: 20,
   },
 
@@ -819,7 +755,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3, // Align items vertically
+    elevation: 3,
+    height: 680, // Increased height significantly for more content space
   },
   seedImage: {
     width: '100%',
@@ -832,23 +769,29 @@ const styles = StyleSheet.create({
   },
   seedContent: {
     padding: 16,
+    flex: 1,
+    flexDirection: 'column',
   },
   seedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start', // Changed from 'center' to allow multi-line names
+    marginBottom: 12, // Increased margin for better spacing
+    flexWrap: 'wrap', // Allow wrapping if needed
   },
   seedName: {
     fontSize: 18,
     fontWeight: 'bold',
     flex: 1,
+    flexWrap: 'wrap',
+    marginRight: 8, // Add margin to prevent overlap with type container
   },
 
   seedTypeContainer: {
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 8,
+    alignSelf: 'flex-start', // Prevent stretching and allow proper positioning
   },
   seedType: {
     fontSize: 14,
@@ -858,6 +801,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     lineHeight: 22,
+    flex: 1,
+    maxHeight: 200, // Much larger height to show ~9 lines (22px line height * 9)
+    minHeight: 180, // Ensure minimum space for at least 8+ lines
+  },
+  seedDescriptionScrollable: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  seedDescriptionContent: {
+    padding: 8,
+    minHeight: 200, // Ensure minimum content height for scrolling
   },
   seedDetails: {
     padding: 12,
@@ -994,5 +948,9 @@ const styles = StyleSheet.create({
   webButtonText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  cardBottom: {
+    marginTop: 8,
+    paddingBottom: 16, // Add bottom padding to ensure content doesn't get cut off
   },
 });

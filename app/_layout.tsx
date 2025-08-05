@@ -13,7 +13,7 @@ SplashScreen.preventAutoHideAsync();
 
 
 function RootLayoutNav() {
-  const { session } = useAuth();
+  const { session, initialized } = useAuth();
   const router = useRouter(); // Get router instance
   const insets = useSafeAreaInsets();
   const [fontsLoaded, fontError] = useFonts({
@@ -24,21 +24,30 @@ function RootLayoutNav() {
   const byPassWebAuth = false; // Set to true to skip authentication on web only
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
-  const isAppReady = fontsLoaded || fontError;
+  const isAppReady = (fontsLoaded || fontError) && initialized;
   // Determine authentication status - consider session OR bypass flags
   const isAuthenticated = !!session || byPassAuthForTesting || (Platform.OS === 'web' && byPassWebAuth);
 
+  console.log('RootLayoutNav - Platform:', Platform.OS);
+  console.log('RootLayoutNav - Fonts loaded:', fontsLoaded, 'Font error:', fontError);
+  console.log('RootLayoutNav - Auth initialized:', initialized);
+  console.log('RootLayoutNav - Session exists:', !!session);
+  console.log('RootLayoutNav - App ready:', isAppReady);
+  console.log('RootLayoutNav - Authenticated:', isAuthenticated);
+
   useEffect(() => {
     if (isAppReady) {
+      console.log('App ready, hiding splash screen and navigating...');
       SplashScreen.hideAsync();
 
       // Navigate after app is ready and navigator is mounted
       if (isAuthenticated) {
         // If authenticated or bypassed, ensure user is in the main app area
-        // Replace might be safer than push to prevent back button going to auth
+        console.log('User authenticated, navigating to main app');
         router.replace('/(tabs)'); // Or your desired initial authenticated route
       } else {
         // If not authenticated, ensure user is in the auth area
+        console.log('User not authenticated, navigating to auth');
         router.replace('/auth');
       }
     }
@@ -46,6 +55,7 @@ function RootLayoutNav() {
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {
+    console.log('App not ready, showing splash screen');
     return null;
   }
 

@@ -183,6 +183,24 @@ export default function AuthScreen() {
             </Text>
           )}
         </Pressable>
+
+        {/* Development Test Button */}
+        {__DEV__ && (
+          <Pressable
+            style={[
+              styles.testButton,
+              { backgroundColor: colors.primary, marginTop: 16, opacity: 0.7 },
+            ]}
+            onPress={() => {
+              setEmail('test@gardening.app');
+              setPassword('testpassword123');
+            }}
+          >
+            <Text style={[styles.testButtonText, { color: colors.background }]}>
+              Use Test Credentials
+            </Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );
@@ -317,5 +335,14 @@ const styles = StyleSheet.create({
   authButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  testButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

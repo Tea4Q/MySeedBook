@@ -31,11 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const rootNavigation = useRootNavigation();
 
+  // Initialize auth immediately on web, or when navigation is ready on mobile
   useEffect(() => {
-    if (!rootNavigation?.isReady) return;
+    console.log('Auth initialization - Platform:', Platform.OS);
+    console.log('Root navigation ready:', rootNavigation?.isReady);
+    
+    // Web platform doesn't always have rootNavigation ready state working properly
+    // Initialize auth immediately on web, wait for navigation on mobile
+    const shouldInitialize = Platform.OS === 'web' || rootNavigation?.isReady;
+    
+    if (!shouldInitialize) {
+      console.log('Waiting for navigation to be ready...');
+      return;
+    }
+
+    console.log('Initializing authentication...');
 
     // Check auth state and handle invalid refresh tokens
     supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('Initial session check - Session:', session?.user?.email || 'No session');
+      console.log('Initial session check - Error:', error?.message || 'No error');
+      
       if (error) {
         // Clear any invalid session data
         console.log('Session error, clearing auth state:', error.message);
@@ -48,10 +64,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
+      console.log('Auth initialization complete');
+    }).catch((error) => {
+      console.error('Failed to get session:', error);
+      setSession(null);
+      setUser(null);
+      setInitialized(true);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change event:', event);
+      console.log('Auth state change session:', session?.user?.email || 'No session');
+      
       if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully');
       } else if (event === 'SIGNED_OUT') {
@@ -63,9 +88,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      console.log('Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, [rootNavigation?.isReady]);
+
+  // Web-specific initialization fallback
+  useEffect(() => {
+    if (Platform.OS === 'web' && !initialized) {
+      console.log('Web fallback initialization triggered');
+      
+      // Add a small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        if (!initialized) {
+          console.log('Forcing web auth initialization');
+          supabase.auth.getSession().then(({ data: { session }, error }) => {
+            console.log('Web fallback session check - Session:', session?.user?.email || 'No session');
+            console.log('Web fallback session check - Error:', error?.message || 'No error');
+            
+            if (error) {
+              console.log('Web fallback session error:', error.message);
+              setSession(null);
+              setUser(null);
+            } else {
+              setSession(session);
+              setUser(session?.user ?? null);
+            }
+            setInitialized(true);
+          });
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [initialized]);
   // Handle routing based on auth state - DISABLED to prevent conflict with _layout.tsx
   // useEffect(() => {
   //   if (!initialized) return;
