@@ -86,6 +86,24 @@
     "ts-jest": "^29.3.2",
     "typescript": "^5.3.3"
   },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "@fortawesome/free-solid-svg-icons",
+          "react-native-phone-number-input",
+          "@lucide/lab",
+          "@react-native-community/cli",
+          "@testing-library/jest-dom",
+          "@testing-library/react",
+          "framer-motion",
+          "lightningcss",
+          "uuid"
+        ],
+        "listUnknownPackages": false
+      }
+    }
+  },
   "description": "This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).",
   "directories": {
     "lib": "lib"
