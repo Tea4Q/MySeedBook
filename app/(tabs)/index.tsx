@@ -27,7 +27,6 @@ import {
   Tally4,
   Trash2,
   Archive,
-  DollarSign,
   Truck,
   Leaf,
   Flower2,
@@ -340,7 +339,7 @@ export default function InventoryScreen() {
           disabled={deletingSeedId === item.id}
         >
           <Edit3 size={24} color="#fff" />
-          <Text style={styles.actionText}>Edit</Text>
+          <Text style={[styles.actionText, { color: '#fff' }]}>Edit</Text>
         </Pressable>
         <Pressable
           style={[
@@ -362,7 +361,7 @@ export default function InventoryScreen() {
               <Trash2 size={24} color="#fff" />
             )}
           </View>
-          <Text style={styles.actionText}>Delete</Text>
+          <Text style={[styles.actionText, { color: '#fff' }]}>Delete</Text>
         </Pressable>
       </Animated.View>
     );
@@ -481,7 +480,14 @@ export default function InventoryScreen() {
     // Main content component that will be conditionally wrapped
     const seedItemContent = (
       <Pressable
-        style={[styles.seedItem, highlightStyle]}
+        style={[
+          styles.seedItem, 
+          highlightStyle,
+          { 
+            backgroundColor: colors.card,
+            shadowColor: colors.shadowColor,
+          }
+        ]}
         onPress={handlePress}
       >
         <View style={styles.imageContainer}>
@@ -494,34 +500,39 @@ export default function InventoryScreen() {
         </View>
         <View style={styles.seedContent}>
           <View style={styles.seedHeader}>
-            <Text style={styles.seedName}>{seed.seed_name}</Text>
+            <Text style={[styles.seedName, { color: colors.text }]}>{seed.seed_name}</Text>
             <View
               style={[
                 styles.seedTypeContainer,
-                { flexDirection: 'row', alignItems: 'center', gap: 6 },
+                { 
+                  backgroundColor: colors.surface,
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  gap: 6,
+                },
               ]}
             >
               {getSeedTypeIcon(seed.type)}
-              <Text style={styles.seedType}>{seed.type}</Text>
+              <Text style={[styles.seedType, { color: colors.primary }]}>{seed.type}</Text>
             </View>
           </View>
-          <Text style={styles.seedDescription}>{seed.description}</Text>
-          <View style={styles.seedDetails}>
+          <Text style={[styles.seedDescription, { color: colors.textSecondary }]}>{seed.description}</Text>
+          <View style={[styles.seedDetails, { backgroundColor: colors.surface }]}>
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
                 <Tally4 style={styles.iconsView} /> Quantity:
               </Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {seed.quantity} {seed.quantity_unit}
               </Text>
             </View>
             {/* Accessing seed.suppliers safely */}
             {seed.suppliers && (
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>
+                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
                   <Truck style={styles.iconsView} /> Supplier:
                 </Text>
-                <Text style={styles.detailValue}>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   {seed.suppliers.supplier_name}
                 </Text>
               </View>
@@ -529,23 +540,23 @@ export default function InventoryScreen() {
             {/*Fallback for when suppliers is not loaded as an object or is null */}
             {!seed.suppliers && seed.supplier_id && (
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>
+                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
                   <Truck style={styles.iconsView} />
                   Supplier ID:
                 </Text>
-                <Text style={styles.detailValue}>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   (Details not loaded) {seed.supplier_id}
                 </Text>
               </View>
             )}
             <View style={styles.seasonContainer}>
               <View style={[styles.seasonTag, styles.plantTag]}>
-                <Text style={styles.seasonText}>
+                <Text style={[styles.seasonText, { color: colors.text }]}>
                   Plant: {seed.planting_season}
                 </Text>
               </View>
               <View style={[styles.seasonTag, styles.harvestTag]}>
-                <Text style={styles.seasonText}>
+                <Text style={[styles.seasonText, { color: colors.text }]}>
                   Harvest: {seed.harvest_season}
                 </Text>
               </View>
@@ -553,15 +564,21 @@ export default function InventoryScreen() {
           </View>
           {/* Show action buttons on web, hint about double-click */}
           {Platform.OS === 'web' && (
-            <View style={styles.webActionButtons}>
-              <Text style={styles.webHint}>Double-click for calendar • Buttons below for edit/delete</Text>
+            <View style={[
+              styles.webActionButtons,
+              { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              }
+            ]}>
+              <Text style={[styles.webHint, { color: colors.textSecondary }]}>Double-click for calendar • Buttons below for edit/delete</Text>
               <View style={styles.webButtonRow}>
                 <Pressable
                   style={[styles.webActionButton, styles.editButton]}
                   onPress={() => handleEdit(seed)}
                 >
                   <Edit3 size={16} color="#fff" />
-                  <Text style={styles.webButtonText}>Edit</Text>
+                  <Text style={[styles.webButtonText, { color: '#fff' }]}>Edit</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.webActionButton, styles.deleteButton]}
@@ -573,7 +590,7 @@ export default function InventoryScreen() {
                   ) : (
                     <Trash2 size={16} color="#fff" />
                   )}
-                  <Text style={styles.webButtonText}>Delete</Text>
+                  <Text style={[styles.webButtonText, { color: '#fff' }]}>Delete</Text>
                 </Pressable>
               </View>
             </View>
@@ -581,7 +598,7 @@ export default function InventoryScreen() {
         </View>
         {/* Show chevron only on mobile (where swipe is available) */}
         {Platform.OS !== 'web' && (
-          <ChevronRight size={24} color="#ccc" style={styles.chevronIcon} />
+          <ChevronRight size={24} color={colors.textSecondary} style={styles.chevronIcon} />
         )}
       </Pressable>
     );
@@ -617,9 +634,9 @@ export default function InventoryScreen() {
     // Show full screen loader only on very first load when no seeds (mock or real) are set yet
     // and not during a search.
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2d7a3a" />
-        <Text style={styles.loadingText}>Loading your garden...</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your garden...</Text>
       </View>
     );
   }
@@ -654,9 +671,12 @@ export default function InventoryScreen() {
       {error &&
         !loading && ( // Show error only if not loading
           <View style={styles.centered}>
-            <Text style={styles.errorText}>Error: {error}</Text>
-            <Pressable onPress={() => loadSeeds()} style={styles.retryButton}>
-              <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>Error: {error}</Text>
+            <Pressable 
+              onPress={() => loadSeeds()} 
+              style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.retryButtonText, { color: colors.primaryText }]}>Try Again</Text>
             </Pressable>
           </View>
         )}
@@ -665,8 +685,8 @@ export default function InventoryScreen() {
         seeds.length === 0 &&
         !error && ( // Message for no seeds (could be no search results or truly empty)
           <View style={styles.centered}>
-            <Archive size={48} color="#ccc" />
-            <Text style={styles.emptyText}>
+            <Archive size={48} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {searchTerm
                 ? 'No seeds match your search.'
                 : 'Your garden is empty! Add some seeds to get started.'}
@@ -674,9 +694,9 @@ export default function InventoryScreen() {
             {!searchTerm && (
               <Pressable
                 onPress={handleAddSeed}
-                style={styles.addFirstSeedButton}
+                style={[styles.addFirstSeedButton, { backgroundColor: colors.primary }]}
               >
-                <Text style={styles.addFirstSeedButtonText}>
+                <Text style={[styles.addFirstSeedButtonText, { color: colors.primaryText }]}>
                   Add First Seed
                 </Text>
               </Pressable>
@@ -696,8 +716,8 @@ export default function InventoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#2d7a3a']}
-              tintColor={'#2d7a3a'}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -793,11 +813,9 @@ const styles = StyleSheet.create({
   },
 
   seedItem: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -824,29 +842,24 @@ const styles = StyleSheet.create({
   seedName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a472a',
     flex: 1,
   },
 
   seedTypeContainer: {
-    backgroundColor: '#e0f7fa',
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
   seedType: {
     fontSize: 14,
-    color: '#2d7a3a',
     fontWeight: '600',
   },
   seedDescription: {
     fontSize: 16,
-    color: '#666666',
     marginBottom: 16,
     lineHeight: 22,
   },
   seedDetails: {
-    backgroundColor: '#f8faf8',
     padding: 12,
     borderRadius: 12,
     gap: 8,
@@ -861,12 +874,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     fontSize: 16,
-    color: '#666666',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    color: '#1a472a',
     fontWeight: '600',
   },
   seasonContainer: {
@@ -890,7 +901,6 @@ const styles = StyleSheet.create({
   seasonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1a472a',
   },
   chevronIcon: {
     marginLeft: 'auto', // Pushes chevron to the far right
@@ -904,7 +914,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#555',
   },
   errorContainer: {
     margin: 16,
@@ -915,34 +924,28 @@ const styles = StyleSheet.create({
     borderColor: '#fee2e2',
   },
   errorText: {
-    color: '#dc2626',
     fontSize: 14,
   },
   retryButton: {
-    backgroundColor: '#2d7a3a',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
     fontSize: 16,
   },
   emptyText: {
     fontSize: 18,
-    color: '#888',
     textAlign: 'center',
     marginTop: 15,
     marginBottom: 20,
   },
   addFirstSeedButton: {
-    backgroundColor: '#2d7a3a',
     paddingVertical: 12,
     paddingHorizontal: 25,
     borderRadius: 25,
   },
   addFirstSeedButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -953,7 +956,6 @@ const styles = StyleSheet.create({
     height: '90%',
   },
   actionText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 5,
@@ -962,14 +964,11 @@ const styles = StyleSheet.create({
   webActionButtons: {
     marginTop: 12,
     padding: 8,
-    backgroundColor: '#f8faf8',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   webHint: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -993,7 +992,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F44336',
   },
   webButtonText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { router, useRootNavigation, useSegments } from 'expo-router';
+import { useRootNavigation } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
 // Create auth context
@@ -27,21 +29,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const segments = useSegments();
   const rootNavigation = useRootNavigation();
 
   useEffect(() => {
     if (!rootNavigation?.isReady) return;
 
-    // Check auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check auth state and handle invalid refresh tokens
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Clear any invalid session data
+        console.log('Session error, clearing auth state:', error.message);
+        setSession(null);
+        setUser(null);
+        setInitialized(true);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -107,4 +123,21 @@ export function useAuth() {
 // Add a function to manually clear session for testing
 export const clearSession = async () => {
   await supabase.auth.signOut();
+};
+
+// Add a function to clear invalid authentication state
+export const clearInvalidAuthState = async () => {
+  try {
+    // Clear the session from Supabase
+    await supabase.auth.signOut();
+    
+    // If on mobile, also clear from secure store
+    if (Platform.OS !== 'web') {
+      await SecureStore.deleteItemAsync('supabase.auth.token');
+    }
+    
+    console.log('Cleared invalid authentication state');
+  } catch (error) {
+    console.log('Error clearing auth state:', error);
+  }
 };

@@ -1,0 +1,122 @@
+<!-- MySeedBook Catalogue Splash Screen Template -->
+<!-- Size: 1284x2778 pixels (iPhone 14 Pro Max) -->
+<!-- Export this as PNG at 1284x2778 for your splash screen -->
+
+<svg width="1284" height="2778" viewBox="0 0 1284 2778" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <!-- Light green gradient background -->
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f9f0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#e8f5e8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f9f0;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Seed/plant icon gradient -->
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a7c59;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d5a3d;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1284" height="2778" fill="url(#backgroundGradient)" />
+  
+  <!-- Subtle background pattern -->
+  <g opacity="0.05">
+    <!-- Light leaf patterns scattered in background -->
+    <circle cx="200" cy="400" r="3" fill="#2d7a3a" />
+    <circle cx="1000" cy="600" r="2" fill="#2d7a3a" />
+    <circle cx="300" cy="2200" r="2.5" fill="#2d7a3a" />
+    <circle cx="900" cy="2400" r="3" fill="#2d7a3a" />
+  </g>
+  
+  <!-- Main Content Container -->
+  <g transform="translate(642, 1389)"> <!-- Center of canvas -->
+    
+    <!-- App Icon/Logo Container -->
+    <g transform="translate(0, -200)"> <!-- Move up from center -->
+      
+      <!-- Main seed/sprout icon -->
+      <g filter="url(#dropShadow)">
+        <!-- Seed/pot base -->
+        <ellipse cx="0" cy="60" rx="80" ry="25" fill="#8B4513" opacity="0.8"/>
+        
+        <!-- Plant stem -->
+        <rect x="-4" y="-40" width="8" height="100" rx="4" fill="url(#iconGradient)"/>
+        
+        <!-- Leaves -->
+        <ellipse cx="-35" cy="-20" rx="25" ry="15" fill="#4a7c59" transform="rotate(-30)"/>
+        <ellipse cx="35" cy="-20" rx="25" ry="15" fill="#4a7c59" transform="rotate(30)"/>
+        
+        <!-- Small sprout on top -->
+        <ellipse cx="0" cy="-60" rx="15" ry="8" fill="#6ba16f"/>
+      </g>
+      
+      <!-- Circular background for icon -->
+      <circle cx="0" cy="0" r="120" fill="rgba(255,255,255,0.8)" opacity="0.3"/>
+    </g>
+    
+    <!-- App Name -->
+    <g transform="translate(0, 100)">
+      <text x="0" y="0" 
+            text-anchor="middle" 
+            font-family="Arial, Helvetica, sans-serif" 
+            font-size="52" 
+            font-weight="600" 
+            fill="#1a472a">
+        MySeedBook
+      </text>
+      <text x="0" y="60" 
+            text-anchor="middle" 
+            font-family="Arial, Helvetica, sans-serif" 
+            font-size="28" 
+            font-weight="400" 
+            fill="#4a7c59" 
+            opacity="0.8">
+        Catalogue
+      </text>
+    </g>
+    
+    <!-- Tagline -->
+    <g transform="translate(0, 220)">
+      <text x="0" y="0" 
+            text-anchor="middle" 
+            font-family="Arial, Helvetica, sans-serif" 
+            font-size="18" 
+            font-weight="400" 
+            fill="#666666" 
+            opacity="0.7">
+        Your Garden's Digital Memory
+      </text>
+    </g>
+    
+    <!-- Decorative elements -->
+    <g transform="translate(0, 320)" opacity="0.3">
+      <!-- Small decorative dots -->
+      <circle cx="-50" cy="0" r="2" fill="#4a7c59"/>
+      <circle cx="-25" cy="0" r="3" fill="#4a7c59"/>
+      <circle cx="0" cy="0" r="4" fill="#4a7c59"/>
+      <circle cx="25" cy="0" r="3" fill="#4a7c59"/>
+      <circle cx="50" cy="0" r="2" fill="#4a7c59"/>
+    </g>
+  </g>
+  
+  <!-- Bottom branding area -->
+  <g transform="translate(642, 2600)">
+    <text x="0" y="0" 
+          text-anchor="middle" 
+          font-family="Arial, Helvetica, sans-serif" 
+          font-size="14" 
+          font-weight="400" 
+          fill="#999999" 
+          opacity="0.6">
+      Growing with Technology
+    </text>
+  </g>
+</svg>

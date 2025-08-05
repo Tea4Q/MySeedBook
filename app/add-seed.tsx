@@ -40,6 +40,7 @@ import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
 
 type SeedType = {
   label: string;
@@ -71,6 +72,7 @@ interface Imageinfo {
 // Update your Seed interface for the form state if it's different from DB
 
 export default function AddOrEditSeedScreen() {
+  const { colors } = useTheme(); // Add theme colors
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -528,20 +530,20 @@ export default function AddOrEditSeedScreen() {
 
   // --- Render the component ---
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#ffffff" />
+          <ArrowLeft size={24} color={colors.primaryText} />
         </Pressable>
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: colors.primaryText }]}>
           {isEditing ? 'Edit Seed' : 'Add New Seed'}
         </Text>
       </View>
       {/* Success/Error Messages */}
       {showSuccess && (
-        <View style={styles.successMessage}>
-          <Text style={styles.successText}>
+        <View style={[styles.successMessage, { backgroundColor: colors.success }]}>
+          <Text style={[styles.successText, { color: colors.text }]}>
             {isEditing
               ? 'Seed updated successfully'
               : `Seed added successfully!${autoAddToCalendar && seedPackage.date_purchased ? ' Purchase date added to calendar.' : ''}`}
@@ -549,9 +551,9 @@ export default function AddOrEditSeedScreen() {
         </View>
       )}
       {errors.submit && (
-        <View style={styles.errorBanner}>
-          <AlertCircle size={20} color="#dc2626" />
-          <Text style={styles.errorBannerText}>{errors.submit}</Text>
+        <View style={[styles.errorBanner, { backgroundColor: colors.error }]}>
+          <AlertCircle size={20} color={colors.primaryText} />
+          <Text style={[styles.errorBannerText, { color: colors.primaryText }]}>{errors.submit}</Text>
         </View>
       )}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -571,29 +573,44 @@ export default function AddOrEditSeedScreen() {
         <View style={styles.formSection}>
           {/* Seed Name */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Seed Name *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Seed Name *</Text>
             <TextInput
-              style={[styles.input, errors.name && styles.inputError]}
+              style={[
+                styles.input, 
+                errors.name && styles.inputError,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                }
+              ]}
               value={seedPackage.seed_name || ''} // Handle potential null/undefined
               onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, seed_name: text }))
               }
               placeholder="e.g., Brandywine Tomato"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
             />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+            {errors.name && <Text style={[styles.errorText, { color: colors.error }]}>{errors.name}</Text>}
           </View>
 
           {/* Seed Type */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Seed Type *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Seed Type *</Text>
             <View style={styles.typeContainer}>
               {seedTypes.map((type) => (
                 <Pressable
                   key={type.value}
                   style={[
                     styles.typeButton,
-                    seedPackage.type === type.value && styles.selectedType,
+                    {
+                      backgroundColor: seedPackage.type === type.value 
+                        ? colors.primary 
+                        : colors.background,
+                      borderColor: seedPackage.type === type.value 
+                        ? colors.primary 
+                        : colors.border,
+                    },
                   ]}
                   onPress={() =>
                     setSeedPackage((prev) => ({ ...prev, type: type.value }))
@@ -602,8 +619,11 @@ export default function AddOrEditSeedScreen() {
                   <Text
                     style={[
                       styles.typeButtonText,
-                      seedPackage.type === type.value &&
-                        styles.selectedTypeText,
+                      {
+                        color: seedPackage.type === type.value 
+                          ? colors.background 
+                          : colors.text,
+                      },
                     ]}
                   >
                     {type.label}
@@ -611,20 +631,24 @@ export default function AddOrEditSeedScreen() {
                 </Pressable>
               ))}
             </View>
-            {errors.type && <Text style={styles.errorText}>{errors.type}</Text>}
+            {errors.type && <Text style={[styles.errorText, { color: colors.error }]}>{errors.type}</Text>}
           </View>
 
           {/* Description */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Description</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { 
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                color: colors.text 
+              }]}
               value={seedPackage.description || ''}
               onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, description: text }))
               }
               placeholder="Describe your seeds..."
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={4}
             />
@@ -634,9 +658,13 @@ export default function AddOrEditSeedScreen() {
           <View style={styles.quantityPriceRow}>
             {/* Quantity Input */}
             <View style={[styles.inputGroup, styles.quantityInput]}>
-              <Text style={styles.label}>Quantity *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Quantity *</Text>
               <TextInput
-                style={[styles.input, errors.quantity && styles.inputError]}
+                style={[styles.input, errors.quantity && styles.inputError, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text 
+                }]}
                 value={String(seedPackage.quantity || '')} // Ensure string value
                 onChangeText={(text: string) => {
                   const num = parseInt(text, 10);
@@ -646,19 +674,23 @@ export default function AddOrEditSeedScreen() {
                   }));
                 }}
                 placeholder="0"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
               />
               {errors.quantity && (
-                <Text style={styles.errorText}>{errors.quantity}</Text>
+                <Text style={[styles.errorText, { color: colors.error }]}>{errors.quantity}</Text>
               )}
             </View>
 
             {/* Price Input */}
             <View style={[styles.inputGroup, styles.priceInput]}>
-              <Text style={styles.label}>Price</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Price</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text 
+                }]}
                 value={priceInput}
                 onChangeText={(text: string) => {
                   // Remove dollar sign and all non-numeric characters except dot
@@ -687,116 +719,135 @@ export default function AddOrEditSeedScreen() {
                   setPriceInput(formatted);
                 }}
                 placeholder="$3.50"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="decimal-pad"
               />
             </View>
           </View>
 
-          {/* Date Purchased Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Purchase Date</Text>
-            <Text style={styles.helpText}>
-              💡 Purchase date will be automatically added to your calendar
-            </Text>
-            {/* Web Date Picker */}
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                className="date-input"
-                style={{
-                  background: '#fff',
-                  borderRadius: 12,
-                  padding: 16,
-                  fontSize: 16,
-                  color: '#333',
-                  borderWidth: 1,
-                  borderColor: '#e0e0e0',
-                  height: 56,
-                  boxSizing: 'border-box',
-                  width: '100%',
-                } as any}
-                value={
-                  seedPackage.date_purchased
-                    ? seedPackage.date_purchased.toISOString().split('T')[0]
-                    : ''
-                }
-                onChange={(e: any) => {
-                  const date = new Date(e.target.value + 'T00:00:00');
-                  if (!isNaN(date.getTime())) handleDateChange(date);
-                }}
-                placeholder="Select a date"
-                title="Select event date"
-              />
-            ) : (
-              <>
-                <Pressable
-                  style={styles.datePickerContainer}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={styles.dateText}>
-                    {seedPackage.date_purchased
-                      ? seedPackage.date_purchased.toLocaleDateString(
-                          'en-US',
-                          {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          }
-                        )
-                      : 'Select a date'}
-                  </Text>
-                  <Calendar size={20} color="#2d7a3a" />
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={seedPackage.date_purchased || new Date()}
-                      mode="date"
-                      display="default"
-                      onChange={(event: any, selectedDate?: Date) => {
-                        if (selectedDate) {
-                          handleDateChange(selectedDate);
-                        }
-                        setShowDatePicker(false);
-                      }}
-                    ></DateTimePicker>
-                  )}
-                </Pressable>
-              </>
-            )}
-          </View>
-
-          {/* Supplier Selection */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Supplier</Text>
-            {/* Use SupplierSelect component for supplier selection */}
-            <SupplierSelect
-              onSelect={handleSupplierSelect}
-              selectedSupplierId={seedPackage.supplier_id || undefined}
-              initialSearchQuery={''}
-              // Optionally, add a key to force remount on reloadSuppliers
-              key={reloadSuppliers ? 'reload' : 'normal'}
-            />
-            {/* Show selected supplier name if available */}
-            {selectedSupplier && (
-              <Text style={styles.selectedSupplierText}>
-                Selected: {selectedSupplier.supplier_name}
+          {/* Date and Supplier Row */}
+          <View style={styles.dateSupplierRow}>
+            {/* Date Purchased Input */}
+            <View style={[styles.inputGroup, styles.dateInput]}>
+              <Text style={[styles.label, { color: colors.text }]}>Purchase Date</Text>
+              <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+                💡 Added to calendar
               </Text>
-            )}
-            {/* Show error if no supplier selected and form submitted */}
-            {errors.supplier && (
-              <Text style={styles.errorText}>{errors.supplier}</Text>
-            )}
+              {/* Web Date Picker */}
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  className="date-input"
+                  style={{
+                    background: colors.inputBackground,
+                    borderRadius: 12,
+                    padding: 16,
+                    fontSize: 16,
+                    color: colors.inputText,
+                    borderWidth: 1,
+                    borderColor: colors.inputBorder,
+                    height: 56,
+                    boxSizing: 'border-box',
+                    width: '100%',
+                  } as any}
+                  value={
+                    seedPackage.date_purchased
+                      ? seedPackage.date_purchased.toISOString().split('T')[0]
+                      : ''
+                  }
+                  onChange={(e: any) => {
+                    const date = new Date(e.target.value + 'T00:00:00');
+                    if (!isNaN(date.getTime())) handleDateChange(date);
+                  }}
+                  placeholder="Select a date"
+                  title="Select event date"
+                />
+              ) : (
+                <>
+                  <Pressable
+                    style={[
+                      styles.datePickerContainer,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      }
+                    ]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={[styles.dateText, { color: colors.inputText }]}>
+                      {seedPackage.date_purchased
+                        ? seedPackage.date_purchased.toLocaleDateString(
+                            'en-US',
+                            {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )
+                        : 'Select a date'}
+                    </Text>
+                    <Calendar size={20} color={colors.primary} />
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={seedPackage.date_purchased || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event: any, selectedDate?: Date) => {
+                          if (selectedDate) {
+                            handleDateChange(selectedDate);
+                          }
+                          setShowDatePicker(false);
+                        }}
+                      ></DateTimePicker>
+                    )}
+                  </Pressable>
+                </>
+              )}
+            </View>
+
+            {/* Supplier Selection */}
+            <View style={[styles.inputGroup, styles.supplierInput]}>
+              <Text style={[styles.label, { color: colors.text }]}>Supplier *</Text>
+              <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+                💡 Select or add supplier
+              </Text>
+              {/* Use SupplierSelect component for supplier selection */}
+              <SupplierSelect
+                onSelect={handleSupplierSelect}
+                selectedSupplierId={seedPackage.supplier_id || undefined}
+                initialSearchQuery={''}
+                // Optionally, add a key to force remount on reloadSuppliers
+                key={reloadSuppliers ? 'reload' : 'normal'}
+              />
+              {/* Show selected supplier name if available */}
+              {selectedSupplier && (
+                <Text style={[styles.selectedSupplierText, { color: colors.textSecondary }]}>
+                  Selected: {selectedSupplier.supplier_name}
+                </Text>
+              )}
+              {/* Show error if no supplier selected and form submitted */}
+              {errors.supplier && (
+                <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>
+              )}
+            </View>
           </View>
 
           {/* Growth Timeline Section */}
-          <View style={styles.timingSection}>
-            <Text style={styles.sectionTitle}>Growth Timeline</Text>
+          <View style={[styles.timingSection, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.border 
+          }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Growth Timeline</Text>
             <View style={styles.timelineRow}>
               <View style={styles.timelineItem}>
-                <Sprout size={24} color="#2d7a3a" />
-                <Text style={styles.timelineLabel}>Days to Germinate</Text>
+                <Sprout size={24} color={colors.primary} />
+                <Text style={[styles.timelineLabel, { color: colors.text }]}>Days to Germinate</Text>
                 <TextInput
-                  style={styles.timelineInput}
+                  style={[styles.timelineInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={
                     seedPackage.days_to_germinate
                       ? String(seedPackage.days_to_germinate)
@@ -810,15 +861,19 @@ export default function AddOrEditSeedScreen() {
                     }));
                   }}
                   placeholder="e.g., 7-10"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="default" // Allow any input, not just numbers
                 />
               </View>
               <View style={styles.timelineItem}>
-                <Clock size={24} color="#2d7a3a" />
-                <Text style={styles.timelineLabel}>Days to Harvest</Text>
+                <Clock size={24} color={colors.primary} />
+                <Text style={[styles.timelineLabel, { color: colors.text }]}>Days to Harvest</Text>
                 <TextInput
-                  style={styles.timelineInput}
+                  style={[styles.timelineInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={
                     seedPackage.days_to_harvest
                       ? String(seedPackage.days_to_harvest)
@@ -832,7 +887,7 @@ export default function AddOrEditSeedScreen() {
                     }));
                   }}
                   placeholder="e.g., 60-80"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric" // Allow numeric input
                 />
               </View>
@@ -840,14 +895,21 @@ export default function AddOrEditSeedScreen() {
           </View>
 
           {/* Planting Instructions Section */}
-          <View style={styles.plantingSection}>
-            <Text style={styles.sectionTitle}>Planting Instructions</Text>
+          <View style={[styles.plantingSection, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.border 
+          }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Planting Instructions</Text>
             <View style={styles.instructionRow}>
               <View style={styles.instructionItem}>
-                <Ruler size={24} color="#2d7a3a" />
-                <Text style={styles.instructionLabel}>Planting Depth</Text>
+                <Ruler size={24} color={colors.primary} />
+                <Text style={[styles.instructionLabel, { color: colors.text }]}>Planting Depth</Text>
                 <TextInput
-                  style={styles.instructionInput}
+                  style={[styles.instructionInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.planting_depth || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
@@ -856,33 +918,41 @@ export default function AddOrEditSeedScreen() {
                     }))
                   }
                   placeholder="e.g., 1/4 inch"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.instructionItem}>
                 <Ruler
                   style={{ transform: [{ rotate: '90deg' }] }}
                   size={24}
-                  color="#2d7a3a"
+                  color={colors.primary}
                 />
-                <Text style={styles.instructionLabel}>Spacing</Text>
+                <Text style={[styles.instructionLabel, { color: colors.text }]}>Spacing</Text>
                 <TextInput
-                  style={styles.instructionInput}
+                  style={[styles.instructionInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.spacing || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({ ...prev, spacing: text }))
                   }
                   placeholder="e.g., 12 inches"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
             </View>
             <View style={styles.instructionRow}>
               <View style={styles.instructionItem}>
-                <Droplets size={24} color="#2d7a3a" />
-                <Text style={styles.instructionLabel}>Watering</Text>
+                <Droplets size={24} color={colors.primary} />
+                <Text style={[styles.instructionLabel, { color: colors.text }]}>Watering</Text>
                 <TextInput
-                  style={styles.instructionInput}
+                  style={[styles.instructionInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.watering_requirements || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
@@ -891,14 +961,18 @@ export default function AddOrEditSeedScreen() {
                     }))
                   }
                   placeholder="e.g., Keep moist"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.instructionItem}>
-                <Sun size={24} color="#2d7a3a" />
-                <Text style={styles.instructionLabel}>Sunlight</Text>
+                <Sun size={24} color={colors.primary} />
+                <Text style={[styles.instructionLabel, { color: colors.text }]}>Sunlight</Text>
                 <TextInput
-                  style={styles.instructionInput}
+                  style={[styles.instructionInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.sunlight_requirements || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
@@ -907,34 +981,45 @@ export default function AddOrEditSeedScreen() {
                     }))
                   }
                   placeholder="e.g., Full sun"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
             </View>
           </View>
 
           {/* Soil & Nutrients Section */}
-          <View style={styles.soilSection}>
-            <Text style={styles.sectionTitle}>Soil & Nutrients</Text>
+          <View style={[styles.soilSection, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.border 
+          }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Soil & Nutrients</Text>
             <View style={styles.soilRow}>
               <View style={styles.soilItem}>
-                <Mountain size={24} color="#2d7a3a" />
-                <Text style={styles.soilLabel}>Soil Type</Text>
+                <Mountain size={24} color={colors.primary} />
+                <Text style={[styles.soilLabel, { color: colors.text }]}>Soil Type</Text>
                 <TextInput
-                  style={styles.soilInput}
+                  style={[styles.soilInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.soil_type || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({ ...prev, soil_type: text }))
                   }
                   placeholder="e.g., Well-draining"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.soilItem}>
-                <Flask size={24} color="#2d7a3a" />
-                <Text style={styles.soilLabel}>Fertilizer</Text>
+                <Flask size={24} color={colors.primary} />
+                <Text style={[styles.soilLabel, { color: colors.text }]}>Fertilizer</Text>
                 <TextInput
-                  style={styles.soilInput}
+                  style={[styles.soilInput, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text 
+                  }]}
                   value={seedPackage.fertilizer_requirements || ''}
                   onChangeText={(text: string) =>
                     setSeedPackage((prev) => ({
@@ -943,7 +1028,7 @@ export default function AddOrEditSeedScreen() {
                     }))
                   }
                   placeholder="e.g., Balanced NPK"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
             </View>
@@ -952,42 +1037,54 @@ export default function AddOrEditSeedScreen() {
           {/* Planting/Harvest Season Row */}
           <View style={styles.seasonRow}>
             <View style={[styles.inputGroup, styles.seasonInput]}>
-              <Text style={styles.label}>Planting Season</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Planting Season</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text 
+                }]}
                 value={seedPackage.planting_season || ''}
                 onChangeText={(text: string) =>
                   setSeedPackage((prev) => ({ ...prev, planting_season: text }))
                 }
                 placeholder="e.g., Spring"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
             <View style={[styles.inputGroup, styles.seasonInput]}>
-              <Text style={styles.label}>Harvest Season</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Harvest Season</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text 
+                }]}
                 value={seedPackage.harvest_season || ''}
                 onChangeText={(text: string) =>
                   setSeedPackage((prev) => ({ ...prev, harvest_season: text }))
                 }
                 placeholder="e.g., Summer/Fall"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
           </View>
 
           {/* Notes */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notes</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { 
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                color: colors.text 
+              }]}
               value={seedPackage.notes || ''}
               onChangeText={(text: string) =>
                 setSeedPackage((prev) => ({ ...prev, notes: text }))
               }
               placeholder="Any additional notes..."
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={4}
             />
@@ -998,15 +1095,18 @@ export default function AddOrEditSeedScreen() {
         <Pressable
           style={[
             styles.submitButton,
+            {
+              backgroundColor: colors.primary,
+            },
             isSubmitting && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={styles.submitButtonText}>
+            <Text style={[styles.submitButtonText, { color: colors.primaryText }]}>
               {isEditing ? 'Save Changes' : 'Add Seed'}
             </Text>
           )}
@@ -1024,7 +1124,6 @@ const styles = StyleSheet.create({
   // Main container
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0',
   },
   imageContainer: {
     marginBottom: 16,
@@ -1109,7 +1208,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#336633',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -1129,14 +1227,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
   content: {
     flex: 1,
     padding: 16,
   },
   successMessage: {
-    backgroundColor: '#dcfce7',
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
@@ -1146,12 +1242,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   successText: {
-    color: '#166534',
     fontSize: 16,
     fontWeight: '600',
   },
   errorBanner: {
-    backgroundColor: '#fef2f2',
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
@@ -1161,7 +1255,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorBannerText: {
-    color: '#dc2626',
     fontSize: 16,
     flex: 1,
   },
@@ -1229,22 +1322,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a472a',
   },
   helpText: {
     fontSize: 12,
-    color: '#666666',
     fontStyle: 'italic',
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     gap: 8,
   },
   inputError: {
@@ -1302,28 +1390,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#2d7a3a',
-  },
-  selectedType: {
-    backgroundColor: '#2d7a3a',
   },
   typeButtonText: {
     fontSize: 14,
-    color: '#2d7a3a',
     fontWeight: '600',
   },
-  selectedTypeText: {
-    color: '#ffffff',
-  },
   timingSection: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   timelineRow: {
     flexDirection: 'row',
@@ -1337,32 +1414,25 @@ const styles = StyleSheet.create({
   },
   timelineLabel: {
     fontSize: 14,
-    color: '#666666',
     textAlign: 'center',
   },
   timelineInput: {
-    backgroundColor: '#f8faf8',
     borderRadius: 8,
     padding: 12,
     width: '100%',
     textAlign: 'center',
     fontSize: 14,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   plantingSection: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a472a',
     marginBottom: 16,
   },
   instructionRow: {
@@ -1377,27 +1447,21 @@ const styles = StyleSheet.create({
   },
   instructionLabel: {
     fontSize: 14,
-    color: '#666666',
     textAlign: 'center',
   },
   instructionInput: {
-    backgroundColor: '#f8faf8',
     borderRadius: 8,
     padding: 12,
     width: '100%',
     textAlign: 'center',
     fontSize: 14,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   soilSection: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   soilRow: {
     flexDirection: 'row',
@@ -1410,19 +1474,15 @@ const styles = StyleSheet.create({
   },
   soilLabel: {
     fontSize: 14,
-    color: '#666666',
     textAlign: 'center',
   },
   soilInput: {
-    backgroundColor: '#f8faf8',
     borderRadius: 8,
     padding: 12,
     width: '100%',
     textAlign: 'center',
     fontSize: 14,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   submitButton: {
     backgroundColor: '#2d7a3a',
@@ -1472,5 +1532,19 @@ const styles = StyleSheet.create({
   seasonInput: {
     flex: 1,
     minWidth: 140, // Ensure adequate space for season names
+  },
+  // New styles for date and supplier row layout
+  dateSupplierRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  dateInput: {
+    flex: 1,
+    minWidth: 150, // Ensure adequate space for date
+  },
+  supplierInput: {
+    flex: 1,
+    minWidth: 150, // Ensure adequate space for supplier
   },
 });

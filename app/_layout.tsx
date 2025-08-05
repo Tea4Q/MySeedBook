@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
 
+
 function RootLayoutNav() {
   const { session } = useAuth();
   const router = useRouter(); // Get router instance
@@ -19,7 +20,6 @@ function RootLayoutNav() {
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
   });
-  const byPassLoginOnAndroid = false; // Disable bypass to show login screen
   const byPassAuthForTesting = false; // Set to true to skip authentication during development
   const byPassWebAuth = false; // Set to true to skip authentication on web only
 
@@ -73,6 +73,7 @@ function RootLayoutNav() {
         <Stack.Screen name="add-supplier" />
         <Stack.Screen name="edit-supplier/[id]" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="splash-test" />
         {/* Add signup if needed */}
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />

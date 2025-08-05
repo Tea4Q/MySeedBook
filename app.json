@@ -11,7 +11,7 @@
     "description": "A comprehensive gardening application for managing your seed collection and supplier information. Track planting seasons, harvest times, and maintain detailed records of your gardening inventory.",
     "primaryColor": "#336633",
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/splashScreenImage.png",
       "resizeMode": "contain",
       "backgroundColor": "#f0f9f0"
     },
