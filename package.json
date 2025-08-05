@@ -23,9 +23,6 @@
     "@expo-google-fonts/playfair-display": "^0.2.3",
     "@expo/metro-config": "~0.20.0",
     "@expo/vector-icons": "^14.0.2",
-    "@fortawesome/fontawesome-svg-core": "^6.7.2",
-    "@fortawesome/free-solid-svg-icons": "^6.7.2",
-    "@fortawesome/react-native-fontawesome": "^0.3.2",
     "@lucide/lab": "^0.1.2",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/cli": "latest",
@@ -64,7 +61,6 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-get-random-values": "^1.11.0",
     "react-native-modal-datetime-picker": "^18.0.0",
-    "react-native-phone-number-input": "^2.1.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
@@ -84,14 +80,13 @@
     "lightningcss-win32-x64-msvc": "^1.29.3",
     "react-native-gradle-plugin": "^0.71.19",
     "ts-jest": "^29.3.2",
-    "typescript": "^5.3.3"
+    "typescript": "~5.8.3"
   },
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
           "@fortawesome/free-solid-svg-icons",
-          "react-native-phone-number-input",
           "@lucide/lab",
           "@react-native-community/cli",
           "@testing-library/jest-dom",

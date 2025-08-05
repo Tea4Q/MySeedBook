@@ -42,6 +42,12 @@ import type { Supplier, Seed } from '@/types/database'; // Assuming types are de
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 
+// Utility function to validate UUID format
+const isValidUUID = (uuid: string): boolean => {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(uuid);
+};
+
 type SeedType = {
   label: string;
   value: string;
@@ -147,6 +153,15 @@ export default function AddOrEditSeedScreen() {
       if (parsed.date_purchased) {
         parsed.date_purchased = new Date(parsed.date_purchased);
       }
+      
+      // Validate and clean supplier_id
+      if (parsed.supplier_id) {
+        if (!isValidUUID(parsed.supplier_id)) {
+          console.warn('Invalid supplier_id found in seed data:', parsed.supplier_id);
+          parsed.supplier_id = undefined; // Clear invalid supplier_id
+        }
+      }
+      
       // Transform old seed_image or existing images array into Imageinfo[]
       const initialImages: Imageinfo[] = initialImagesData.map((img) => ({
         id: uuidv4(), // Assign new client ID
@@ -290,7 +305,10 @@ export default function AddOrEditSeedScreen() {
       date_purchased: seedPackage.date_purchased
         ? seedPackage.date_purchased.toISOString()
         : null,
-      supplier_id: seedPackage.supplier_id || null, // Ensure null if empty
+      // Validate supplier_id is valid UUID or set to null
+      supplier_id: seedPackage.supplier_id && isValidUUID(seedPackage.supplier_id) 
+        ? seedPackage.supplier_id 
+        : null,
     };
 
     // Remove client-side only fields or fields not directly in 'seeds' table
@@ -357,7 +375,24 @@ export default function AddOrEditSeedScreen() {
       setNavigationTarget(params.returnTo || '/(tabs)'); // Set navigation target
     } catch (error: any) {
       console.error('Error saving seed:', error);
-      setErrors({ submit: `Failed to save seed. ${error.message || ''}` });
+      
+      // Provide more specific error messages for common issues
+      let errorMessage = 'Failed to save seed.';
+      if (error.message) {
+        if (error.message.includes('invalid input syntax for type uuid')) {
+          errorMessage = 'Invalid supplier selection. Please select a valid supplier and try again.';
+          // Log the problematic data for debugging
+          console.error('UUID validation error. Supplier ID:', seedPackage.supplier_id);
+        } else if (error.message.includes('violates foreign key constraint')) {
+          errorMessage = 'The selected supplier no longer exists. Please select a different supplier.';
+        } else if (error.message.includes('violates not-null constraint')) {
+          errorMessage = 'Required information is missing. Please check all required fields.';
+        } else {
+          errorMessage = `Failed to save seed. ${error.message}`;
+        }
+      }
+      
+      setErrors({ submit: errorMessage });
       setShowSuccess(false); // Hide success message on error
     } finally {
       setIsSubmitting(false);
@@ -497,6 +532,11 @@ export default function AddOrEditSeedScreen() {
       errors.quantity = 'Quantity must be greater than 0';
     if (!seedPackage.type) errors.type = 'Seed type is required';
     if (!seedPackage.supplier_id) errors.supplier = 'Supplier is required';
+    
+    // Validate supplier_id is a valid UUID format (basic check)
+    if (seedPackage.supplier_id && !isValidUUID(seedPackage.supplier_id)) {
+      errors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+    }
     
     // Check if any images are still loading
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
@@ -819,16 +859,7 @@ export default function AddOrEditSeedScreen() {
                 // Optionally, add a key to force remount on reloadSuppliers
                 key={reloadSuppliers ? 'reload' : 'normal'}
               />
-              {/* Show selected supplier name if available */}
-              {selectedSupplier && (
-                <Text style={[styles.selectedSupplierText, { color: colors.textSecondary }]}>
-                  Selected: {selectedSupplier.supplier_name}
-                </Text>
-              )}
-              {/* Show error if no supplier selected and form submitted */}
-              {errors.supplier && (
-                <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>
-              )}
+
             </View>
           </View>
 

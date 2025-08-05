@@ -336,6 +336,9 @@ This checklist ensures your MySeedBook Catalogue app is fully prepared for produ
 - [ ] Build profiles configured
 - [ ] Certificates valid
 - [ ] Permissions declared
+- [ ] **EAS Build checks pass** (`npx expo-doctor` shows no issues)
+- [ ] **Prebuild configuration** (no native folders in git, app.json contains native config)
+- [ ] **Package validation** exclusions configured for known working packages
 
 ### Documentation
 - [ ] README updated
