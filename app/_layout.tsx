@@ -28,34 +28,39 @@ function RootLayoutNav() {
   // Determine authentication status - consider session OR bypass flags
   const isAuthenticated = !!session || byPassAuthForTesting || (Platform.OS === 'web' && byPassWebAuth);
 
-  console.log('RootLayoutNav - Platform:', Platform.OS);
-  console.log('RootLayoutNav - Fonts loaded:', fontsLoaded, 'Font error:', fontError);
-  console.log('RootLayoutNav - Auth initialized:', initialized);
-  console.log('RootLayoutNav - Session exists:', !!session);
-  console.log('RootLayoutNav - App ready:', isAppReady);
-  console.log('RootLayoutNav - Authenticated:', isAuthenticated);
 
   useEffect(() => {
     if (isAppReady) {
-      console.log('App ready, hiding splash screen and navigating...');
-      SplashScreen.hideAsync();
+       
+      // Different behavior for web vs mobile
+      if (Platform.OS === 'web') {
+        // Web: Hide splash screen quickly and navigate
+        setTimeout(() => {
+          SplashScreen.hideAsync();
+        }, 500);
 
-      // Navigate after app is ready and navigator is mounted
-      if (isAuthenticated) {
-        // If authenticated or bypassed, ensure user is in the main app area
-        console.log('User authenticated, navigating to main app');
-        router.replace('/(tabs)'); // Or your desired initial authenticated route
+        // Navigate based on auth state - force navigation on web to ensure it works
+               if (isAuthenticated) {
+           router.replace('/(tabs)');
+        } else {
+                  router.replace('/auth');
+        }
       } else {
-        // If not authenticated, ensure user is in the auth area
-        console.log('User not authenticated, navigating to auth');
-        router.replace('/auth');
+        // Mobile: Keep original splash screen behavior
+        SplashScreen.hideAsync();
+        
+        // Always navigate on mobile to ensure proper state
+        if (isAuthenticated) {
+                router.replace('/(tabs)');
+        } else {
+           router.replace('/auth');
+        }
       }
     }
   }, [isAppReady, isAuthenticated, router]); // Add dependencies
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {
-    console.log('App not ready, showing splash screen');
     return null;
   }
 

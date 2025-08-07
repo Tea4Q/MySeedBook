@@ -5,9 +5,9 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ScrollView,
   Alert,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   Building2,
   Mail,
@@ -169,7 +169,13 @@ export default function AddSupplierForm({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -318,7 +324,7 @@ export default function AddSupplierForm({
             </Pressable>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Mail, Lock, User } from 'lucide-react-native';
@@ -85,7 +86,15 @@ export default function AuthScreen() {
       setIsLoading(true);
       setError(null);
       await signIn(loginEmail, loginPassword);
-      router.replace('/(tabs)');
+      
+      if (Platform.OS === 'web') {
+        // Let the _layout.tsx handle navigation on web to prevent splash screen
+        console.log('Login successful, waiting for automatic navigation...');
+      } else {
+        // On mobile, navigate immediately - auth provider handles timing for splash screen
+        console.log('Login successful, navigating to main app...');
+        router.replace('/(tabs)');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in');
     } finally {
@@ -100,7 +109,15 @@ export default function AuthScreen() {
       setIsLoading(true);
       setError(null);
       await signUp(signupEmail, signupPassword);
-      router.replace('/(tabs)');
+      
+      if (Platform.OS === 'web') {
+        // Let the _layout.tsx handle navigation on web to prevent splash screen
+        console.log('Signup successful, waiting for automatic navigation...');
+      } else {
+        // On mobile, navigate immediately - auth provider handles timing for splash screen
+        console.log('Signup successful, navigating to main app...');
+        router.replace('/(tabs)');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {

@@ -73,6 +73,37 @@ Write-Host "   Platform: $Platform" -ForegroundColor White
 Write-Host "`nInstalling dependencies..." -ForegroundColor Cyan
 npm install
 
+# Git commit step - Ensure all changes are committed before build
+Write-Host "`nChecking git status and committing changes..." -ForegroundColor Cyan
+try {
+    # Check if there are any changes to commit
+    $gitStatus = git status --porcelain 2>$null
+    if ($gitStatus) {
+        Write-Host "[INFO] Found uncommitted changes. Committing before build..." -ForegroundColor Yellow
+        
+        # Add all files (modified, new, deleted)
+        git add -A
+        
+        # Create commit with timestamp and build type
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $commitMessage = "Pre-build commit ($BuildType) - $timestamp"
+        git commit -m $commitMessage
+        
+        Write-Host "[OK] Changes committed: $commitMessage" -ForegroundColor Green
+        
+        # Optional: Push to remote (commented out by default)
+        # Uncomment the next line if you want to auto-push before builds
+        # git push origin main
+        
+    } else {
+        Write-Host "[OK] No uncommitted changes found" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "[WARNING] Git commit failed or not in a git repository" -ForegroundColor Yellow
+    Write-Host "   You can manually commit changes with: git add -A && git commit -m 'Pre-build commit'" -ForegroundColor Cyan
+    Write-Host "   Continuing with build process..." -ForegroundColor Yellow
+}
+
 # Build based on type and platform
 Write-Host "`nStarting build process..." -ForegroundColor Cyan
 

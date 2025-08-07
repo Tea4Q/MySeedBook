@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   format,
   addMonths,
@@ -481,7 +482,12 @@ export default function CalendarScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <KeyboardAwareScrollView 
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable onPress={previousMonth} style={[styles.iconButton, { backgroundColor: colors.surface }]}>
             <ChevronLeft size={24} color={colors.icon} />
@@ -621,7 +627,7 @@ export default function CalendarScreen() {
               ))}
           </ScrollView>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Add Event Modal */}
       <Modal

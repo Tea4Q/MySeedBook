@@ -15,11 +15,11 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ScrollView,
   Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   ArrowLeft,
   Calendar,
@@ -596,7 +596,13 @@ export default function AddOrEditSeedScreen() {
           <Text style={[styles.errorBannerText, { color: colors.primaryText }]}>{errors.submit}</Text>
         </View>
       )}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Image Section */}
         <View style={styles.imageContainer}>
           <ImageHandler
@@ -1144,8 +1150,8 @@ export default function AddOrEditSeedScreen() {
         </Pressable>
 
         {/* End of formSection View */}
-      </ScrollView>
-      {/* End of ScrollView */}
+      </KeyboardAwareScrollView>
+      {/* End of KeyboardAwareScrollView */}
     </View>
   );
 }

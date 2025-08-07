@@ -5,9 +5,9 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
   ArrowLeft,
@@ -123,7 +123,13 @@ export default function EditSupplierScreen() {
         <Text style={styles.title}>Edit Supplier</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -237,7 +243,7 @@ export default function EditSupplierScreen() {
             {isSubmitting ? 'Updating Supplier...' : 'Update Supplier'}
           </Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

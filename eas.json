@@ -33,9 +33,6 @@
       },
       "ios": {
         "buildConfiguration": "Release"
-      },
-      "env": {
-        "NODE_ENV": "production"
       }
     }
   },

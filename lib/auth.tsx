@@ -4,6 +4,7 @@ import { useRootNavigation } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { logger } from '../utils/logger';
 
 // Create auth context
 interface AuthContextType {
@@ -33,29 +34,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth immediately on web, or when navigation is ready on mobile
   useEffect(() => {
-    console.log('Auth initialization - Platform:', Platform.OS);
-    console.log('Root navigation ready:', rootNavigation?.isReady);
-    
+     
     // Web platform doesn't always have rootNavigation ready state working properly
     // Initialize auth immediately on web, wait for navigation on mobile
     const shouldInitialize = Platform.OS === 'web' || rootNavigation?.isReady;
     
     if (!shouldInitialize) {
-      console.log('Waiting for navigation to be ready...');
-      return;
+       return;
     }
 
-    console.log('Initializing authentication...');
-
+   
     // Check auth state and handle invalid refresh tokens
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session check - Session:', session?.user?.email || 'No session');
-      console.log('Initial session check - Error:', error?.message || 'No error');
-      
+       
       if (error) {
         // Clear any invalid session data
-        console.log('Session error, clearing auth state:', error.message);
-        setSession(null);
+         setSession(null);
         setUser(null);
         setInitialized(true);
         return;
@@ -64,51 +58,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
-      console.log('Auth initialization complete');
     }).catch((error) => {
-      console.error('Failed to get session:', error);
-      setSession(null);
+       setSession(null);
       setUser(null);
       setInitialized(true);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change event:', event);
-      console.log('Auth state change session:', session?.user?.email || 'No session');
       
       if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
-      } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
+        } else if (event === 'SIGNED_OUT') {
+   
+      } else if (event === 'SIGNED_IN' && Platform.OS !== 'web') {
+       
+        // On mobile, add a small delay when signing in to allow splash screen to show
+        setTimeout(() => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }, 1200);
+        return;
       }
       
+      // Immediate update for web or other events
       setSession(session);
       setUser(session?.user ?? null);
     });
 
     return () => {
-      console.log('Cleaning up auth subscription');
-      subscription.unsubscribe();
-    };
+      };
   }, [rootNavigation?.isReady]);
 
   // Web-specific initialization fallback
   useEffect(() => {
     if (Platform.OS === 'web' && !initialized) {
-      console.log('Web fallback initialization triggered');
       
-      // Add a small delay to ensure DOM is ready
+      // Shorter delay for web to improve UX
       const timer = setTimeout(() => {
         if (!initialized) {
-          console.log('Forcing web auth initialization');
-          supabase.auth.getSession().then(({ data: { session }, error }) => {
-            console.log('Web fallback session check - Session:', session?.user?.email || 'No session');
-            console.log('Web fallback session check - Error:', error?.message || 'No error');
-            
+           supabase.auth.getSession().then(({ data: { session }, error }) => {
+             
             if (error) {
-              console.log('Web fallback session error:', error.message);
-              setSession(null);
+               setSession(null);
               setUser(null);
             } else {
               setSession(session);
@@ -117,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setInitialized(true);
           });
         }
-      }, 100);
+      }, 50); // Reduced from 100ms to 50ms for faster web initialization
 
       return () => clearTimeout(timer);
     }
@@ -156,8 +147,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+     
+    // Check if there's an active session before attempting to sign out
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // No active session, just clear local state
+       setSession(null);
+      setUser(null);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        
+        // Handle specific session missing error
+        if (error.message.includes('session') && error.message.includes('missing')) {
+         setSession(null);
+          setUser(null);
+          return;
+        }
+        throw error;
+      }
+      
+      
+      // Force clear local state immediately after successful signOut
+      setSession(null);
+      setUser(null);
+      
+    // On web, also manually clear localStorage and other storage if needed
+    if (Platform.OS === 'web') {
+      try {
+        
+        // Clear localStorage
+        const localKeysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.toLowerCase().includes('supabase') || 
+            key.toLowerCase().includes('auth') ||
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('session') ||
+            key.includes('sb-') || // Supabase prefix
+            key.includes('gotrue') // Supabase auth service
+          )) {
+            localKeysToRemove.push(key);
+          }
+        }
+        localKeysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Clear sessionStorage
+        const sessionKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (
+            key.toLowerCase().includes('supabase') || 
+            key.toLowerCase().includes('auth') ||
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('session') ||
+            key.includes('sb-') || // Supabase prefix
+            key.includes('gotrue') // Supabase auth service
+          )) {
+            sessionKeysToRemove.push(key);
+          }
+        }
+        sessionKeysToRemove.forEach(key => {
+          sessionStorage.removeItem(key);
+        });
+        
+        // Clear auth-related cookies by setting them to expire
+        const cookies = document.cookie.split(';');
+        cookies.forEach(cookie => {
+          const cookieName = cookie.split('=')[0].trim();
+          if (cookieName.toLowerCase().includes('supabase') || 
+              cookieName.toLowerCase().includes('auth') ||
+              cookieName.toLowerCase().includes('token') ||
+              cookieName.toLowerCase().includes('session')) {
+            // Set cookie to expire in the past
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            // Also try with different path and domain combinations
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${window.location.hostname};`;
+          }
+        });
+        
+        } catch (webError) {
+      }
+    }    } catch (signOutError) {
+      
+      // Even if signOut fails, clear local state since user requested logout
+      setSession(null);
+      setUser(null);
+      
+      // Re-throw the error for the UI to handle
+      throw signOutError;
+    }
   };
 
   return (
@@ -184,16 +272,27 @@ export const clearSession = async () => {
 // Add a function to clear invalid authentication state
 export const clearInvalidAuthState = async () => {
   try {
-    // Clear the session from Supabase
-    await supabase.auth.signOut();
+    // First check if there's a session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      // Clear the session from Supabase
+      await supabase.auth.signOut();
+    }
     
     // If on mobile, also clear from secure store
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('supabase.auth.token');
     }
     
-    console.log('Cleared invalid authentication state');
-  } catch (error) {
-    console.log('Error clearing auth state:', error);
+   } catch (error) {
+    
+    // Force clear from secure store if there's an error
+    if (Platform.OS !== 'web') {
+      try {
+        await SecureStore.deleteItemAsync('supabase.auth.token');
+      } catch (secureStoreError) {
+      }
+    }
   }
 };

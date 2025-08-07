@@ -5,13 +5,13 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   Platform,
   Alert,
   Modal,
   TouchableOpacity,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Search, Plus, Pencil, Trash2, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -264,7 +264,12 @@ export default function ManageSuppliersScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.content}>
+      <KeyboardAwareScrollView 
+        style={styles.content}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         {filteredSuppliers.map((supplier) => (
           <View
             key={supplier.id}
@@ -396,7 +401,7 @@ export default function ManageSuppliersScreen() {
             )}
           </View>
         ))}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Custom Confirmation Modal for Web */}
       <Modal

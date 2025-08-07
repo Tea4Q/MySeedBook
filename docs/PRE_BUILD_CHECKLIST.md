@@ -32,10 +32,12 @@ This checklist ensures your MySeedBook Catalogue app is fully prepared for produ
 
 ### Node.js & Dependencies
 - [ ] Node.js version is compatible (18.x or 20.x recommended)
+### Package Validation
 - [ ] All dependencies are installed (`npm install`)
 - [ ] No dependency vulnerabilities (`npm audit`)
 - [ ] All peer dependencies resolved
 - [ ] Package-lock.json is up to date
+- [ ] Known working packages excluded from validation warnings
 
 ### Expo & React Native
 - [ ] Expo SDK version is stable (currently 53.0.20)
@@ -43,6 +45,7 @@ This checklist ensures your MySeedBook Catalogue app is fully prepared for produ
 - [ ] React Native version compatible with Expo SDK
 - [ ] Metro bundler configured correctly
 - [ ] Expo development tools working
+- [ ] Expo doctor passes validation (`npx expo-doctor`)
 
 ### Development Tools
 - [ ] TypeScript configuration working
@@ -64,10 +67,30 @@ This checklist ensures your MySeedBook Catalogue app is fully prepared for produ
 
 ### Linting & Formatting
 - [ ] ESLint passes without errors
-- [ ] No console.log statements in production code
+- [ ] No console.log statements in production code (see log cleanup guide below)
 - [ ] No debug code or comments left in
 - [ ] Unused imports removed
 - [ ] Code formatting consistent
+
+#### 🗑️ Log Cleanup Guide
+Before production builds, clean up debug logging:
+
+**Files to clean/remove:**
+- [ ] `utils/web-auth-debug.ts` - Remove entire file (debug only)
+- [ ] `utils/debug-supabase.ts` - Remove entire file (debug only)  
+- [ ] `lib/auth-test.ts` - Remove entire file (testing only)
+- [ ] `lib/auth.tsx` - Replace console.log with logger.log (21 statements)
+- [ ] `app/_layout.tsx` - Replace console.log with logger.log (13 statements)
+- [ ] `app/auth/login.tsx` - Replace console.log with logger.log (4 statements)
+
+**Quick cleanup commands:**
+```bash
+# Remove debug files
+rm utils/web-auth-debug.ts utils/debug-supabase.ts lib/auth-test.ts
+
+# Use logger utility for conditional logging (import { logger } from '@/utils/logger')
+# Replace console.log with logger.log in remaining files
+```
 
 ### Code Review
 - [ ] All features implemented and tested
