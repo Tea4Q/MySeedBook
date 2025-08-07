@@ -14,6 +14,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +25,8 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  resetPassword: async () => {},
+  updatePassword: async () => {},
 });
 
 // Provider component
@@ -248,8 +252,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/reset-password`,
+    });
+
+    if (error) throw error;
+  };
+
+  const updatePassword = async (password: string) => {
+    console.log('Auth context: Attempting to update password');
+    
+    // First check if we have a valid session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error during password update:', sessionError);
+      throw new Error('Session validation failed. Please request a new reset link.');
+    }
+    
+    if (!session) {
+      console.error('No session found during password update');
+      throw new Error('No active session. Please request a new reset link.');
+    }
+    
+    console.log('Valid session found, updating password');
+    
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      console.error('Password update error:', error);
+      throw error;
+    }
+    
+    console.log('Password updated successfully in auth context');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

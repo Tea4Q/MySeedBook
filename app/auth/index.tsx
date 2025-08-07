@@ -38,6 +38,16 @@ export default function AuthScreen() {
   // Animation values
   const slideAnim = React.useRef(new Animated.Value(0)).current;
 
+  const handleForgotPassword = () => {
+    console.log('Forgot password clicked');
+    try {
+      router.push('/auth/forgot-password');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      alert('Navigation failed: ' + error);
+    }
+  };
+
   const toggleForm = () => {
     setError(null);
     const toValue = isLogin ? 1 : 0;
@@ -349,6 +359,16 @@ export default function AuthScreen() {
             )}
           </Pressable>
 
+          {/* Forgot Password Link */}
+          <Pressable
+            style={styles.forgotPassword}
+            onPress={handleForgotPassword}
+          >
+            <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+              Forgot your password?
+            </Text>
+          </Pressable>
+
           <Pressable style={styles.forgotPassword}>
             <Text style={[styles.forgotPasswordText, { color: colors.textSecondary }]}>
               Forgot your password?
@@ -477,9 +497,14 @@ const styles = StyleSheet.create({
   forgotPassword: {
     alignItems: 'center',
     marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    minHeight: 44,
   },
   forgotPasswordText: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
 });

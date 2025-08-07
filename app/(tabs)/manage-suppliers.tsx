@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Search, Plus, Pencil, Trash2, X } from 'lucide-react-native';
+import { Search, PlusCircle, Pencil, Trash2, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -226,7 +226,7 @@ export default function ManageSuppliersScreen() {
         style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}
         onPress={() => setShowAddSupplierModal(true)}
       >
-        <Plus size={28} color={colors.primaryText} />
+        <PlusCircle size={28} color={colors.primaryText} />
       </Pressable>
 
       <View
