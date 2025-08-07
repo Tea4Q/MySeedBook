@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import type { Supplier } from '@/types/database';
+import AddSupplierForm from '@/components/AddSupplierForm';
 
 export default function ManageSuppliersScreen() {
   const { colors } = useTheme();
@@ -28,6 +29,7 @@ export default function ManageSuppliersScreen() {
     visible: boolean;
     supplier: Supplier | null;
   }>({ visible: false, supplier: null });
+  const [showAddSupplierModal, setShowAddSupplierModal] = React.useState(false);
 
   // Helper function to convert hex to rgba
   const hexToRgba = (hex: string, alpha: number) => {
@@ -102,6 +104,11 @@ export default function ManageSuppliersScreen() {
         err instanceof Error ? err.message : 'Failed to update supplier status'
       );
     }
+  };
+
+  const handleSupplierAdded = async (newSupplier: Supplier) => {
+    setShowAddSupplierModal(false);
+    await loadSuppliers(); // Refresh the suppliers list
   };
 
   const deleteSupplier = async (supplier: Supplier) => {
@@ -214,20 +221,13 @@ export default function ManageSuppliersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.title, { color: colors.primaryText }]}>
-          Supplier List
-        </Text>
-        <Pressable
-          style={[
-            styles.addButton,
-            { backgroundColor: hexToRgba(colors.primaryText, 0.2) },
-          ]}
-          onPress={() => router.push('/add-supplier')}
-        >
-          <Plus size={24} color={colors.primaryText} />
-        </Pressable>
-      </View>
+      {/* Floating Add Button */}
+      <Pressable
+        style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}
+        onPress={() => setShowAddSupplierModal(true)}
+      >
+        <Plus size={28} color={colors.primaryText} />
+      </Pressable>
 
       <View
         style={[
@@ -470,6 +470,33 @@ export default function ManageSuppliersScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Add Supplier Modal */}
+      <Modal
+        visible={showAddSupplierModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddSupplierModal(false)}
+      >
+        <View style={styles.addSupplierModalContainer}>
+          <View style={styles.addSupplierModalContent}>
+            <View style={styles.addSupplierModalHeader}>
+              <Text style={styles.addSupplierModalTitle}>Add New Supplier</Text>
+              <Pressable
+                style={styles.addSupplierModalClose}
+                onPress={() => setShowAddSupplierModal(false)}
+              >
+                <X size={24} color="#666666" />
+              </Pressable>
+            </View>
+            <AddSupplierForm
+              initialSupplierName=""
+              onSuccess={handleSupplierAdded}
+              onCancel={() => setShowAddSupplierModal(false)}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -477,6 +504,28 @@ export default function ManageSuppliersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 1000,
+    padding: 16,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  titleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   loadingContainer: {
     flex: 1,
@@ -659,5 +708,35 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Add Supplier Modal styles
+  addSupplierModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  addSupplierModalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    flex: 1,
+    marginTop: '10%',
+  },
+  addSupplierModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  addSupplierModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#212529',
+  },
+  addSupplierModalClose: {
+    padding: 8,
   },
 });

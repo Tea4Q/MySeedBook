@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
 import { Seed } from '@/types/database'; // Adjust path if needed
@@ -577,14 +578,10 @@ export default function InventoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.title, { color: colors.primaryText }]}>My Seed Inventory</Text>
-        <View style={styles.headerButtons}>
-          <Pressable onPress={handleAddSeed} style={styles.addButton}>
-            <PlusCircle size={32} color={colors.primaryText} />
-          </Pressable>
-        </View>
-      </View>
+      {/* Floating Add Button */}
+      <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
+        <PlusCircle size={28} color={colors.primaryText} />
+      </Pressable>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
         <Search size={20} color={colors.textSecondary} style={styles.searchIcon} />
@@ -665,6 +662,28 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 1000,
+    padding: 16,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  titleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',

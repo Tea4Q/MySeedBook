@@ -33,13 +33,17 @@ interface AddSupplierFormProps {
   initialSupplierName?: string;
   onSuccess?: (supplier: Supplier) => void;
   onCancel?: () => void;
+  embedded?: boolean; // New prop to indicate if form is embedded in another modal
 }
 
 export default function AddSupplierForm({
   initialSupplierName = '',
   onSuccess,
   onCancel,
+  embedded = false,
 }: AddSupplierFormProps) {
+  console.log('AddSupplierForm rendering with initialSupplierName:', initialSupplierName, 'embedded:', embedded);
+  
   const [formData, setFormData] = useState<Partial<Supplier>>({
     supplier_name: initialSupplierName,
     webaddress: '',
@@ -168,7 +172,7 @@ export default function AddSupplierForm({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={embedded ? styles.embeddedContainer : styles.container}>
       <KeyboardAwareScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
@@ -299,6 +303,7 @@ export default function AddSupplierForm({
             />
           </View>
         </View>
+        
         {/* Submit/Cancel Buttons */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }}>
           <Pressable
@@ -333,6 +338,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f9f0',
+  },
+  embeddedContainer: {
+    backgroundColor: 'transparent', // No background when embedded
+    minHeight: 400, // Ensure minimum height
   },
   content: {
     flex: 1,

@@ -33,7 +33,7 @@ import {
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
-import { SupplierSelect } from '@/components/SupplierSelect';
+import { SupplierInput } from '@/components/SupplierInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
@@ -551,10 +551,10 @@ export default function AddOrEditSeedScreen() {
   };
 
   // --- Supplier Select Handler ---
-  const handleSupplierSelect = (supplier: Supplier | null) => {
+  const handleSupplierSelect = (supplier: Supplier) => {
     setSeedPackage((prev) => ({
       ...prev,
-      supplier_id: supplier?.id || undefined,
+      supplier_id: supplier.id,
     }));
     setSelectedSupplier(supplier);
   };
@@ -571,15 +571,11 @@ export default function AddOrEditSeedScreen() {
   // --- Render the component ---
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={colors.primaryText} />
-        </Pressable>
-        <Text style={[styles.title, { color: colors.primaryText }]}>
-          {isEditing ? 'Edit Seed' : 'Add New Seed'}
-        </Text>
-      </View>
+      {/* Back Button - Floating Style */}
+      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
+        <ArrowLeft size={24} color={colors.text} />
+      </Pressable>
+      
       {/* Success/Error Messages */}
       {showSuccess && (
         <View style={[styles.successMessage, { backgroundColor: colors.success }]}>
@@ -598,6 +594,7 @@ export default function AddOrEditSeedScreen() {
       )}
       <KeyboardAwareScrollView 
         style={styles.content} 
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         enableOnAndroid={true}
         extraScrollHeight={20}
@@ -855,17 +852,14 @@ export default function AddOrEditSeedScreen() {
             <View style={[styles.inputGroup, styles.supplierInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Supplier *</Text>
               <Text style={[styles.helpText, { color: colors.textSecondary }]}>
-                💡 Select or add supplier
+                💡 Type to search or add new supplier
               </Text>
-              {/* Use SupplierSelect component for supplier selection */}
-              <SupplierSelect
+              <SupplierInput
                 onSelect={handleSupplierSelect}
-                selectedSupplierId={seedPackage.supplier_id || undefined}
-                initialSearchQuery={''}
-                // Optionally, add a key to force remount on reloadSuppliers
-                key={reloadSuppliers ? 'reload' : 'normal'}
+                selectedSupplier={selectedSupplier}
+                placeholder="Type supplier name..."
               />
-
+              {errors.supplier && <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>}
             </View>
           </View>
 
@@ -1160,6 +1154,7 @@ export default function AddOrEditSeedScreen() {
 const styles = StyleSheet.create({
   // Main container
   container: {
+    marginTop:28,
     flex: 1,
   },
   imageContainer: {
@@ -1241,19 +1236,18 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  // Header elements
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
+  floatingBackButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 1000,
+    padding: 12,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   backButton: {
     padding: 8,
@@ -1261,13 +1255,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     marginRight: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
   content: {
     flex: 1,
     padding: 16,
+  },
+  contentContainer: {
+    paddingTop: 60, // Space for floating back button
   },
   successMessage: {
     padding: 16,

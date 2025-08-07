@@ -79,11 +79,10 @@ export default function AuthScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: `${colors.primary}20` }]}>
-          <ArrowLeft size={24} color={colors.primary} />
-        </Pressable>
-      </View>
+      {/* Floating Back Button */}
+      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
+        <ArrowLeft size={24} color={colors.text} />
+      </Pressable>
 
       <View style={styles.logoContainer}>
         <Image
@@ -210,6 +209,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  floatingBackButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 1000,
+    padding: 12,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   header: {
     padding: 16,
     paddingTop: 32,
@@ -224,6 +236,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 40,
+    marginTop: 60, // Space for floating back button
     width: '100%',
     paddingHorizontal: 16,
   },

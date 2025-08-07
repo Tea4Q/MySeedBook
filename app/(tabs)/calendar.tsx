@@ -488,7 +488,8 @@ export default function CalendarScreen() {
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        {/* Clean Header with Navigation */}
+        <View style={styles.calendarHeader}>
           <Pressable onPress={previousMonth} style={[styles.iconButton, { backgroundColor: colors.surface }]}>
             <ChevronLeft size={24} color={colors.icon} />
           </Pressable>
@@ -883,6 +884,13 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',

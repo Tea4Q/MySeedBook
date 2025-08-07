@@ -116,15 +116,14 @@ export default function EditSupplierScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#ffffff" />
-        </Pressable>
-        <Text style={styles.title}>Edit Supplier</Text>
-      </View>
+      {/* Floating Back Button */}
+      <Pressable onPress={() => router.back()} style={styles.floatingBackButton}>
+        <ArrowLeft size={24} color="#333333" />
+      </Pressable>
 
       <KeyboardAwareScrollView 
         style={styles.content} 
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         enableOnAndroid={true}
         extraScrollHeight={20}
@@ -266,6 +265,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  floatingBackButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 1000,
+    padding: 12,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   backButton: {
     padding: 8,
     borderRadius: 12,
@@ -280,6 +293,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  contentContainer: {
+    paddingTop: 60, // Space for floating back button
   },
   errorContainer: {
     backgroundColor: '#fef2f2',

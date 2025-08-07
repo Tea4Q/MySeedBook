@@ -49,10 +49,6 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.headerText }]}>Settings</Text>
-      </View>
-
       <View style={[styles.section, { borderBottomColor: colors.border }, styles.disabledSection]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
@@ -171,6 +167,15 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  titleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   header: {
     padding: 16,

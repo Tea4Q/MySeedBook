@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ScrollView,
   FlatList,
+  Platform,
 } from 'react-native';
 import {
   Search,
@@ -53,8 +54,18 @@ export function SupplierSelect({
   const [pendingSupplierName, setPendingSupplierName] = useState<string | null>(
     null
   );
+  const [modalMode, setModalMode] = useState<'select' | 'add'>('select');
 
   const [reloadSuppliers, setReloadSuppliers] = useState(false);
+
+  // Debug logging for modal state changes
+  useEffect(() => {
+    console.log('showAddSupplierModal changed to:', showAddSupplierModal, 'Platform:', Platform.OS);
+  }, [showAddSupplierModal]);
+
+  useEffect(() => {
+    console.log('isOpen changed to:', isOpen, 'Platform:', Platform.OS);
+  }, [isOpen]);
 
   useEffect(() => {
     loadSuppliers();
@@ -135,19 +146,45 @@ export function SupplierSelect({
   const pathname = usePathname();
 
   const handleAddNewSupplier = () => {
-    setIsOpen(false); // Close the select supplier modal first
+    console.log('handleAddNewSupplier called with searchQuery:', searchQuery);
     setPendingSupplierName(searchQuery); // Pass the current search query
-    setShowAddSupplierModal(true); // Open the add supplier modal
+    console.log('Setting showAddSupplierModal to true');
+    
+    if (Platform.OS === 'web') {
+      // On web, use the dual modal approach
+      setIsOpen(false);
+      setTimeout(() => {
+        setShowAddSupplierModal(true);
+        console.log('showAddSupplierModal state should now be true');
+      }, 100);
+    } else {
+      // On mobile, switch modal content instead of opening a new modal
+      setModalMode('add');
+      console.log('Switched to add mode on mobile');
+    }
   };
 
   // Handler for when a new supplier is added from the inline modal
   const handleSupplierAdded = async (newSupplier: Supplier) => {
-    setShowAddSupplierModal(false);
+    if (Platform.OS === 'web') {
+      setShowAddSupplierModal(false);
+    } else {
+      setModalMode('select');
+    }
     setIsOpen(false); // Close the supplier select modal
     await loadSuppliers(); // Refresh suppliers list
     setSelectedSupplier(newSupplier);
     onSelect(newSupplier);
     setSearchQuery('');
+  };
+
+  const handleCancelAddSupplier = () => {
+    console.log('Add supplier form cancelled');
+    if (Platform.OS === 'web') {
+      setShowAddSupplierModal(false);
+    } else {
+      setModalMode('select');
+    }
   };
 
   const renderSupplierItem = ({ item: supplier }: { item: Supplier }) => (
@@ -220,23 +257,39 @@ export function SupplierSelect({
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.selectButton} onPress={() => setIsOpen(true)}>
+      <Pressable style={styles.selectButton} onPress={() => {
+        setModalMode('select'); // Reset to select mode
+        setIsOpen(true);
+      }}>
         <Text>{selectedSupplier?.supplier_name || 'Select supplier'}</Text>
       </Pressable>
 
       {/* Add Supplier Modal (inline, not navigation) */}
       <Modal
         visible={showAddSupplierModal}
-        animationType="slide"
+        animationType={Platform.OS === 'web' ? 'slide' : 'fade'}
         transparent={true}
-        onRequestClose={() => setShowAddSupplierModal(false)}
+        presentationStyle={
+          Platform.OS === 'web' 
+            ? 'overFullScreen' 
+            : Platform.OS === 'ios' 
+            ? 'pageSheet' 
+            : 'overFullScreen'
+        }
+        onRequestClose={() => {
+          console.log('Add supplier modal onRequestClose called');
+          setShowAddSupplierModal(false);
+        }}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, styles.addSupplierModalContainer]}>
           <View style={styles.modalContent}>
             <AddSupplierForm
               initialSupplierName={pendingSupplierName || ''}
               onSuccess={handleSupplierAdded}
-              onCancel={() => setShowAddSupplierModal(false)}
+              onCancel={() => {
+                console.log('Add supplier form cancelled');
+                setShowAddSupplierModal(false);
+              }}
             />
           </View>
         </View>
@@ -246,80 +299,106 @@ export function SupplierSelect({
         visible={isOpen}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setIsOpen(false)}
+        onRequestClose={() => {
+          setIsOpen(false);
+          setModalMode('select'); // Reset to select mode when closing
+        }}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Supplier</Text>
-              <Pressable
-                style={styles.closeButton}
-                onPress={() => setIsOpen(false)}
-              >
-                <X size={24} color="#666666" />
-              </Pressable>
-            </View>
+          <View style={[styles.modalContent, modalMode === 'add' && styles.addModeModalContent]}>
+            {modalMode === 'select' ? (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Supplier</Text>
+                  <Pressable
+                    style={styles.closeButton}
+                    onPress={() => setIsOpen(false)}
+                  >
+                    <X size={24} color="#666666" />
+                  </Pressable>
+                </View>
 
-            <View style={styles.searchContainer}>
-              <Search size={20} color="#666666" />
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={handleSearch}
-                placeholder="Search suppliers..."
-                placeholderTextColor="#999999"
-                autoFocus
-              />
-            </View>
+                <View style={styles.searchContainer}>
+                  <Search size={20} color="#666666" />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={handleSearch}
+                    placeholder="Search suppliers..."
+                    placeholderTextColor="#999999"
+                    autoFocus
+                  />
+                </View>
 
-            {error && (              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2d7a3a" />
-              </View>
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+                {isLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#2d7a3a" />
+                  </View>
+                ) : (
+                  <>
+                    <FlatList
+                      data={filteredSuppliers}
+                      renderItem={renderSupplierItem}
+                      keyExtractor={(item) => item.id}
+                      contentContainerStyle={styles.supplierList}
+                      ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                          <Text style={styles.emptyStateText}>
+                            {searchQuery
+                              ? `No suppliers found matching "${searchQuery}"`
+                              : 'No suppliers available'}
+                          </Text>
+                          {searchQuery && (
+                            <Pressable
+                              style={styles.addNewButton}
+                              onPress={handleAddNewSupplier}
+                            >
+                              <Plus size={20} color="#ffffff" />
+                              <Text style={styles.addNewButtonText}>
+                                Add "{searchQuery}" as New Supplier
+                              </Text>
+                            </Pressable>
+                          )}
+                        </View>
+                      }
+                    />
+
+                    {!searchQuery && (
+                      <Pressable
+                        style={styles.addNewButton}
+                        onPress={handleAddNewSupplier}
+                      >
+                        <Plus size={20} color="#ffffff" />
+                        <Text style={styles.addNewButtonText}>
+                          Add New Supplier
+                        </Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+              </>
             ) : (
               <>
-                <FlatList
-                  data={filteredSuppliers}
-                  renderItem={renderSupplierItem}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.supplierList}
-                  ListEmptyComponent={
-                    <View style={styles.emptyState}>
-                      <Text style={styles.emptyStateText}>
-                        {searchQuery
-                          ? `No suppliers found matching "${searchQuery}"`
-                          : 'No suppliers available'}
-                      </Text>
-                      {searchQuery && (
-                        <Pressable
-                          style={styles.addNewButton}
-                          onPress={handleAddNewSupplier}
-                        >
-                          <Plus size={20} color="#ffffff" />
-                          <Text style={styles.addNewButtonText}>
-                            Add "{searchQuery}" as New Supplier
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  }
-                />
-
-                {!searchQuery && (
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Add New Supplier</Text>
                   <Pressable
-                    style={styles.addNewButton}
-                    onPress={handleAddNewSupplier}
+                    style={styles.closeButton}
+                    onPress={handleCancelAddSupplier}
                   >
-                    <Plus size={20} color="#ffffff" />
-                    <Text style={styles.addNewButtonText}>
-                      Add New Supplier
-                    </Text>
+                    <X size={24} color="#666666" />
                   </Pressable>
-                )}
+                </View>
+                <AddSupplierForm
+                  initialSupplierName={pendingSupplierName || ''}
+                  onSuccess={handleSupplierAdded}
+                  onCancel={handleCancelAddSupplier}
+                  embedded={true}
+                />
               </>
             )}
           </View>
@@ -378,11 +457,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  addSupplierModalContainer: {
+    zIndex: 1000, // Higher z-index for the add supplier modal
+    backgroundColor: Platform.OS === 'web' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.7)',
+    justifyContent: Platform.OS === 'web' ? 'flex-end' : 'center',
+  },
   modalContent: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
+  },
+  addModeModalContent: {
+    maxHeight: '90%', // Allow more space for the form
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -523,5 +611,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  addSupplierContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  addSupplierFormContainer: {
+    flex: 1,
+    padding: 0, // Remove padding since AddSupplierForm has its own
   },
 });

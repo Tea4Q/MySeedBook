@@ -146,11 +146,11 @@ export default function SelectSupplierScreen() {
   };
 
   const handleEditSupplier = (supplierId: string) => {
-    router.push({ pathname: '/add-supplier', params: { supplierId } });
+    router.push({ pathname: '/edit-supplier/[id]', params: { id: supplierId } });
   };
 
   const handleAddSupplier = () => {
-    router.push('/add-supplier'); // Navigate without supplierId
+    router.push('/manage-suppliers'); // Navigate to manage suppliers instead
   };
 
   const renderItem = ({ item }: { item: Supplier }) => (
@@ -186,12 +186,10 @@ export default function SelectSupplierScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Select Supplier</Text>
-        <Pressable onPress={handleAddSupplier} style={styles.iconButton}>
-          <Plus size={24} color="#007AFF" />
-        </Pressable>
-      </View>
+      {/* Floating Add Button */}
+      <Pressable onPress={handleAddSupplier} style={styles.floatingAddButton}>
+        <Plus size={28} color="#ffffff" />
+      </Pressable>
 
       <TextInput
         style={styles.searchInput}
@@ -235,6 +233,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f8f8',
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 1000,
+    padding: 16,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  titleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333333',
   },
   header: {
     flexDirection: 'row',

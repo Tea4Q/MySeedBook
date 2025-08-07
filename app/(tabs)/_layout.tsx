@@ -26,43 +26,48 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: colors.tabBarBackground,
+        },
+        headerTintColor: colors.tabBarActive,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 18,
+        },
         tabBarStyle: {
           backgroundColor: colors.tabBarBackground,
           borderTopColor: colors.tabBarActive,
         },
         tabBarActiveTintColor: colors.tabBarActive,
         tabBarInactiveTintColor: colors.tabBarInactive,
-        headerStyle: {
-          backgroundColor: colors.tabBarBackground,
-        },
-        headerTintColor: colors.tabBarActive,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Inventory',
+          title: 'My Seed Inventory',
           tabBarIcon: ({ color }) => <Seed size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
+          title: 'Planting Calendar',
           tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="manage-suppliers"
         options={{
-          title: 'Suppliers',
+          title: 'Manage Suppliers',
           tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: 'App Settings',
           tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
         }}
       />

@@ -31,10 +31,14 @@
 - [ ] Add proper caching strategies
 
 ### User Experience
+- [x] Fixed supplier selection touch handling (mobile optimization)
+- [x] Complete header redesign - bulky custom headers removed
+- [x] Native header implementation with theme integration
+- [x] Floating action buttons for clean interface design
+- [x] Consistent navigation patterns across all screens
 - [ ] Add onboarding flow for new users
 - [ ] Implement proper form validation feedback
 - [ ] Add keyboard navigation support
-- [ ] Improve mobile responsiveness
 
 ---
 

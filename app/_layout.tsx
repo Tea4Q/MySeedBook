@@ -85,7 +85,6 @@ function RootLayoutNav() {
         {/* Let the useEffect handle redirecting */}
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add-seed" />
-        <Stack.Screen name="add-supplier" />
         <Stack.Screen name="edit-supplier/[id]" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="splash-test" />
