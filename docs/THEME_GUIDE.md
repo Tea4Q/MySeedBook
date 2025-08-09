@@ -334,6 +334,55 @@ const safeColor = colors.customColor || colors.text;
 const shadowColor = Platform.OS === 'ios' ? colors.shadowColor : 'transparent';
 ```
 
+### 5. useCallback Dependencies
+
+**Critical**: Always include `colors` in useCallback dependencies when using theme colors
+
+```tsx
+// ✅ Correct - includes colors dependency
+const renderItem = useCallback(({ item }) => {
+  return (
+    <View style={{ backgroundColor: colors.card }}>
+      <Text style={{ color: colors.text }}>{item.title}</Text>
+    </View>
+  );
+}, [colors, item.id]); // Include colors!
+
+// ❌ Wrong - missing colors dependency
+const renderItem = useCallback(({ item }) => {
+  return (
+    <View style={{ backgroundColor: colors.card }}>
+      <Text style={{ color: colors.text }}>{item.title}</Text>
+    </View>
+  );
+}, [item.id]); // Missing colors - won't update on theme change!
+```
+
+### 6. Avoid Static Background Colors
+
+Remove hardcoded backgroundColor from StyleSheet.create and apply them dynamically:
+
+```tsx
+// ❌ Don't do this
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#ffffff', // Static color won't change
+    padding: 16,
+  },
+});
+
+// ✅ Do this instead
+const styles = StyleSheet.create({
+  card: {
+    // backgroundColor removed
+    padding: 16,
+  },
+});
+
+// Apply background dynamically
+<View style={[styles.card, { backgroundColor: colors.card }]} />
+```
+
 ---
 
 ## 📱 Platform-Specific Considerations
@@ -473,17 +522,77 @@ const loadTheme = async () => {
 #### 2. Colors Not Updating
 
 **Problem**: Some components don't update when theme changes
-**Solution**: Ensure proper useTheme hook usage
+**Solution**: Ensure proper useTheme hook usage and useCallback dependencies
 
 ```tsx
 // Make sure component re-renders on theme change
 const { colors } = useTheme();
+
+// IMPORTANT: Include 'colors' in useCallback dependencies
+const renderItem = useCallback(({ item }) => {
+  return (
+    <View style={{ backgroundColor: colors.card }}>
+      <Text style={{ color: colors.text }}>{item.title}</Text>
+    </View>
+  );
+}, [colors]); // ← Include colors here!
 
 // Use useEffect if needed
 useEffect(() => {
   // Update non-React Native elements
   updateWebStyles(colors);
 }, [colors]);
+```
+
+#### 2a. Cards Stay Dark/Light After Theme Switch
+
+**Problem**: Components using `useCallback` don't update when theme changes
+**Solution**: Add `colors` to useCallback dependency arrays
+
+```tsx
+// ❌ Missing colors dependency
+const renderSeedItem = useCallback(({ item: seed }) => {
+  return (
+    <View style={{ backgroundColor: colors.card }}>
+      {/* ... */}
+    </View>
+  );
+}, [highlightedSeedId]); // Missing colors!
+
+// ✅ Correct implementation
+const renderSeedItem = useCallback(({ item: seed }) => {
+  return (
+    <View style={{ backgroundColor: colors.card }}>
+      {/* ... */}
+    </View>
+  );
+}, [highlightedSeedId, colors]); // Include colors
+```
+
+#### 2b. Static Styles Override Theme Colors
+
+**Problem**: Hardcoded backgroundColor in StyleSheet.create overrides dynamic colors
+**Solution**: Remove static background colors and apply them inline
+
+```tsx
+// ❌ Static styles override theme
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#ffffff', // This won't change with theme
+  },
+});
+
+// ✅ Dynamic inline styles
+const styles = StyleSheet.create({
+  card: {
+    // Remove backgroundColor from static styles
+    padding: 16,
+    borderRadius: 8,
+  },
+});
+
+// Apply background color inline
+<View style={[styles.card, { backgroundColor: colors.card }]}>
 ```
 
 #### 3. Performance Issues
@@ -532,9 +641,13 @@ const styles = useMemo(() =>
 ### Testing
 - [ ] Light theme displays correctly
 - [ ] Dark theme displays correctly
-- [ ] Theme switching works
+- [ ] Theme switching works bidirectionally (light→dark→light)
 - [ ] Colors persist across app restarts
 - [ ] All screens support both themes
+- [ ] useCallback components update on theme change
+- [ ] No components remain stuck in previous theme colors
+- [ ] Cards and surfaces properly switch backgrounds
+- [ ] Text remains readable in both themes
 
 ---
 
@@ -574,6 +687,6 @@ shadowColor: colors.shadowColor,
 
 ---
 
-*Last Updated: August 4, 2025*  
-*Version: 1.0*  
+*Last Updated: August 8, 2025*  
+*Version: 1.1*  
 *Compatible with: MySeedBook Catalogue v1.0*

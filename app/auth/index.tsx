@@ -18,363 +18,242 @@ import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 
 export default function AuthScreen() {
-  const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  // Log isLogin state after all state declarations
   const [isLogin, setIsLogin] = useState(true);
-  
-  // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
-  // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Animation values
-  const slideAnim = React.useRef(new Animated.Value(0)).current;
 
-  const handleForgotPassword = () => {
-    console.log('Forgot password clicked');
-    try {
-      router.push('/auth/forgot-password');
-    } catch (error) {
-      console.error('Navigation error:', error);
-      alert('Navigation failed: ' + error);
-    }
-  };
+  // Animation values (dummy for now, replace with actual Animated.Value if needed)
+  const loginTranslateY = new Animated.Value(0);
+  const loginOpacity = new Animated.Value(1);
+  const signupTranslateY = new Animated.Value(0);
+  const signupOpacity = new Animated.Value(1);
 
-  const toggleForm = () => {
+  const { colors } = useTheme();
+  const { signIn, signUp } = useAuth();
+
+
+  const showSignup = () => {
     setError(null);
-    const toValue = isLogin ? 1 : 0;
-    
-    Animated.timing(slideAnim, {
-      toValue,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-    
-    setIsLogin(!isLogin);
+    setIsLogin(false);
   };
 
-  const validateLoginForm = () => {
-    if (!loginEmail || !loginPassword) {
-      setError('Email and password are required');
-      return false;
-    }
-    if (loginPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    return true;
+  const showLogin = () => {
+    setError(null);
+    setIsLogin(true);
   };
 
-  const validateSignupForm = () => {
-    if (!signupName || !signupEmail || !signupPassword || !confirmPassword) {
-      setError('All fields are required');
-      return false;
-    }
-    if (signupPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (signupPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    return true;
-  };
-
-  const handleLogin = async () => {
-    if (!validateLoginForm()) return;
-
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
       await signIn(loginEmail, loginPassword);
-      
-      if (Platform.OS === 'web') {
-        // Let the _layout.tsx handle navigation on web to prevent splash screen
-        console.log('Login successful, waiting for automatic navigation...');
-      } else {
-        // On mobile, navigate immediately - auth provider handles timing for splash screen
-        console.log('Login successful, navigating to main app...');
-        router.replace('/(tabs)');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
+      // Navigate or do something on success
+    } catch (e: any) {
+      setError(e.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSignup = async () => {
-    if (!validateSignupForm()) return;
-
+    setIsLoading(true);
+    setError(null);
+    if (signupPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
     try {
-      setIsLoading(true);
-      setError(null);
       await signUp(signupEmail, signupPassword);
-      
-      if (Platform.OS === 'web') {
-        // Let the _layout.tsx handle navigation on web to prevent splash screen
-        console.log('Signup successful, waiting for automatic navigation...');
-      } else {
-        // On mobile, navigate immediately - auth provider handles timing for splash screen
-        console.log('Signup successful, navigating to main app...');
-        router.replace('/(tabs)');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account');
+      // Navigate or do something on success
+    } catch (e: any) {
+      setError(e.message || 'Signup failed');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Transform values for animations
-  const signupTranslateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -320],
-  });
-
-  const loginTranslateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [200, 0],
-  });
-
-  const signupOpacity = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-  });
-
-  const loginOpacity = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
+  const handleForgotPassword = () => {
+    router.push('/auth/forgot-password');
+  };
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]} 
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Logo */}
+    <ScrollView contentContainerStyle={styles.scrollContent}>
       <View style={styles.logoContainer}>
-        <Image
-          source={require('../../assets/images/icon.png')}
-          style={styles.logo}
-        />
-        <Text style={[styles.logoText, { color: colors.primary }]}>
-          MySeedBook Catalogue
-        </Text>
+        <Image source={require('@/assets/images/icon1.png')} style={styles.logo} />
+        <Text style={[styles.logoText, { color: colors.primary }]}>Gardening Catalogue</Text>
       </View>
-
-      {/* Main Form Container */}
-      <View style={[styles.formWrapper, { backgroundColor: colors.surface }]}>
-        
-        {/* Signup Form */}
-        <Animated.View 
-          style={[
-            styles.signupContainer,
-            {
-              transform: [{ translateY: signupTranslateY }],
-              opacity: signupOpacity,
-            }
-          ]}
-        >
-          <View style={styles.formHeader}>
-            <Text style={[styles.formTitle, { color: colors.primary }]}>Sign up</Text>
-            <Pressable onPress={toggleForm} style={styles.toggleButton}>
-              <Text style={[styles.toggleText, { color: colors.textSecondary }]}>
-                Already have an account?
+      <View style={[styles.formWrapper, { backgroundColor: colors.surface }]}> 
+        {isLogin ? (
+          <Animated.View 
+            style={[
+              styles.loginContainer,
+              {
+                transform: [{ translateY: loginTranslateY }],
+                opacity: loginOpacity,
+              }
+            ]}
+          >
+            <View style={styles.formHeader}>
+              <Text style={[styles.formTitle, { color: colors.primary }]}>Login</Text>
+              <Pressable onPress={showSignup} style={styles.toggleButton}>
+                <Text style={[styles.toggleText, { color: colors.textSecondary }]}> 
+                  Don&apos;t have an account?
+                </Text>
+              </Pressable>
+            </View>
+            {error && (
+              <View style={[styles.errorContainer, { 
+                backgroundColor: `${colors.error}20`, 
+                borderColor: `${colors.error}40` 
+              }]}> 
+                <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+              </View>
+            )}
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <Mail size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Email"
+                placeholderTextColor={colors.textSecondary}
+                value={loginEmail}
+                onChangeText={setLoginEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+            </View>
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <Lock size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                value={loginPassword}
+                onChangeText={setLoginPassword}
+                secureTextEntry
+                editable={!isLoading}
+              />
+            </View>
+            <Pressable
+              style={[styles.authButton, { backgroundColor: colors.primary }]}
+              onPress={handleSignIn}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <Text style={[styles.authButtonText, { color: colors.primaryText }]}> 
+                  Login
+                </Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.forgotPassword}
+              onPress={handleForgotPassword}
+            >
+              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}> 
+                Forgot your password?
               </Text>
             </Pressable>
-          </View>
-
-          {error && !isLogin && (
-            <View style={[styles.errorContainer, { 
-              backgroundColor: `${colors.error}20`, 
-              borderColor: `${colors.error}40` 
-            }]}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-            </View>
-          )}
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <User size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Full Name"
-              placeholderTextColor={colors.textSecondary}
-              value={signupName}
-              onChangeText={setSignupName}
-              editable={!isLoading}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <Mail size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={signupEmail}
-              onChangeText={setSignupEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <Lock size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              value={signupPassword}
-              onChangeText={setSignupPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <Lock size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Confirm Password"
-              placeholderTextColor={colors.textSecondary}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
-          </View>
-
-          <Pressable
-            style={[styles.authButton, { backgroundColor: colors.primary }]}
-            onPress={handleSignup}
-            disabled={isLoading}
+          </Animated.View>
+        ) : (
+          <Animated.View 
+            style={[
+              styles.signupContainer,
+              {
+                transform: [{ translateY: signupTranslateY }],
+                opacity: signupOpacity,
+              }
+            ]}
           >
-            {isLoading && !isLogin ? (
-              <ActivityIndicator color={colors.primaryText} />
-            ) : (
-              <Text style={[styles.authButtonText, { color: colors.primaryText }]}>
-                Sign up
-              </Text>
+            <View style={styles.formHeader}>
+              <Text style={[styles.formTitle, { color: colors.primary }]}>Sign up</Text>
+              <Pressable onPress={showLogin} style={styles.toggleButton}>
+                <Text style={[styles.toggleText, { color: colors.textSecondary }]}> 
+                  Already have an account?
+                </Text>
+              </Pressable>
+            </View>
+            {error && (
+              <View style={[styles.errorContainer, { 
+                backgroundColor: `${colors.error}20`, 
+                borderColor: `${colors.error}40` 
+              }]}> 
+                <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+              </View>
             )}
-          </Pressable>
-        </Animated.View>
-
-        {/* Login Form */}
-        <Animated.View 
-          style={[
-            styles.loginContainer,
-            {
-              transform: [{ translateY: loginTranslateY }],
-              opacity: loginOpacity,
-            }
-          ]}
-        >
-          <View style={styles.formHeader}>
-            <Text style={[styles.formTitle, { color: colors.primary }]}>Login</Text>
-            <Pressable onPress={toggleForm} style={styles.toggleButton}>
-              <Text style={[styles.toggleText, { color: colors.textSecondary }]}>
-                Don&apos;t have an account?
-              </Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <User size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Full Name"
+                placeholderTextColor={colors.textSecondary}
+                value={signupName}
+                onChangeText={setSignupName}
+                editable={!isLoading}
+                autoCapitalize="words"
+              />
+            </View>
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <Mail size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Email"
+                placeholderTextColor={colors.textSecondary}
+                value={signupEmail}
+                onChangeText={setSignupEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+            </View>
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <Lock size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                value={signupPassword}
+                onChangeText={setSignupPassword}
+                secureTextEntry
+                editable={!isLoading}
+              />
+            </View>
+            <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
+              <Lock size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.input, { color: colors.inputText }]}
+                placeholder="Confirm Password"
+                placeholderTextColor={colors.textSecondary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                editable={!isLoading}
+              />
+            </View>
+            <Pressable
+              style={[styles.authButton, { backgroundColor: colors.primary }]}
+              onPress={handleSignup}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <Text style={[styles.authButtonText, { color: colors.primaryText }]}> 
+                  Sign up
+                </Text>
+              )}
             </Pressable>
-          </View>
-
-          {error && isLogin && (
-            <View style={[styles.errorContainer, { 
-              backgroundColor: `${colors.error}20`, 
-              borderColor: `${colors.error}40` 
-            }]}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-            </View>
-          )}
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <Mail size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={loginEmail}
-              onChangeText={setLoginEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.inputBackground, 
-            borderColor: colors.inputBorder 
-          }]}>
-            <Lock size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.inputText }]}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              value={loginPassword}
-              onChangeText={setLoginPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
-          </View>
-
-          <Pressable
-            style={[styles.authButton, { backgroundColor: colors.primary }]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading && isLogin ? (
-              <ActivityIndicator color={colors.primaryText} />
-            ) : (
-              <Text style={[styles.authButtonText, { color: colors.primaryText }]}>
-                Login
-              </Text>
-            )}
-          </Pressable>
-
-          {/* Forgot Password Link */}
-          <Pressable
-            style={styles.forgotPassword}
-            onPress={handleForgotPassword}
-          >
-            <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
-              Forgot your password?
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.forgotPassword}>
-            <Text style={[styles.forgotPasswordText, { color: colors.textSecondary }]}>
-              Forgot your password?
-            </Text>
-          </Pressable>
-        </Animated.View>
+          </Animated.View>
+        )}
       </View>
     </ScrollView>
   );
@@ -427,8 +306,7 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   loginContainer: {
-    position: 'absolute',
-    top: 210,
+    position: 'relative',
     left: 0,
     right: 0,
     padding: 32,
@@ -501,6 +379,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     minHeight: 44,
+    fontWeight: '600',
   },
   forgotPasswordText: {
     fontSize: 16,

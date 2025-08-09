@@ -192,6 +192,7 @@ export default function CalendarScreen() {
       setEvents(formattedEvents || []);
     } catch (error) {
       console.error('Error fetching events:', error);
+      alert('Failed to load events. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -224,7 +225,8 @@ export default function CalendarScreen() {
 
       setEvents(formattedEvents || []);
     } catch (error) {
-      console.error('Error fetching events:', error);
+      console.error('Error fetching events for month:', error);
+      alert('Failed to load events for the month. Please try again later.');
     }
   };
 
@@ -237,7 +239,8 @@ export default function CalendarScreen() {
         .eq('id', seedId)
         .maybeSingle();
       if (error) {
-        console.error('Error fetching seed data:', error);
+        console.error('Error fetching seed data:', error);  
+
         // Keep default values if fetch fails
         setDaysToGerminate('7');
         setDaysToHarvest('80');
@@ -250,12 +253,10 @@ export default function CalendarScreen() {
         // Seed not found, keep default values
         setDaysToGerminate('7');
         setDaysToHarvest('80');
-        console.warn(`Seed with ID ${seedId} not found.`);
       }
     } catch (error) {
       setDaysToGerminate('7');
       setDaysToHarvest('80');
-      console.error('Error fetching seed data:', error);
     }
   };
 

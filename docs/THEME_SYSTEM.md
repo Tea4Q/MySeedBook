@@ -218,6 +218,38 @@ const darkTheme: ThemeColors = {
 - Auth screens (login/signup)
 - Other modal/component screens
 
+## Common Issues & Solutions
+
+### Theme Not Updating in Callbacks
+
+If you're using `useCallback` with theme colors, make sure to include `colors` in the dependency array:
+
+```tsx
+// ❌ Wrong - missing colors dependency
+const renderItem = useCallback(({ item }) => {
+  return <View style={{ backgroundColor: colors.card }} />;
+}, [item.id]);
+
+// ✅ Correct - includes colors dependency
+const renderItem = useCallback(({ item }) => {
+  return <View style={{ backgroundColor: colors.card }} />;
+}, [item.id, colors]);
+```
+
+### Static Styles Override Theme
+
+Remove hardcoded `backgroundColor` from `StyleSheet.create` and apply them inline:
+
+```tsx
+// ❌ Static background won't change with theme
+const styles = StyleSheet.create({
+  card: { backgroundColor: '#ffffff' },
+});
+
+// ✅ Dynamic background
+<View style={[styles.card, { backgroundColor: colors.card }]} />
+```
+
 ## Next Steps
 
 1. **Complete remaining screens** - Apply theme colors to all remaining screens

@@ -65,15 +65,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      logger.debug('Auth state change:', { event, session });      
+      console.log('🔄 Auth state change event:', event, 'Session exists:', !!session);
+      
       if (event === 'TOKEN_REFRESHED') {
-          setSession(session);
+        console.log('🔄 Token refreshed');
+        setSession(session);
       } else if (event === 'SIGNED_OUT') {
-               setSession(null);
+        console.log('🚪 SIGNED_OUT event - clearing auth state');
+        setSession(null);
         setUser(null);
       } else {
-        logger.debug('Other auth event, updating session:', { event });
-        // For other events, just update session and user
+        console.log('🔄 Other auth event, updating session');
         setSession(session);
         setUser(session?.user ?? null);
       }
@@ -141,18 +143,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
 const signOut = async () => {
-    logger.debug('Signing out user:', user?.email);
-    // Call Supabase signOut
+    console.log('🚪 SignOut function called');
     const { error } = await supabase.auth.signOut();
-    
+    console.log('🚪 Supabase signOut completed, error:', error);
     
     setSession(null);
     setUser(null);
-    
+    console.log('🚪 Local auth state cleared');
 
     if (Platform.OS === 'web') {
       try {
-        
+        console.log('🧹 Clearing web storage and cookies');
         // Clear Supabase-related localStorage
         Object.keys(localStorage).forEach(key => {
           if (key.includes('supabase') || key.includes('sb-')) {
@@ -167,11 +168,7 @@ const signOut = async () => {
           document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         });
       } catch (err) {
-        logger.error('Error clearing web storage:', err);
-        // Handle web-specific error
-        if (window) {
-          window.alert('Failed to clear session. Please try again.');
-        }
+        console.warn('Failed to clear storage and cookies:', err);
       }
     }
 

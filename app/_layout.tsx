@@ -30,34 +30,61 @@ function RootLayoutNav() {
 
 
   useEffect(() => {
-    if (isAppReady) {
-       
-      // Different behavior for web vs mobile
-      if (Platform.OS === 'web') {
-        // Web: Hide splash screen quickly and navigate
+    if (!isAppReady) return;
+
+    // Get current path (web only)
+    let currentPath = '';
+    if (Platform.OS === 'web') {
+      currentPath = window.location.pathname;
+    }
+
+    if (Platform.OS === 'web') {
+      // Check if this is a password reset link
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const type = urlParams.get('type');
+      const isPasswordReset = accessToken && type === 'recovery';
+
+      // If it's a password reset link, navigate to reset password page
+      if (isPasswordReset) {
+        setTimeout(() => {
+          SplashScreen.hideAsync();
+        }, 1200);
+        router.replace('/auth/reset-password');
+        return;
+      }
+
+      // GUARD: If already on /auth/reset-password, do not redirect away
+      if (currentPath === '/auth/reset-password') {
+        SplashScreen.hideAsync();
+        return;
+      }
+
+      // Web: Add small delay to ensure auth state is stable
+      setTimeout(() => {
+        SplashScreen.hideAsync();
+        // Navigate based on auth state - use replace to reset navigation stack
+        if (isAuthenticated) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/auth');
+        }
+      }, 100);
+    } else {
+      // Mobile: Keep original splash screen behavior
+      SplashScreen.hideAsync();
+
+      // Always navigate on mobile to ensure proper state
+      if (isAuthenticated) {
         setTimeout(() => {
           SplashScreen.hideAsync();
         }, 500);
-
-        // Navigate based on auth state - force navigation on web to ensure it works
-               if (isAuthenticated) {
-           router.replace('/(tabs)');
-        } else {
-                  router.replace('/auth');
-        }
+        router.replace('/(tabs)');
       } else {
-        // Mobile: Keep original splash screen behavior
-        SplashScreen.hideAsync();
-        
-        // Always navigate on mobile to ensure proper state
-        if (isAuthenticated) {
-                router.replace('/(tabs)');
-        } else {
-           router.replace('/auth');
-        }
+        router.replace('/auth');
       }
     }
-  }, [isAppReady, isAuthenticated, router]); // Add dependencies
+  }, [isAppReady, isAuthenticated, router, session]);
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {
