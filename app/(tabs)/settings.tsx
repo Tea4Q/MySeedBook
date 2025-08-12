@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Pl
 import { Bell, Sun, Moon, CloudRain, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 
 export default function SettingsScreen() {
@@ -171,6 +172,21 @@ export default function SettingsScreen() {
           {isSigningOut && (
             <ActivityIndicator size="small" color={colors.error || '#FF6B6B'} />
           )}
+        </Pressable>
+      </View>
+
+      {/* Profile section with Create/Edit Profile button */}
+      <View style={[styles.section, { borderBottomColor: colors.border }]}> 
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.setting,
+            { backgroundColor: pressed ? colors.surface : undefined },
+            { borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: colors.primary }
+          ]}
+          onPress={() => router.push('/auth/create-profile')}
+        >
+          <Text style={[styles.settingText, { color: colors.primary, fontWeight: 'bold', textAlign: 'center', width: '100%' }]}>Create or Edit Profile</Text>
         </Pressable>
       </View>
     </View>

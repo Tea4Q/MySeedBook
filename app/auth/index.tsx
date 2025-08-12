@@ -17,6 +17,8 @@ import { Mail, Lock, User } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 
+
+
 export default function AuthScreen() {
   // Log isLogin state after all state declarations
   const [isLogin, setIsLogin] = useState(true);
@@ -36,7 +38,7 @@ export default function AuthScreen() {
   const signupOpacity = new Animated.Value(1);
 
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp} = useAuth();
 
 
   const showSignup = () => {
@@ -53,7 +55,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn(loginEmail, loginPassword);
+      await signIn(loginEmail);
       // Navigate or do something on success
     } catch (e: any) {
       setError(e.message || 'Login failed');
@@ -72,7 +74,8 @@ export default function AuthScreen() {
     }
     try {
       await signUp(signupEmail, signupPassword);
-      // Navigate or do something on success
+      // Redirect to create profile after successful signup
+      router.replace('/auth/create-profile');
     } catch (e: any) {
       setError(e.message || 'Signup failed');
     } finally {

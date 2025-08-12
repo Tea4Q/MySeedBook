@@ -1,21 +1,37 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { useRootNavigation } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import {  useRootNavigation } from 'expo-router';
 import { Platform } from 'react-native';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
+// import { isLoading } from 'expo-font';
+// import { set } from 'date-fns';
+// import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+
+export const  defaultAuthTestState = {
+  isLogin: true,
+  loginEmail: 'chandraskinner@gmail.com',
+  loginPassword: 'teatime',
+  signupName: 'Chandra Skinner',
+  signupEmail: 'chandraskinner@gmail.com',
+  signupPassword: 'teatime',
+  confirmPassword: 'teatime',
+  isLoading: false,
+  error: null,
+  }
+  
 
 // Create auth context
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   initialized: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+ 
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,7 +41,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
-  resetPassword: async () => {},
+  forgotPassword: async () => {},
   updatePassword: async () => {},
 });
 
@@ -35,7 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
   const rootNavigation = useRootNavigation();
-  // Router and segments removed since navigation is handled in _layout.tsx
+  // Profile state is managed in UI screens, not here
+  
+
 
 
   // Initialize auth immediately on web, or when navigation is ready on mobile
@@ -51,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
    
     // Check auth state and handle invalid refresh tokens
- supabase.auth.getSession()
+  supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
         setSession(session);
         setUser(session?.user ?? null);
@@ -100,33 +118,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [initialized]);
 
-   // Auto-redirect based on auth state - DISABLED to prevent conflict with _layout.tsx
-  // useEffect(() => {
-  //   if (!initialized) return;
+  // Sign in function
 
-  //   const inAuthGroup = segments[0] === 'auth';
-
-  //   const delay = Platform.OS === 'web' ? 0 : 1000; // 1 second delay for mobile splash screen
-  //   const timeout = setTimeout(() => {
-  //     if (user && inAuthGroup) {
-  //       router.replace('/(tabs)');
-  //     } else if (!user && !inAuthGroup) {
-  //       router.replace('/auth/login');
-  //     }
-  //   }, delay);
-
-  //   return () => clearTimeout(timeout);
-  // }, [user, initialized, segments]);
-
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const signIn = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ email })
 
     if (error) throw error;
+    else{
+      alert('Check your email for the sign-in link');
+    }
+
   };
+
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
@@ -134,9 +137,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/callback`,
-    },
+      },
     });
-
     if (error) throw error;
   };
 
@@ -144,7 +146,11 @@ const signOut = async () => {
     logger.debug('Signing out user:', user?.email);
     // Call Supabase signOut
     const { error } = await supabase.auth.signOut();
-    
+    if (error) {
+      logger.error('Sign out error:', error);
+      throw error;
+    }
+      // Clear session and user state    
     
     setSession(null);
     setUser(null);
@@ -178,7 +184,7 @@ const signOut = async () => {
     if (error) throw error;
   };
 
-  const resetPassword = async (email: string) => {
+  const recoverPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/reset-password`,
     });
@@ -193,35 +199,8 @@ const signOut = async () => {
     if (error) throw error;
   };
     
-    // First check if we have a valid session
-  //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-  //   if (sessionError) {
-  //     console.error('Session error during password update:', sessionError);
-  //     throw new Error('Session validation failed. Please request a new reset link.');
-  //   }
-    
-  //   if (!session) {
-  //     console.error('No session found during password update');
-  //     throw new Error('No active session. Please request a new reset link.');
-  //   }
-    
-  //   console.log('Valid session found, updating password');
-    
-  //   const { error } = await supabase.auth.updateUser({
-  //     password,
-  //   });
-
-  //   if (error) {
-  //     console.error('Password update error:', error);
-  //     throw error;
-  //   }
-    
-  //   console.log('Password updated successfully in auth context');
-  // };
-
   return (
-    <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, forgotPassword: recoverPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
@@ -236,35 +215,3 @@ export function useAuth() {
   return context;
 }
 
-// // Add a function to manually clear session for testing
-// export const clearSession = async () => {
-//   await supabase.auth.signOut();
-// };
-
-// // Add a function to clear invalid authentication state
-// export const clearInvalidAuthState = async () => {
-//   try {
-//     // First check if there's a session
-//     const { data: { session } } = await supabase.auth.getSession();
-    
-//     if (session) {
-//       // Clear the session from Supabase
-//       await supabase.auth.signOut();
-//     }
-    
-//     // If on mobile, also clear from secure store
-//     if (Platform.OS !== 'web') {
-//       await SecureStore.deleteItemAsync('supabase.auth.token');
-//     }
-    
-//    } catch (error) {
-    
-//     // Force clear from secure store if there's an error
-//     if (Platform.OS !== 'web') {
-//       try {
-//         await SecureStore.deleteItemAsync('supabase.auth.token');
-//       } catch (secureStoreError) {
-//       }
-//     }
-//   }
-// };

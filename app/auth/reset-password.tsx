@@ -278,7 +278,7 @@ export default function ResetPasswordScreen() {
             Reset Password
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enter your new password below. Make sure it's strong and secure.
+           {` Enter your new password below. Make sure it's strong and secure.`}
           </Text>
         </View>
 

@@ -17,8 +17,8 @@ export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
   const { forgotPassword } = useAuth();
   const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const validateEmail = (email: string) => {
@@ -26,7 +26,7 @@ export default function ForgotPasswordScreen() {
     return emailRegex.test(email);
   };
 
-  const handlerecoverPassword = async () => {
+  const handlerUpdateUser = async () => {
     if (!email) {
       setError('Email address is required');
       return;
@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
           </View>
           
           <Text style={[styles.successTitle, { color: colors.text }]}>
-            Check Your Email
+            Enter your email
           </Text>
           
           <Text style={[styles.successMessage, { color: colors.textSecondary }]}>
@@ -151,16 +151,9 @@ export default function ForgotPasswordScreen() {
               { backgroundColor: colors.primary },
               isLoading && styles.resetButtonDisabled,
             ]}
-            onPress={handlerecoverPassword}
+            onPress={handlerUpdateUser}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator color={colors.primaryText} />
-            ) : (
-              <Text style={[styles.resetButtonText, { color: colors.primaryText }]}>
-                Send Reset Link
-              </Text>
-            )}
           </Pressable>
         </View>
       </View>

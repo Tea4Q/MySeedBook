@@ -43,16 +43,16 @@ export const getResponsiveConfig = (): ResponsiveConfig => {
   }
   
   // Debug logging to help troubleshoot
-  console.log('Responsive Config Debug:', {
-    width,
-    height,
-    minDimension,
-    maxDimension,
-    isLandscape,
-    isTablet,
-    gridColumns,
-    platform: Platform.OS
-  });
+  // console.log('Responsive Config Debug:', {
+  //   width,
+  //   height,
+  //   minDimension,
+  //   maxDimension,
+  //   isLandscape,
+  //   isTablet,
+  //   gridColumns,
+  //   platform: Platform.OS
+  // });
   
   // Calculate card width for grid layout with better spacing
   const containerPadding = 24; // Increased padding for better spacing with 2 columns
