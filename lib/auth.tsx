@@ -8,17 +8,17 @@ import { logger } from '../utils/logger';
 // import { set } from 'date-fns';
 // import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
-export const  defaultAuthTestState = {
-  isLogin: true,
-  loginEmail: 'chandraskinner@gmail.com',
-  loginPassword: 'teatime',
-  signupName: 'Chandra Skinner',
-  signupEmail: 'chandraskinner@gmail.com',
-  signupPassword: 'teatime',
-  confirmPassword: 'teatime',
-  isLoading: false,
-  error: null,
-  }
+// export const  defaultAuthTestState = {
+//   isLogin: true,
+//   loginEmail: 'chandraskinner@gmail.com',
+//   loginPassword: 'teatime',
+//   signupName: 'Chandra Skinner',
+//   signupEmail: 'chandraskinner@gmail.com',
+//   signupPassword: 'teatime',
+//   confirmPassword: 'teatime',
+//   isLoading: false,
+//   error: null,
+//   }
   
 
 // Create auth context
@@ -26,7 +26,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   initialized: boolean;
-  signIn: (email: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
@@ -120,14 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign in function
 
-  const signIn = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ email })
-
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    else{
-      alert('Check your email for the sign-in link');
-    }
-
   };
 
 
@@ -200,7 +195,7 @@ const signOut = async () => {
   };
     
   return (
-    <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, forgotPassword: recoverPassword, updatePassword }}>
+  <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, forgotPassword: recoverPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

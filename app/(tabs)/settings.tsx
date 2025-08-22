@@ -1,4 +1,7 @@
-import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faUserCircle } from '@fortawesome/free-regular-svg-icons';
+
 import { Bell, Sun, Moon, CloudRain, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
@@ -96,6 +99,27 @@ export default function SettingsScreen() {
             disabled={true}
           />
         </View>
+           {/* Profile section with Create/Edit Profile button */}
+      <View style={[styles.setting, styles.disabledSetting]}> 
+        <View style={styles.settingInfo}>
+          <FontAwesomeIcon icon = {faUserCircle} size={24} color={colors.textSecondary} />
+          <Text style={[styles.settingText, { color: colors.textSecondary }]}>Profile</Text>
+     </View>
+        <Pressable
+          style={({ pressed }) => [
+            { alignSelf: 'flex-start', borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8 },
+            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
+          ]}
+          onPress={() => router.push('/auth/create-profile')}
+          android_ripple={{ color: colors.primary + '20' }}
+          disabled={true} // Disable button for now
+        >
+          <View style ={[styles.settingInfo, styles.disabledSetting]}>
+          <Text style={[styles.settingText, { color: colors.primary}]}>Create or Edit Profile</Text>
+          </View>
+        </Pressable>
+        
+      </View>
       </View>
 
       <View style={[styles.section, { borderBottomColor: colors.border }]}>
@@ -149,6 +173,7 @@ export default function SettingsScreen() {
         <Text style={[styles.version, { color: colors.textSecondary }]}>Version 1.0.0</Text>
       </View>
 
+      {/* Sign Out section */}
       <View style={[styles.section, { borderBottomColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
         <Pressable 
@@ -175,20 +200,7 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
-      {/* Profile section with Create/Edit Profile button */}
-      <View style={[styles.section, { borderBottomColor: colors.border }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile</Text>
-        <Pressable
-          style={({ pressed }) => [
-            styles.setting,
-            { backgroundColor: pressed ? colors.surface : undefined },
-            { borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: colors.primary }
-          ]}
-          onPress={() => router.push('/auth/create-profile')}
-        >
-          <Text style={[styles.settingText, { color: colors.primary, fontWeight: 'bold', textAlign: 'center', width: '100%' }]}>Create or Edit Profile</Text>
-        </Pressable>
-      </View>
+   
     </View>
   );
 }

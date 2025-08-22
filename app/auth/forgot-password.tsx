@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react-native';

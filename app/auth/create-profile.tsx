@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import { useAuth } from '../../lib/auth';
 import { useTheme } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { router } from 'expo-router';
+import ImageCapture from '../../components/ImageCapture';
 
 export default function CreateProfileScreen() {
   const { colors } = useTheme();
@@ -67,6 +68,16 @@ export default function CreateProfileScreen() {
       </Pressable>
       <View style={styles.formContainer}>
         <Text style={[styles.title, { color: colors.text }]}>Create Profile</Text>
+         <Text style={{ marginBottom: 8, color: colors.text }}>Avatar (optional)</Text>
+        {avatarUrl ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={{ width: 96, height: 96, borderRadius: 48, alignSelf: 'center', marginBottom: 12, borderWidth: 2, borderColor: colors.primary }}
+            resizeMode="cover"
+          />
+        ) : null}
+        <ImageCapture onImageCaptured={uri => uri && setAvatarUrl(uri)} />
+       
         <TextInput
           style={[styles.input, { color: colors.inputText, borderColor: colors.inputBorder }]}
           placeholder="Username"
@@ -81,14 +92,7 @@ export default function CreateProfileScreen() {
           value={website}
           onChangeText={setWebsite}
         />
-        <TextInput
-          style={[styles.input, { color: colors.inputText, borderColor: colors.inputBorder }]}
-          placeholder="Avatar URL (optional)"
-          placeholderTextColor={colors.textSecondary}
-          value={avatarUrl}
-          onChangeText={setAvatarUrl}
-        />
-        <Pressable
+         <Pressable
           style={[styles.button, { backgroundColor: colors.primary }]}
           onPress={handleCreateProfile}
           disabled={isLoading}
@@ -99,6 +103,8 @@ export default function CreateProfileScreen() {
             <Text style={[styles.buttonText, { color: colors.primaryText }]}>Save Profile</Text>
           )}
         </Pressable>
+        
+       
       </View>
     </View>
   );

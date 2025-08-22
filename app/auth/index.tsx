@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Mail, Lock, User } from 'lucide-react-native';
@@ -55,7 +54,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn(loginEmail);
+      await signIn(loginEmail, loginPassword);
       // Navigate or do something on success
     } catch (e: any) {
       setError(e.message || 'Login failed');

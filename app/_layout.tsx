@@ -35,8 +35,23 @@ function RootLayoutNav() {
     // Get current path (web only)
     let currentPath = '';
     if (Platform.OS === 'web') {
-      currentPath = window.location.pathname;
+      currentPath = window.location.pathname + window.location.search;
     }
+
+    // Helper: Save last route to localStorage
+    const saveLastRoute = (route: string) => {
+      if (Platform.OS === 'web' && route && route !== '/auth' && route !== '/auth/reset-password') {
+        window.localStorage.setItem('lastRoute', route);
+      }
+    };
+
+    // Helper: Restore last route from localStorage
+    const getLastRoute = () => {
+      if (Platform.OS === 'web') {
+        return window.localStorage.getItem('lastRoute') || '/(tabs)';
+      }
+      return '/(tabs)';
+    };
 
     if (Platform.OS === 'web') {
       // Check if this is a password reset link
@@ -55,17 +70,24 @@ function RootLayoutNav() {
       }
 
       // GUARD: If already on /auth/reset-password, do not redirect away
-      if (currentPath === '/auth/reset-password') {
+      if (currentPath.startsWith('/auth/reset-password')) {
         SplashScreen.hideAsync();
         return;
       }
 
-      // Web: Add small delay to ensure auth state is stable
+      // Save the last route if authenticated and not on auth screens
+      if (isAuthenticated && currentPath && !currentPath.startsWith('/auth')) {
+        saveLastRoute(currentPath);
+      }
+
       setTimeout(() => {
         SplashScreen.hideAsync();
-        // Navigate based on auth state - use replace to reset navigation stack
         if (isAuthenticated) {
-          router.replace('/(tabs)');
+          // Restore last route if not already there
+          const lastRoute = getLastRoute();
+          if (currentPath !== lastRoute) {
+            router.replace(lastRoute as any);
+          }
         } else {
           router.replace('/auth');
         }
@@ -73,13 +95,11 @@ function RootLayoutNav() {
     } else {
       // Mobile: Keep original splash screen behavior
       SplashScreen.hideAsync();
-
-      // Always navigate on mobile to ensure proper state
       if (isAuthenticated) {
         setTimeout(() => {
           SplashScreen.hideAsync();
         }, 500);
-        router.replace('/(tabs)');
+        // No-op: Let mobile navigation stay where it is
       } else {
         router.replace('/auth');
       }
