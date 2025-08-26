@@ -642,7 +642,7 @@ export default function InventoryScreen() {
           renderItem={renderSeedItem}
           keyExtractor={(item) => item.id.toString()} // Ensure ID is a string
           numColumns={responsive.gridColumns}
-          key={responsive.gridColumns} // Force re-render when columns change
+          key={`${responsive.gridColumns}-${responsive.isLandscape}-${responsive.screenWidth}`} // Force re-render when layout changes
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={

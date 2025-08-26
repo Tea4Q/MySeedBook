@@ -30,6 +30,7 @@
         "foregroundImage": "./assets/images/icon1.png",
         "backgroundColor": "#f0f9f0"
       },
+      "orientation": "default",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",

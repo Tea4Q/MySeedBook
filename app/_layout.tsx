@@ -31,9 +31,29 @@ function RootLayoutNav() {
 
 
   useEffect(() => {
-    // Unlock orientation on mount (mobile only)
+    // Configure screen orientation for mobile (more explicit)
     if (Platform.OS !== 'web') {
-      ScreenOrientation.unlockAsync().catch(() => {});
+      const configureOrientation = async () => {
+        try {
+          // First, get the current orientation info
+          const orientationInfo = await ScreenOrientation.getOrientationAsync();
+          console.log('Current orientation:', orientationInfo);
+          
+          // Unlock all orientations
+          await ScreenOrientation.unlockAsync();
+          
+          // For tablets/large screens, allow all orientations
+          // For phones, you might want to be more restrictive
+          const supportsAllOrientations = ScreenOrientation.OrientationLock.ALL;
+          await ScreenOrientation.lockAsync(supportsAllOrientations);
+          
+          console.log('Orientation unlocked successfully');
+        } catch (error) {
+          console.warn('Failed to configure orientation:', error);
+        }
+      };
+      
+      configureOrientation();
     }
     
     if (!isAppReady) return;
