@@ -130,8 +130,6 @@ export default function SelectSupplierScreen() {
   );
 
   const handleSelectSupplier = (supplier: Supplier) => {
-    console.log('Selected supplier:', supplier);
-    
     // Navigate back to add-seed with selected supplier data
     if (router.canGoBack()) {
       router.back();

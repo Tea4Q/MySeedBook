@@ -60,11 +60,9 @@ export function SupplierSelect({
 
   // Debug logging for modal state changes
   useEffect(() => {
-    console.log('showAddSupplierModal changed to:', showAddSupplierModal, 'Platform:', Platform.OS);
   }, [showAddSupplierModal]);
 
   useEffect(() => {
-    console.log('isOpen changed to:', isOpen, 'Platform:', Platform.OS);
   }, [isOpen]);
 
   useEffect(() => {
@@ -146,21 +144,17 @@ export function SupplierSelect({
   const pathname = usePathname();
 
   const handleAddNewSupplier = () => {
-    console.log('handleAddNewSupplier called with searchQuery:', searchQuery);
     setPendingSupplierName(searchQuery); // Pass the current search query
-    console.log('Setting showAddSupplierModal to true');
     
     if (Platform.OS === 'web') {
       // On web, use the dual modal approach
       setIsOpen(false);
       setTimeout(() => {
         setShowAddSupplierModal(true);
-        console.log('showAddSupplierModal state should now be true');
       }, 100);
     } else {
       // On mobile, switch modal content instead of opening a new modal
       setModalMode('add');
-      console.log('Switched to add mode on mobile');
     }
   };
 
@@ -179,7 +173,6 @@ export function SupplierSelect({
   };
 
   const handleCancelAddSupplier = () => {
-    console.log('Add supplier form cancelled');
     if (Platform.OS === 'web') {
       setShowAddSupplierModal(false);
     } else {
@@ -277,7 +270,6 @@ export function SupplierSelect({
             : 'overFullScreen'
         }
         onRequestClose={() => {
-          console.log('Add supplier modal onRequestClose called');
           setShowAddSupplierModal(false);
         }}
       >
@@ -287,7 +279,6 @@ export function SupplierSelect({
               initialSupplierName={pendingSupplierName || ''}
               onSuccess={handleSupplierAdded}
               onCancel={() => {
-                console.log('Add supplier form cancelled');
                 setShowAddSupplierModal(false);
               }}
             />

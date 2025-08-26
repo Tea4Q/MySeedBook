@@ -1,4 +1,9 @@
-# Brand Name Change Summary: QTea Seed Catalogue → MySeedBook Catalogue
+# [ARCHIVED] Brand Name Change Summary: QTea Seed Catalogue → MySeedBook Catalogue
+
+> **⚠️ ARCHIVED DOCUMENTATION**  
+> This document is kept for historical reference only.  
+> Changes described here were completed in early 2025.  
+> For current documentation, see [docs/README.md](README.md)
 
 ## Overview
 Successfully updated all project files to change the app name from "QTea Seed Catalogue" to "MySeedBook Catalogue" throughout the entire codebase.

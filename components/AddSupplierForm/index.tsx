@@ -42,8 +42,6 @@ export default function AddSupplierForm({
   onCancel,
   embedded = false,
 }: AddSupplierFormProps) {
-  console.log('AddSupplierForm rendering with initialSupplierName:', initialSupplierName, 'embedded:', embedded);
-  
   const [formData, setFormData] = useState<Partial<Supplier>>({
     supplier_name: initialSupplierName,
     webaddress: '',

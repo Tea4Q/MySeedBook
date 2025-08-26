@@ -19,6 +19,9 @@
 ## 🔧 Technical Improvements
 
 ### Code Quality
+- [x] Production security cleanup completed (August 2025)
+- [x] Authentication bypass flags removed
+- [x] Debug console logging cleaned up
 - [ ] Add unit tests for critical functions
 - [ ] Implement proper error boundaries
 - [ ] Add loading states for all async operations
@@ -36,6 +39,9 @@
 - [x] Native header implementation with theme integration
 - [x] Floating action buttons for clean interface design
 - [x] Consistent navigation patterns across all screens
+- [x] Fixed calendar event creation with proper user ID association (August 2025)
+- [x] Android orientation handling for responsive design (August 2025)
+- [x] Image URL handling for seed suppliers (RareSeeds, Burpee)
 - [ ] Add onboarding flow for new users
 - [ ] Implement proper form validation feedback
 - [ ] Add keyboard navigation support

@@ -1,4 +1,9 @@
-# Sign Out Error Fix & Web UX Improvements
+# [ARCHIVED] Sign Out Error Fix & Web UX Improvements
+
+> **⚠️ ARCHIVED DOCUMENTATION**  
+> This document is kept for historical reference only.  
+> Issue was resolved in early 2025 and authentication flows have been updated since then.  
+> For current production documentation, see [docs/README.md](README.md)
 
 ## Issues Fixed
 1. **Mobile**: "authsessionmissing error: session is missing" when trying to sign out on mobile devices

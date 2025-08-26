@@ -1,0 +1,56 @@
+name: Auto-generate Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Generate TypeScript Documentation
+      run: |
+        npx typedoc --out docs/api src/types/database.ts lib/ utils/ components/ --exclude "**/*.test.ts" --exclude "**/node_modules/**" --readme README.md
+    
+    - name: Generate Component Documentation
+      run: |
+        echo "# Component Documentation" > docs/COMPONENTS.md
+        echo "" >> docs/COMPONENTS.md
+        echo "Auto-generated component documentation:" >> docs/COMPONENTS.md
+        echo "" >> docs/COMPONENTS.md
+        find components/ -name "index.tsx" -exec echo "## {}" \; -exec head -20 {} \; >> docs/COMPONENTS.md
+    
+    - name: Update API Documentation
+      run: |
+        echo "# API Documentation" > docs/API.md
+        echo "" >> docs/API.md
+        echo "## Database Types" >> docs/API.md
+        echo "" >> docs/API.md
+        echo "Generated from types/database.ts:" >> docs/API.md
+        echo "" >> docs/API.md
+        echo "\`\`\`typescript" >> docs/API.md
+        head -100 types/database.ts >> docs/API.md
+        echo "\`\`\`" >> docs/API.md
+    
+    - name: Commit documentation changes
+      if: github.event_name == 'push'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git diff --staged --quiet || git commit -m "Auto-update documentation [skip ci]"
+        git push

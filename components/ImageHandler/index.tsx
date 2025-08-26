@@ -198,14 +198,16 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   );
 
   const handleAddWebImageUrl = useCallback(async () => {
-    if (!webImageUrlInput.trim()) {
+    const trimmedUrl = webImageUrlInput.trim();
+    
+    if (!trimmedUrl) {
       Alert.alert('Invalid URL', 'Please enter a valid web URL for the image.');
       return;
     }
 
     if (
-      !webImageUrlInput.startsWith('http://') &&
-      !webImageUrlInput.startsWith('https://')
+      !trimmedUrl.startsWith('http://') &&
+      !trimmedUrl.startsWith('https://')
     ) {
       Alert.alert(
         'Invalid URL',
@@ -219,7 +221,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       id: imageId,
       type: 'url',
       url: '',
-      localUri: webImageUrlInput.trim(),
+      localUri: trimmedUrl,
       isLoading: true,
     };
     
@@ -243,7 +245,57 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     });
 
     try {
-      const response = await fetch(webImageUrlInput.trim());
+      // For external URLs, we can either:
+      // 1. Upload to Supabase storage (requires proper RLS policy)
+      // 2. Use the URL directly (faster, no storage costs)
+      
+      // Option 2: Use URL directly (recommended for public image URLs)
+      if (trimmedUrl.includes('rareseeds.com') || trimmedUrl.includes('burpee.com') || 
+          trimmedUrl.includes('seedsavers.org') || trimmedUrl.includes('johnnyseeds.com')) {
+        // For trusted seed supplier domains, use direct URL
+        setImages((prevImages) =>
+          prevImages.map((img) =>
+            img.id === imageId
+              ? {
+                  ...img,
+                  url: trimmedUrl,
+                  type: 'url',
+                  isLoading: false,
+                  localUri: undefined,
+                }
+              : img
+          )
+        );
+        setWebImageUrlInput('');
+        return;
+      }
+      
+      // For other URLs, still attempt Supabase upload
+      // Check if user is authenticated for Supabase storage
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        // If not authenticated, still allow direct URL usage
+        setImages((prevImages) =>
+          prevImages.map((img) =>
+            img.id === imageId
+              ? {
+                  ...img,
+                  url: trimmedUrl,
+                  type: 'url',
+                  isLoading: false,
+                  localUri: undefined,
+                }
+              : img
+          )
+        );
+        setWebImageUrlInput('');
+        return;
+      }
+      
+      const response = await fetch(trimmedUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
       const blob = await response.blob();
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const fileExt = contentType.split('/').pop()?.toLowerCase() || 'jpg';
@@ -251,7 +303,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       const extensionToUse = validExtensions.includes(fileExt)
         ? fileExt
         : 'jpg';
-      const fileName = `${Date.now()}_${uuidv4().substring(
+      const fileName = `${user.id}/${Date.now()}_${uuidv4().substring(
         0,
         8
       )}.${extensionToUse}`;
@@ -264,7 +316,14 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           upsert: false,
           contentType: contentType,
         });
-      if (uploadError) throw uploadError;
+      
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        if (uploadError.message?.includes('row-level security')) {
+          throw new Error('Storage permission denied. Please check your account permissions.');
+        }
+        throw uploadError;
+      }
       const { data: publicUrlData } = supabase.storage
         .from(bucketName) // Use bucketName prop
         .getPublicUrl(filePath);
@@ -285,7 +344,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       );
     } catch (error: any) {
       console.error('Error uploading image from URL:', error);
-      // BYPASS FOR TESTING: Mark as uploaded with dummy URL
+      // Fallback: Use original URL if upload fails
       setImages((prevImages) =>
         prevImages.map((img) =>
           img.id === imageId
@@ -304,7 +363,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       );
     }
     setWebImageUrlInput(''); // Clear the input after adding
-  }, [bucketName]);
+  }, [bucketName, webImageUrlInput]);
 
   const handleRemoveImage = useCallback(
     async (imageIdToRemove: string) => {

@@ -21,13 +21,11 @@ function RootLayoutNav() {
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
   });
-  const byPassAuthForTesting = false; // Set to true to skip authentication during development
-  const byPassWebAuth = false; // Set to true to skip authentication on web only
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
   const isAppReady = (fontsLoaded || fontError) && initialized;
-  // Determine authentication status - consider session OR bypass flags
-  const isAuthenticated = !!session || byPassAuthForTesting || (Platform.OS === 'web' && byPassWebAuth);
+  // Only authenticate with valid session (no bypass flags in production)
+  const isAuthenticated = !!session;
 
 
   useEffect(() => {
@@ -35,21 +33,12 @@ function RootLayoutNav() {
     if (Platform.OS !== 'web') {
       const configureOrientation = async () => {
         try {
-          // First, get the current orientation info
-          const orientationInfo = await ScreenOrientation.getOrientationAsync();
-          console.log('Current orientation:', orientationInfo);
-          
-          // Unlock all orientations
+          // Configure orientation for mobile devices
           await ScreenOrientation.unlockAsync();
-          
-          // For tablets/large screens, allow all orientations
-          // For phones, you might want to be more restrictive
           const supportsAllOrientations = ScreenOrientation.OrientationLock.ALL;
           await ScreenOrientation.lockAsync(supportsAllOrientations);
-          
-          console.log('Orientation unlocked successfully');
-        } catch (error) {
-          console.warn('Failed to configure orientation:', error);
+        } catch {
+          // Silently handle orientation configuration errors
         }
       };
       

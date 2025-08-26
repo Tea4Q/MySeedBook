@@ -31,11 +31,9 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { supabase } from '@../../lib/supabase';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/lib/theme';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import {useRouter} from 'expo-router';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -175,23 +173,38 @@ export default function CalendarScreen() {
   const fetchEvents = async () => {
     setLoading(true);
     try {
+      // Get current user for RLS
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('User not authenticated for calendar events');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('calendar_events')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id); // Filter by user ID for RLS
 
       if (error) throw error;
-      if (!data) return;
+      if (!data) {
+        setEvents([]);
+        return;
+      }
 
-      // Convert date string from database to date
+      // Convert date string from database to Date object
       const formattedEvents = data.map((event: any) => ({
-        ...event,
-        date: new Date(event.date), // Convert event_date to Date
+        id: event.id,
+        date: new Date(event.event_date), // Use correct column name
+        seedName: event.seed_name,
+        seedId: event.seed_id,
         category: event.category as EventCategory,
+        notes: event.notes,
       }));
 
       setEvents(formattedEvents || []);
     } catch (error) {
-      console.error('Error fetching events:', error);
+      console.error('Error fetching calendar events:', error);
       alert('Failed to load events. Please try again later.');
     } finally {
       setLoading(false);
@@ -203,18 +216,28 @@ export default function CalendarScreen() {
     const startDate = startOfMonth(date).toISOString();
     const endDate = endOfMonth(date).toISOString();
     try {
+      // Get current user for RLS
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('User not authenticated for calendar events');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
+        .eq('user_id', user.id) // Filter by user ID
         .gte('event_date', startDate)
         .lte('event_date', endDate);
-      // Convert date string from database to date
-      // and format the events
+        
       if (error) throw error;
-      if (!data) return;
+      if (!data) {
+        setEvents([]);
+        return;
+      }
 
+      // Convert date string from database to Date object and format events
       const formattedEvents = data.map((event: any) => ({
-        ...event,
         id: event.id,
         date: new Date(event.event_date),
         seedName: event.seed_name,
@@ -314,25 +337,31 @@ export default function CalendarScreen() {
 
   const handleAddEvent = async () => {
     try {
+      // Get current user for RLS
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        alert('You must be logged in to add events.');
+        return;
+      }
+
       // Validate required fields
       if (!newEvent.seedName || !newEvent.date || !newEvent.category) {
         alert('Please fill in all fields.');
         return;
       }
-      if (!newEvent.seedId || newEvent.seedId === '') {
-        alert('Seed ID is required.');
-        return;
-      }
+      
+      // Note: seedId is optional - allow general garden events without specific seeds
 
       // Insert the main event
       const { data: mainEventData, error: mainEventError } = await supabase
         .from('calendar_events')
         .insert({
-          seed_id: newEvent.seedId,
+          seed_id: newEvent.seedId || null, // Allow null for general events
           seed_name: newEvent.seedName,
           event_date: newEvent.date.toISOString(),
           category: newEvent.category,
           notes: newEvent.notes,
+          user_id: user.id, // Add user_id for RLS
         })
         .select();
 
@@ -359,6 +388,7 @@ export default function CalendarScreen() {
             event_date: germinationDate.toISOString(),
             category: 'germination',
             notes: `Expected germination date for ${newEvent.seedName}`,
+            user_id: user.id, // Add user_id for RLS
           });
         if (germError) {
           console.error('Error inserting germination event:', germError);
@@ -375,6 +405,7 @@ export default function CalendarScreen() {
             event_date: harvestDate.toISOString(),
             category: 'harvest',
             notes: `Estimated harvest date for ${newEvent.seedName}`,
+            user_id: user.id, // Add user_id for RLS
           });
         if (harvestError) {
           console.error('Error inserting harvest event:', harvestError);

@@ -39,11 +39,8 @@ export default function ResetPasswordScreen() {
           const refreshToken = urlParams.get('refresh_token');
           const type = urlParams.get('type');
           
-          console.log('URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
-          
           // If we have tokens in the URL, this is likely a password reset link
           if (accessToken && refreshToken && type === 'recovery') {
-            console.log('Found recovery tokens in URL, attempting to set session');
             
             try {
               // Set the session using the tokens from the URL
