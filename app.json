@@ -3,7 +3,7 @@
     "name": "MySeedBook Catalogue",
     "slug": "myseedbook-catalogue",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon1.png",
     "scheme": "myseedbook-catalogue",
     "userInterfaceStyle": "automatic",

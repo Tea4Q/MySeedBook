@@ -1,4 +1,5 @@
 import { Stack, SplashScreen, useRouter } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemeProvider } from '@/lib/theme';
@@ -30,6 +31,11 @@ function RootLayoutNav() {
 
 
   useEffect(() => {
+    // Unlock orientation on mount (mobile only)
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    }
+    
     if (!isAppReady) return;
 
     // Get current path (web only)
@@ -93,13 +99,13 @@ function RootLayoutNav() {
         }
       }, 100);
     } else {
-      // Mobile: Keep original splash screen behavior
+      // Mobile: Navigate to main app when authenticated, auth screen when not
       SplashScreen.hideAsync();
       if (isAuthenticated) {
         setTimeout(() => {
           SplashScreen.hideAsync();
+          router.replace('/(tabs)');
         }, 500);
-        // No-op: Let mobile navigation stay where it is
       } else {
         router.replace('/auth');
       }

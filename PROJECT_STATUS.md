@@ -13,6 +13,13 @@
 ### 2. EAS Build Configuration Fixes
 - ✅ **All 15/15 expo-doctor checks now passing**
   - Removed problematic `react-native-phone-number-input` package (React 16 vs 19 conflict)
+
+### 3. Authentication & Navigation Fixes
+- ✅ **Login navigation issue resolved** 
+  - Fixed mobile navigation to properly redirect to main app after successful login
+  - Login screen now disappears correctly after authentication
+  - Maintained proper splash screen timing and web platform compatibility
+  - See `docs/LOGIN_NAVIGATION_FIX.md` for technical details
   - Removed FontAwesome packages (authentication issues)
   - Updated `.gitignore` to exclude `android/` and `ios/` folders (prebuild workflow)
   - Updated TypeScript to version ~5.8.3 (Expo SDK 53 compatibility)

@@ -272,6 +272,45 @@ export default function AddOrEditSeedScreen() {
     if (isSubmitting) return;
     if (!validateForm()) return;
 
+    // --- FREEMIUM LOGIC: Prevent adding more than 10 seeds ---
+    if (!isEditing) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          Alert.alert('Error', 'User not authenticated.');
+          return;
+        }
+        // Count seeds for this user
+        const { count, error: countError } = await supabase
+          .from('seeds')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if (countError) {
+          console.error('Error counting seeds:', countError);
+        } else if (typeof count === 'number' && count >= 10) {
+          Alert.alert(
+            'Free Plan Limit',
+            'You have reached the free plan limit of 10 seeds. Upgrade to add more.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Upgrade', style: 'default', onPress: () => {
+                  // Navigate to upgrade screen (adjust route as needed)
+                  if (router && typeof router.push === 'function') {
+                    router.push('/upgrade');
+                  }
+                }
+              },
+            ]
+          );
+          return;
+        }
+      } catch (err) {
+        console.error('Error enforcing freemium limit:', err);
+        Alert.alert('Error', 'Could not verify seed limit. Please try again.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setErrors({}); // Clear previous submit errors    
     

@@ -82,16 +82,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
     // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      logger.debug('Auth state change:', { event, session });      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') {
-          setSession(session);
+        setSession(session);
       } else if (event === 'SIGNED_OUT') {
-               setSession(null);
+        setSession(null);
         setUser(null);
       } else {
-        logger.debug('Other auth event, updating session:', { event });
-        // For other events, just update session and user
         setSession(session);
         setUser(session?.user ?? null);
       }
