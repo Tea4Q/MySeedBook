@@ -1,6 +1,4 @@
 import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faUserCircle } from '@fortawesome/free-regular-svg-icons';
 
 import { Bell, Sun, Moon, CloudRain, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
@@ -102,8 +100,7 @@ export default function SettingsScreen() {
            {/* Profile section with Create/Edit Profile button */}
       <View style={[styles.setting, styles.disabledSetting]}> 
         <View style={styles.settingInfo}>
-          <FontAwesomeIcon icon = {faUserCircle} size={24} color={colors.textSecondary} />
-          <Text style={[styles.settingText, { color: colors.textSecondary }]}>Profile</Text>
+          <Text style={[styles.settingText, { color: colors.textSecondary }]}>👤 Profile</Text>
      </View>
         <Pressable
           style={({ pressed }) => [

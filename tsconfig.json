@@ -25,5 +25,9 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
+  "exclude": [
+    "_backup/**/*",
+    "utils/auth-test-fix.ts"
+  ],
   "extends": "expo/tsconfig.base"
 }

@@ -41,6 +41,10 @@ import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { useGuestLimits } from '@/hooks/useGuestLimits';
+import GuestStatusBanner from '@/components/GuestStatusBanner';
+import { useAuth } from '@/lib/auth';
+import { guestDataManager } from '@/utils/guestDataManager';
 
 // Utility function to validate UUID format
 const isValidUUID = (uuid: string): boolean => {
@@ -79,10 +83,12 @@ interface Imageinfo {
 
 export default function AddOrEditSeedScreen() {
   const { colors } = useTheme(); // Add theme colors
+  const { user } = useAuth(); // Add auth context
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
+  const { checkAndPromptForLimit, trackAction } = useGuestLimits();
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -93,40 +99,64 @@ export default function AddOrEditSeedScreen() {
   }>();
 
   const isEditing = !!params.seed; // Check if we're editing
-  // Add this before useEffect (e.g., after other useState hooks)
-  const [reloadSuppliers, setReloadSuppliers] = useState(false);
 
   useEffect(() => {
-    if (params.newSupplierID && params.newSupplierName) {
-      // If a new supplier ID is provided, set it as the selected supplier
-      setSeedPackage((prev) => ({
-        ...prev,
-        supplier_id: params.newSupplierID, // Set the supplier_id to the newSupplierID
-      }));
-      // Fetch the full supplier object from the database to satisfy the Supplier type
-      (async () => {
+    if (params.newSupplierID) {
+      const fetchNewSupplier = async () => {
         try {
-          const { data: supplier, error } = await supabase
-            .from('suppliers')
-            .select('*')
-            .eq('id', params.newSupplierID)
-            .single();
-          if (error) {
-            console.error('Error fetching supplier:', error);
-            setSelectedSupplier(null);
+          let supplier = null;
+          
+          if (user) {
+            // Authenticated user - fetch from Supabase
+            const { data, error } = await supabase
+              .from('suppliers')
+              .select('*')
+              .eq('id', params.newSupplierID)
+              .single();
+            
+            if (error) {
+              console.error('Error fetching supplier:', error);
+              Alert.alert(
+                'Error',
+                'Failed to load new supplier details. Please try again.'
+              );
+              return;
+            }
+            supplier = data;
           } else {
+            // Guest user - get from sample data
+            console.log('Guest mode: Loading supplier from sample data');
+            const allSuppliers = await guestDataManager.getAllSuppliers();
+            supplier = allSuppliers.find(s => s.id === params.newSupplierID);
+            
+            if (!supplier) {
+              console.log('Supplier not found in guest data:', params.newSupplierID);
+              Alert.alert(
+                'Error',
+                'Selected supplier not found. Please try selecting again.'
+              );
+              return;
+            }
+          }
+
+          if (supplier) {
+            setSeedPackage((prev) => ({
+              ...prev,
+              supplier_id: supplier.id,
+            }));
             setSelectedSupplier(supplier as Supplier);
           }
-        } catch (error) {
-          console.error('Error fetching supplier:', error);
-          setSelectedSupplier(null);
+        } catch (error: any) {
+          console.error('Error fetching new supplier:', error);
+          Alert.alert(
+            'Error',
+            `Failed to load supplier details: ${error.message || error}`
+          );
         }
-      })();
+      };
+      fetchNewSupplier();
     }
-    if (params.reloadSuppliers === 'true') {
-      setReloadSuppliers(true); // Set reloadSuppliers to true if specified;
-    }
-  }, [params.newSupplierID, params.newSupplierName, params.reloadSuppliers]);
+  }, [params.newSupplierID, user]);
 
   // Parse editingSeed data safely
   const editingSeed = useMemo(() => {
@@ -272,41 +302,10 @@ export default function AddOrEditSeedScreen() {
     if (isSubmitting) return;
     if (!validateForm()) return;
 
-    // --- FREEMIUM LOGIC: Prevent adding more than 10 seeds ---
+    // Check guest limits for new seeds
     if (!isEditing) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          Alert.alert('Error', 'User not authenticated.');
-          return;
-        }
-        // Count seeds for this user
-        const { count, error: countError } = await supabase
-          .from('seeds')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        if (countError) {
-          console.error('Error counting seeds:', countError);
-        } else if (typeof count === 'number' && count >= 10) {
-          Alert.alert(
-            'Free Plan Limit',
-            'You have reached the free plan limit of 10 seeds. Upgrade to add more.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Upgrade', style: 'default', onPress: () => {
-                  // Navigate to upgrade screen (adjust route as needed)
-                  if (router && typeof router.push === 'function') {
-                    router.push('/upgrade');
-                  }
-                }
-              },
-            ]
-          );
-          return;
-        }
-      } catch (err) {
-        console.error('Error enforcing freemium limit:', err);
-        Alert.alert('Error', 'Could not verify seed limit. Please try again.');
+      const canProceed = await checkAndPromptForLimit('seed');
+      if (!canProceed) {
         return;
       }
     }
@@ -344,8 +343,9 @@ export default function AddOrEditSeedScreen() {
       date_purchased: seedPackage.date_purchased
         ? seedPackage.date_purchased.toISOString()
         : null,
-      // Validate supplier_id is valid UUID or set to null
-      supplier_id: seedPackage.supplier_id && isValidUUID(seedPackage.supplier_id) 
+      // Validate supplier_id - allow sample IDs for guest users or valid UUIDs
+      supplier_id: seedPackage.supplier_id && 
+        (isValidUUID(seedPackage.supplier_id) || seedPackage.supplier_id.startsWith('sample-supplier-'))
         ? seedPackage.supplier_id 
         : null,
     };
@@ -364,33 +364,39 @@ export default function AddOrEditSeedScreen() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user && !isEditing)
-        throw new Error('User not authenticated for new seed.');
-
-      if (isEditing && editingSeed && editingSeed.id) {
-        // Update existing seed
-        const { error } = await supabase
-          .from('seeds')
-          .update(payload) // Pass prepared payload
-          .eq('id', editingSeed.id); // Use the ID from the original seedPackage state
-        responseError = error;
-        savedSeedId = editingSeed.id;
+      
+      if (!user) {
+        // Guest user - simulate successful save without hitting Supabase
+        console.log('Guest mode: Simulating seed save', payload);
+        savedSeedId = `guest-seed-${Date.now()}`;
+        responseError = null;
       } else {
-        // Add a new seed
-        const { data: newSeedData, error } = await supabase.from('seeds').insert({
-          ...payload,
-          user_id: user?.id, // Add user_id for new seeds
-        }).select('id').single();
-        responseError = error;
-        if (newSeedData) {
-          savedSeedId = newSeedData.id;
+        // Authenticated user - save to Supabase
+        if (isEditing && editingSeed && editingSeed.id) {
+          // Update existing seed
+          const { error } = await supabase
+            .from('seeds')
+            .update(payload) // Pass prepared payload
+            .eq('id', editingSeed.id); // Use the ID from the original seedPackage state
+          responseError = error;
+          savedSeedId = editingSeed.id;
+        } else {
+          // Add a new seed
+          const { data: newSeedData, error } = await supabase.from('seeds').insert({
+            ...payload,
+            user_id: user?.id, // Add user_id for new seeds
+          }).select('id').single();
+          responseError = error;
+          if (newSeedData) {
+            savedSeedId = newSeedData.id;
+          }
         }
       }
 
       if (responseError) throw responseError;
 
       // Automatically add purchase date to calendar if date is provided and user wants it
-      if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name) {
+      if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && user) {
         try {
           await supabase
             .from('calendar_events')
@@ -406,11 +412,26 @@ export default function AddOrEditSeedScreen() {
           console.error('Error adding purchase date to calendar:', calendarError);
           // Don't fail the seed creation if calendar addition fails
         }
+      } else if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && !user) {
+        // Guest user - simulate calendar addition
+        console.log('Guest mode: Simulating calendar event addition', {
+          seed_id: savedSeedId,
+          seed_name: seedPackage.seed_name,
+          event_date: seedPackage.date_purchased.toISOString(),
+          category: 'purchase',
+          notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
+        });
       }
 
       // Reset form state
       setShowSuccess(true);
-      if (!isEditing) clearForm(); // Clear form only if adding new seed
+      
+      // Track action for guest users
+      if (!isEditing) {
+        await trackAction('seed');
+        clearForm(); // Clear form only if adding new seed
+      }
+      
       setNavigationTarget(params.returnTo || '/(tabs)'); // Set navigation target
     } catch (error: any) {
       console.error('Error saving seed:', error);
@@ -457,24 +478,47 @@ export default function AddOrEditSeedScreen() {
     if (params.newSupplierID) {
       const fetchNewSupplier = async () => {
         try {
-          const { data: supplier, error } = await supabase
-            .from('suppliers')
-            .select('*') // Fetch all fields for Supplier
-            .eq('id', params.newSupplierID)
-            .single();
+          let supplier = null;
+          
+          if (user) {
+            // Authenticated user - fetch from Supabase
+            const { data, error } = await supabase
+              .from('suppliers')
+              .select('*')
+              .eq('id', params.newSupplierID)
+              .single();
 
-          if (error) {
-            console.error('Error fetching new supplier:', error);
-            Alert.alert(
-              'Error',
-              'Failed to load new supplier details. Please try again.'
-            );
-          } else if (supplier) {
+            if (error) {
+              console.error('Error fetching new supplier:', error);
+              Alert.alert(
+                'Error',
+                'Failed to load new supplier details. Please try again.'
+              );
+              return;
+            }
+            supplier = data;
+          } else {
+            // Guest user - get from sample data
+            console.log('Guest mode: Loading supplier from sample data');
+            const allSuppliers = await guestDataManager.getAllSuppliers();
+            supplier = allSuppliers.find(s => s.id === params.newSupplierID);
+            
+            if (!supplier) {
+              console.log('Supplier not found in guest data:', params.newSupplierID);
+              Alert.alert(
+                'Error',
+                'Selected supplier not found. Please try selecting again.'
+              );
+              return;
+            }
+          }
+
+          if (supplier) {
             setSeedPackage((prev) => ({
               ...prev,
               supplier_id: supplier.id,
             }));
-            setSelectedSupplier(supplier as Supplier); // Update selectedSupplier
+            setSelectedSupplier(supplier as Supplier);
           }
         } catch (error: any) {
           console.error('Error fetching new supplier:', error);
@@ -486,10 +530,7 @@ export default function AddOrEditSeedScreen() {
       };
       fetchNewSupplier();
     }
-    if (params.reloadSuppliers === 'true') {
-      setReloadSuppliers(true);
-    }
-  }, [params.newSupplierID, params.reloadSuppliers]);
+  }, [params.newSupplierID, params.reloadSuppliers, user]);
 
   // Fetch supplier details when seedPackage.supplier_id changes
   useEffect(() => {
@@ -498,14 +539,33 @@ export default function AddOrEditSeedScreen() {
         setSelectedSupplier(null);
         return;
       }
+      
       try {
-        const { data: supplier, error } = await supabase
-          .from('suppliers') // Ensure this matches your table name
-          .select('*') // Fetch all fields for Supplier
-          .eq('id', seedPackage.supplier_id) //Filter for the current supplier_id
-          .single(); // Expect a single object, not an array
-        // Check for errors
-        if (error) throw error;
+        let supplier = null;
+        
+        if (user) {
+          // Authenticated user - fetch from Supabase
+          const { data, error } = await supabase
+            .from('suppliers')
+            .select('*')
+            .eq('id', seedPackage.supplier_id)
+            .single();
+          
+          if (error) throw error;
+          supplier = data;
+        } else {
+          // Guest user - get from sample data
+          console.log('Guest mode: Loading supplier details from sample data', seedPackage.supplier_id);
+          const allSuppliers = await guestDataManager.getAllSuppliers();
+          supplier = allSuppliers.find(s => s.id === seedPackage.supplier_id);
+          
+          if (!supplier) {
+            console.log('Supplier not found in guest data:', seedPackage.supplier_id);
+            setSelectedSupplier(null);
+            return;
+          }
+        }
+
         if (supplier) {
           // Ensure supplier is an object with expected properties
           if (
@@ -514,8 +574,7 @@ export default function AddOrEditSeedScreen() {
             'id' in supplier &&
             'supplier_name' in supplier
           ) {
-            // Check if supplier has the expected properties
-            setSelectedSupplier(supplier as Supplier); // Cast to Supplier type
+            setSelectedSupplier(supplier as Supplier);
           } else {
             console.error('Invalid supplier data:', supplier);
             Alert.alert(
@@ -525,19 +584,22 @@ export default function AddOrEditSeedScreen() {
             setSelectedSupplier(null);
           }
         } else {
-          setSelectedSupplier(null); // Reset if no supplier found
+          setSelectedSupplier(null);
         }
       } catch (error: any) {
         console.error('Error fetching supplier details:', error);
-        Alert.alert(
-          'Error',
-          `Failed to load supplier details: ${error.message || error}`
-        );
-        setSelectedSupplier(null); // Reset if error occurs
+        if (user) {
+          // Only show error for authenticated users making real requests
+          Alert.alert(
+            'Error',
+            `Failed to load supplier details: ${error.message || error}`
+          );
+        }
+        setSelectedSupplier(null);
       }
     };
     fetchSupplierDetails();
-  }, [seedPackage.supplier_id]);
+  }, [seedPackage.supplier_id, user]);
 
   // Add useEffect to sync input state if seedPackage.seed_price changes externally
   // (Important for initial load when editing)
@@ -572,9 +634,14 @@ export default function AddOrEditSeedScreen() {
     if (!seedPackage.type) errors.type = 'Seed type is required';
     if (!seedPackage.supplier_id) errors.supplier = 'Supplier is required';
     
-    // Validate supplier_id is a valid UUID format (basic check)
-    if (seedPackage.supplier_id && !isValidUUID(seedPackage.supplier_id)) {
-      errors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+    // Validate supplier_id format - allow sample IDs for guest users
+    if (seedPackage.supplier_id) {
+      const isSampleId = seedPackage.supplier_id.startsWith('sample-supplier-');
+      const isValidFormat = isValidUUID(seedPackage.supplier_id) || isSampleId;
+      
+      if (!isValidFormat) {
+        errors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+      }
     }
     
     // Check if any images are still loading
@@ -610,6 +677,9 @@ export default function AddOrEditSeedScreen() {
   // --- Render the component ---
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Guest Status Banner */}
+      <GuestStatusBanner />
+      
       {/* Back Button - Floating Style */}
       <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
         <ArrowLeft size={24} color={colors.text} />

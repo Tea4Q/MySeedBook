@@ -11,13 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {
-  Search,
   Plus,
   X,
   Check,
   Building2,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
+import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
 import { debounce } from '@/utils/debounce';
 import AddSupplierForm from '../AddSupplierForm';
@@ -33,6 +34,7 @@ export function SupplierInput({
   selectedSupplier,
   placeholder = 'Type supplier name...',
 }: SupplierInputProps) {
+  const { isGuest } = useAuth();
   const [inputValue, setInputValue] = useState(selectedSupplier?.supplier_name || '');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
@@ -40,11 +42,6 @@ export function SupplierInput({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const isSelectingRef = useRef(false);
-
-  // Load suppliers on mount
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
 
   // Update input when selectedSupplier changes
   useEffect(() => {
@@ -55,6 +52,15 @@ export function SupplierInput({
   const loadSuppliers = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (isGuest) {
+        // Load sample + demo data for guests
+        console.log('👤 Loading suppliers for guest user in SupplierInput');
+        const guestSuppliers = await guestDataManager.getAllSuppliers();
+        setSuppliers(guestSuppliers);
+        return;
+      }
+
+      // Regular user - load from Supabase
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
@@ -68,7 +74,12 @@ export function SupplierInput({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isGuest]);
+
+  // Load suppliers on mount
+  useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   // Debounced search function
   const filterSuppliers = useCallback(

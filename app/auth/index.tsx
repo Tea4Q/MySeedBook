@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useWindowDimensions ,
+import React, { useState, useEffect, useMemo } from 'react';
+import {
   View,
   Text,
   TextInput,
@@ -9,25 +9,22 @@ import { useWindowDimensions ,
   ScrollView,
   ActivityIndicator,
   Animated,
-  Dimensions,
+  StatusBar,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
-
-
-
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff, Leaf } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
-import { useTheme } from '@/lib/theme';
-
+import { debugNetwork } from '@/utils/networkDebug';
 
 export default function AuthScreen() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
-    
-  // Log isLogin state after all state declarations
+  
   const [isLogin, setIsLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -38,336 +35,742 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Animation values with useMemo to prevent re-creation
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
 
-  // Animation values (dummy for now, replace with actual Animated.Value if needed)
-  const loginTranslateY = new Animated.Value(0);
-  const loginOpacity = new Animated.Value(1);
-  const signupTranslateY = new Animated.Value(0);
-  const signupOpacity = new Animated.Value(1);
+  // Falling leaf animations - create 20 animated values for each leaf
+  const leafAnims = useMemo(() => 
+    Array.from({ length: 20 }, () => ({
+      translateY: new Animated.Value(-100),
+      translateX: new Animated.Value(0),
+      rotate: new Animated.Value(0),
+      opacity: new Animated.Value(0.1)
+    })), []
+  );
 
-  const { colors } = useTheme();
-  const { signIn, signUp} = useAuth();
+  const { signIn, signUp, signInAsGuest } = useAuth();
 
-  const showSignup = () => {
-    setError(null);
-    setIsLogin(false);
-  }
-  const showLogin = () => {
-    setError(null);
-    setIsLogin(true);
-  };
+  useEffect(() => {
+    // Initial screen animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Start falling leaf animations
+    const startFallingLeaves = () => {
+      leafAnims.forEach((leafAnim, index) => {
+        // Stagger the start times for natural effect - spread over longer period
+        const delay = index * 400; // 400ms between each leaf start
+        
+        const animateLeaf = () => {
+          const fallDuration = 8000 + (index % 4) * 1000; // 8-11 seconds for full traverse
+          const startX = (index % 5) * (100) + (index % 3 - 1) * 40; // Better spread across screen
+          const endX = startX + (index % 2 === 0 ? 1 : -1) * 60; // More horizontal drift
+          
+          // Reset leaf to TOP of screen (well above visible area)
+          leafAnim.translateY.setValue(-150); // Start higher
+          leafAnim.translateX.setValue(startX);
+          leafAnim.rotate.setValue(0);
+          leafAnim.opacity.setValue(0); // Start invisible
+
+          // Animate falling from top to bottom of ENTIRE screen
+          Animated.parallel([
+            // Fall from top to well below screen bottom
+            Animated.timing(leafAnim.translateY, {
+              toValue: 1200, // Go well past bottom of screen
+              duration: fallDuration,
+              useNativeDriver: true,
+            }),
+            // Horizontal drift during fall
+            Animated.timing(leafAnim.translateX, {
+              toValue: endX,
+              duration: fallDuration,
+              useNativeDriver: true,
+            }),
+            // Gentle rotation during fall
+            Animated.timing(leafAnim.rotate, {
+              toValue: (index % 4) * 180 + 360, // More rotation for longer fall
+              duration: fallDuration,
+              useNativeDriver: true,
+            }),
+            // Fade in, stay visible, then fade out at bottom
+            Animated.sequence([
+              // Fade in at top
+              Animated.timing(leafAnim.opacity, {
+                toValue: 0.4 + (index % 3) * 0.1, // More visible: 0.4-0.7
+                duration: fallDuration * 0.1, // Quick fade in
+                useNativeDriver: true,
+              }),
+              // Stay visible during most of fall
+              Animated.timing(leafAnim.opacity, {
+                toValue: 0.4 + (index % 3) * 0.1,
+                duration: fallDuration * 0.8, // Visible for 80% of fall
+                useNativeDriver: true,
+              }),
+              // Fade out at bottom
+              Animated.timing(leafAnim.opacity, {
+                toValue: 0,
+                duration: fallDuration * 0.1, // Quick fade out
+                useNativeDriver: true,
+              }),
+            ]),
+          ]).start(() => {
+            // Restart the animation immediately when it completes
+            setTimeout(animateLeaf, 500 + index * 100); // Slight stagger on restart
+          });
+        };
+
+        // Start with delay
+        setTimeout(animateLeaf, delay);
+      });
+    };
+
+    startFallingLeaves();
+
+    // Cleanup function to stop animations when component unmounts
+    return () => {
+      leafAnims.forEach(leafAnim => {
+        leafAnim.translateY.stopAnimation();
+        leafAnim.translateX.stopAnimation();
+        leafAnim.rotate.stopAnimation();
+        leafAnim.opacity.stopAnimation();
+      });
+    };
+  }, [fadeAnim, scaleAnim, slideAnim, leafAnims]);
 
   const handleSignIn = async () => {
+    console.log('🔍 Regular sign in started');
     setIsLoading(true);
     setError(null);
-      try {
-        await signIn(loginEmail, loginPassword);
-        // On success, navigation is handled by auth state change
-      } catch (err) {
-    setError((err as Error).message || 'Failed to sign in. Please try again.');
-      } finally {
-        setIsLoading(false);
+    try {
+      console.log('🔍 Calling signIn...');
+      await signIn(loginEmail, loginPassword);
+      console.log('✅ Regular sign in successful - navigation handled by layout');
+      // Let _layout.tsx handle navigation after auth state changes
+    } catch (err) {
+      console.error('❌ Regular sign in error:', err);
+      const errorMessage = (err as Error).message || 'Failed to sign in. Please try again.';
+      
+      // If it's a network error, provide guidance to use guest mode
+      if (errorMessage.includes('Network connection issue') || 
+          errorMessage.includes('NetworkError') ||
+          errorMessage.includes('fetch resource') ||
+          errorMessage.includes('Network request failed')) {
+        if (Platform.OS === 'android') {
+          debugNetwork();
+        }
+        setError(`${errorMessage}\n\n💡 Tip: You can continue as a guest to explore the app offline!`);
+      } else {
+        setError(errorMessage);
       }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async () => {
+    console.log('🔍 Sign up started');
     setIsLoading(true);
     setError(null);
-      if (signupPassword !== confirmPassword) {
-        setError('Passwords do not match.');
-        setIsLoading(false);
-        return;
-      }
+    if (signupPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      setIsLoading(false);
+      return;
+    }
     
-      try {
-        await signUp(signupEmail, signupPassword);
-        // On success, navigation is handled by auth state change
-      } catch (err) {
-        setError((err as Error).message || 'Failed to sign up. Please try again.');
-      } finally {
-        setIsLoading(false);
+    try {
+      console.log('🔍 Calling signUp...');
+      await signUp(signupEmail, signupPassword);
+      console.log('✅ Sign up successful - navigation handled by layout');
+      // Let _layout.tsx handle navigation after auth state changes
+    } catch (err) {
+      console.error('❌ Sign up error:', err);
+      const errorMessage = (err as Error).message || 'Failed to sign up. Please try again.';
+      
+      // If it's a network error, provide guidance to use guest mode
+      if (errorMessage.includes('Network connection issue') || 
+          errorMessage.includes('NetworkError') ||
+          errorMessage.includes('fetch resource')) {
+        setError(`${errorMessage}\n\n💡 Tip: You can continue as a guest to explore the app offline!`);
+      } else {
+        setError(errorMessage);
       }
-    };
-    
-    const handleForgotPassword = () => {
-      // Implement forgot password logic or navigation
-      router.push('/auth/forgot-password');
-    };
-
- 
-
-    return (
-      <ScrollView contentContainerStyle={[styles.scrollContent, isLandscape && { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}> 
-        <View style={[styles.logoContainer, isLandscape && { flex: 1, marginTop: 0, marginBottom: 0, alignItems: 'flex-end', paddingRight: 40 }]}> 
-          <Image source={require('@/assets/images/icon1.png')} style={styles.logo} />
-          <Text style={[styles.logoText, { color: colors.primary }]}>Gardening Catalogue</Text>
-        </View>
-        <View style={[styles.formWrapper, { backgroundColor: colors.surface }, isLandscape && { flex: 2, minHeight: 400, maxWidth: 500, marginLeft: 40 }]}> 
-          {isLogin ? (
-            <Animated.View 
-              style={[
-                styles.loginContainer,
-                isLandscape && { padding: 24 },
-                {
-                  transform: [{ translateY: loginTranslateY }],
-                  opacity: loginOpacity,
-                }
-              ]}
-            >
-              <View style={styles.formHeader}>
-                <Text style={[styles.formTitle, { color: colors.primary }]}>Login</Text>
-                <Pressable onPress={showSignup} style={styles.toggleButton}>
-                  <Text style={[styles.toggleText, { color: colors.textSecondary }]}>Don&apos;t have an account?</Text>
-                </Pressable>
-              </View>
-              {error && (
-                <View style={[styles.errorContainer, { backgroundColor: `${colors.error}20`, borderColor: `${colors.error}40` }]}> 
-                  <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-                </View>
-              )}
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
-                <Mail size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="Email"
-                  placeholderTextColor={colors.textSecondary}
-                  value={loginEmail}
-                  onChangeText={setLoginEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
-                <Lock size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="Password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={loginPassword}
-                  onChangeText={setLoginPassword}
-                  secureTextEntry={!showLoginPassword}
-                  editable={!isLoading}
-                />
-                <Pressable onPress={() => setShowLoginPassword(v => !v)} style={{ padding: 4 }}>
-                  {showLoginPassword ? <EyeOff size={20} color={colors.textSecondary} /> : <Eye size={20} color={colors.textSecondary} />}
-                </Pressable>
-              </View>
-              <Pressable
-                style={[styles.authButton, { backgroundColor: colors.primary }]}
-                onPress={handleSignIn}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={colors.primaryText} />
-                ) : (
-                  <Text style={[styles.authButtonText, { color: colors.primaryText }]}>Sign In</Text>
-                )}
-              </Pressable>
-              <Pressable onPress={handleForgotPassword} style={[styles.forgotPassword, isLoading && { opacity: 0.5 }]} disabled={isLoading}>
-                <Text style={[styles.forgotPasswordText, { color: colors.textSecondary }]}>Forgot your Password?</Text>
-              </Pressable>
-            </Animated.View>
-          ) : (
-            <Animated.View
-              style={[styles.signupContainer, 
-                isLandscape && { padding: 24 },
-                { 
-                  transform: [{ translateY: signupTranslateY }],
-                  opacity: signupOpacity,
-                }
-              ]}
-            >
-              <View style={styles.formHeader}>
-                <Text style={[styles.formTitle, { color: colors.primary }]}>Sign Up</Text>  
-                <Pressable onPress={showLogin} style={styles.toggleButton}>
-                  <Text style={[styles.toggleText, { color: colors.textSecondary }]}>Already have an account?</Text>
-                </Pressable>
-              </View>
-              {error && (
-                <View style={[styles.errorContainer, { backgroundColor: `${colors.error}20`, borderColor: `${colors.error}40` }]}>
-                  <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-                </View>
-              )}
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor
-  : colors.inputBorder }]}>
-                <User size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="User Name"
-                  placeholderTextColor={colors.textSecondary}
-                  value={userName}
-                  onChangeText={setUserName}
-                  editable={!isLoading}
-                />  
-              </View>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
-                <Mail size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="Email" 
-                  placeholderTextColor={colors.textSecondary}
-                  value={signupEmail}
-                  onChangeText={setSignupEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>  
-                <Lock size={20} color={colors.textSecondary} />
-                <TextInput  
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="Password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={signupPassword}
-                  onChangeText={setSignupPassword}
-                  secureTextEntry={!showSignupPassword}
-                  editable={!isLoading}
-                />
-                <Pressable onPress={() => setShowSignupPassword(v => !v)} style={{ padding: 4 }}>
-                  {showSignupPassword ? <EyeOff size={20} color={colors.textSecondary} /> : <Eye size={20} color={colors.textSecondary} />}
-                </Pressable>
-              </View>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}> 
-                <Lock size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  placeholder="Confirm Password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  editable={!isLoading}
-                />
-                <Pressable onPress={() => setShowConfirmPassword(v => !v)} style={{ padding: 4 }}>
-                  {showConfirmPassword ? <EyeOff size={20} color={colors.textSecondary} /> : <Eye size={20} color={colors.textSecondary} />}
-                </Pressable>
-              </View>
-              <Pressable
-                style={[styles.authButton, { backgroundColor: colors.primary }]}
-                onPress={handleSignup}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={[styles.authButtonText, { color: colors.primaryText }]}>Sign Up</Text>
-                )}
-              </Pressable>
-            </Animated.View>
-          )}
-        </View>
-      </ScrollView>
-    );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleForgotPassword = () => {
+    router.push('/auth/forgot-password');
   };
 
+  const handleGuestSignIn = async () => {
+    console.log('🔍 Guest sign in started');
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log('🔍 Calling signInAsGuest...');
+      await signInAsGuest();
+      console.log('✅ Guest sign in successful - navigation handled by layout');
+      // Let _layout.tsx handle navigation after auth state changes
+    } catch (err) {
+      console.error('❌ Guest sign in error:', err);
+      setError((err as Error).message || 'Failed to continue as guest. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#2d5a2d', '#1a4a1a', '#0f2f0f']}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      
+      {/* Background Pattern */}
+      <View style={styles.backgroundPattern}>
+        {leafAnims.map((leafAnim, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.backgroundLeaf,
+              {
+                transform: [
+                  { translateY: leafAnim.translateY },
+                  { translateX: leafAnim.translateX },
+                  { rotate: leafAnim.rotate.interpolate({
+                    inputRange: [0, 360],
+                    outputRange: ['0deg', '360deg']
+                  }) },
+                ],
+                opacity: leafAnim.opacity,
+                // Remove fixed positioning - let animation control everything
+                left: 0,
+                top: 0,
+              },
+            ]}
+          >
+            <Leaf size={25 + (i % 4) * 5} color="#ffffff" />
+          </Animated.View>
+        ))}
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header Section */}
+        <Animated.View 
+          style={[
+            styles.headerSection,
+            {
+              opacity: fadeAnim,
+              transform: [
+                { translateY: slideAnim },
+                { scale: scaleAnim },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.logoContainer}>
+            <View style={styles.logoBackground}>
+              <Image 
+                source={require('@/assets/images/icon1.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.appTitle}>Gardening Catalogue</Text>
+            <Text style={styles.appSubtitle}>Cultivate your green dreams</Text>
+          </View>
+        </Animated.View>
+
+        {/* Main Card */}
+        <Animated.View 
+          style={[
+            styles.mainCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <BlurView intensity={10} style={styles.blurContainer}>
+            <View style={styles.cardContent}>
+              {/* Tab Selector */}
+              <View style={styles.tabContainer}>
+                <Pressable
+                  style={[styles.tab, isLogin && styles.activeTab]}
+                  onPress={() => setIsLogin(true)}
+                >
+                  <Text style={[styles.tabText, isLogin && styles.activeTabText]}>
+                    Sign In
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.tab, !isLogin && styles.activeTab]}
+                  onPress={() => setIsLogin(false)}
+                >
+                  <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>
+                    Sign Up
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Error Message */}
+              {error && (
+                <Animated.View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </Animated.View>
+              )}
+
+              {/* Form Content */}
+              {isLogin ? (
+                <View style={styles.formContainer}>
+                  {/* Email Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <Mail size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email address"
+                      placeholderTextColor="#7c9885"
+                      value={loginEmail}
+                      onChangeText={setLoginEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                  </View>
+
+                  {/* Password Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <Lock size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor="#7c9885"
+                      value={loginPassword}
+                      onChangeText={setLoginPassword}
+                      secureTextEntry={!showLoginPassword}
+                      editable={!isLoading}
+                    />
+                    <Pressable
+                      style={styles.eyeIcon}
+                      onPress={() => setShowLoginPassword(!showLoginPassword)}
+                    >
+                      {showLoginPassword ? (
+                        <EyeOff size={20} color="#7c9885" />
+                      ) : (
+                        <Eye size={20} color="#7c9885" />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {/* Sign In Button */}
+                  <Pressable
+                    style={[styles.primaryButton, isLoading && styles.disabledButton]}
+                    onPress={handleSignIn}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Sign In</Text>
+                    )}
+                  </Pressable>
+
+                  {/* Forgot Password */}
+                  <Pressable style={styles.forgotPassword} onPress={handleForgotPassword}>
+                    <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.formContainer}>
+                  {/* Name Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <User size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Full name"
+                      placeholderTextColor="#7c9885"
+                      value={userName}
+                      onChangeText={setUserName}
+                      editable={!isLoading}
+                    />
+                  </View>
+
+                  {/* Email Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <Mail size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email address"
+                      placeholderTextColor="#7c9885"
+                      value={signupEmail}
+                      onChangeText={setSignupEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                  </View>
+
+                  {/* Password Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <Lock size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor="#7c9885"
+                      value={signupPassword}
+                      onChangeText={setSignupPassword}
+                      secureTextEntry={!showSignupPassword}
+                      editable={!isLoading}
+                    />
+                    <Pressable
+                      style={styles.eyeIcon}
+                      onPress={() => setShowSignupPassword(!showSignupPassword)}
+                    >
+                      {showSignupPassword ? (
+                        <EyeOff size={20} color="#7c9885" />
+                      ) : (
+                        <Eye size={20} color="#7c9885" />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {/* Confirm Password Input */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIconContainer}>
+                      <Lock size={20} color="#7c9885" />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm password"
+                      placeholderTextColor="#7c9885"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                      editable={!isLoading}
+                    />
+                    <Pressable
+                      style={styles.eyeIcon}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={20} color="#7c9885" />
+                      ) : (
+                        <Eye size={20} color="#7c9885" />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {/* Sign Up Button */}
+                  <Pressable
+                    style={[styles.primaryButton, isLoading && styles.disabledButton]}
+                    onPress={handleSignup}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Create Account</Text>
+                    )}
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.divider} />
+              </View>
+
+              {/* Guest Login Button */}
+              <Pressable
+                style={styles.guestButton}
+                onPress={handleGuestSignIn}
+                disabled={isLoading}
+              >
+                <Leaf size={20} color="#4a7c59" />
+                <View style={styles.guestButtonContent}>
+                  <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                  <Text style={styles.guestButtonSubtext}>
+                    Try for free: Add up to 10 seeds
+                  </Text>
+                </View>
+                {isLoading && (
+                  <ActivityIndicator color="#4a7c59" size="small" />
+                )}
+              </Pressable>
+            </View>
+          </BlurView>
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  backgroundPattern: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    overflow: 'hidden',
+    zIndex: 1,
+    pointerEvents: 'none', // This allows touches to pass through
+  },
+  backgroundLeaf: {
+    position: 'absolute',
+    zIndex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#f0f0f0',
+    paddingVertical: 40,
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+    zIndex: 10,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
   },
-  logo: {
+  logoBackground: {
     width: 100,
     height: 100,
-    marginBottom: 10,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  logoText: {
-    fontSize: 24,
+  logo: {
+    width: 60,
+    height: 60,
+  },
+  appTitle: {
+    fontSize: 32,
     fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
-  formWrapper: {
-    width: '100%',
-    maxWidth: 400,
+  appSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  mainCard: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 10,
+  },
+  blurContainer: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    padding: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 32,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    padding: 20,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  formHeader: {
-    marginBottom: 20,
-    alignItems: 'center',
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
-  formTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  signupContainer: {
-    width: '100%',  
-  },
-  loginContainer: {
-    width: '100%',
-  },
-  toggleButton: {
-    paddingVertical: 6,
-  },
-  toggleText: {
-    fontSize: 14,
-    textDecorationLine: 'underline',
+  activeTabText: {
+    color: '#ffffff',
   },
   errorContainer: {
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: 'rgba(220, 38, 38, 0.2)',
+    borderColor: 'rgba(220, 38, 38, 0.4)',
     borderWidth: 1,
-    marginBottom: 15,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
   },
   errorText: {
-    textAlign: 'center',
+    color: '#fca5a5',
     fontSize: 14,
+    textAlign: 'center',
   },
-  inputContainer: {
+  formContainer: {
+    gap: 20,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  inputIconContainer: {
+    marginRight: 12,
   },
   input: {
     flex: 1,
     paddingVertical: 16,
-    paddingHorizontal: 12,
     fontSize: 16,
+    color: '#ffffff',
   },
-  authButton: {
+  eyeIcon: {
+    padding: 8,
+  },
+  primaryButton: {
+    backgroundColor: '#4a7c59',
+    borderRadius: 16,
     paddingVertical: 16,
-    borderRadius: 25,
     alignItems: 'center',
-    marginTop: 20,
-    elevation: 4,
+    marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  authButtonText: {
+  disabledButton: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   forgotPassword: {
-    alignItems: 'center',
-    marginTop: 20,
-    paddingVertical: 12,
+    alignSelf: 'center',
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    minHeight: 44,
-    fontWeight: '600',
   },
   forgotPasswordText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  dividerText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    marginHorizontal: 16,
+  },
+  guestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(116, 165, 127, 0.4)',
+  },
+  guestButtonContent: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  guestButtonText: {
+    color: '#a7d4b4',
     fontSize: 16,
     fontWeight: '600',
-    textDecorationLine: 'underline',
+  },
+  guestButtonSubtext: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    marginTop: 2,
   },
 });

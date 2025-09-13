@@ -20,23 +20,57 @@ const ExpoSecureStoreAdapter = {
      },
 };
 
+// Web storage adapter for better CORS handling
+const WebStorageAdapter = {
+  getItem: (key: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return Promise.resolve(window.localStorage.getItem(key));
+    }
+    return Promise.resolve(null);
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+    return Promise.resolve();
+  },
+  removeItem: (key: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+    return Promise.resolve();
+  },
+};
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Use secure storage for tokens instead of cookies
-    storage: Platform.OS === 'web' ? undefined : ExpoSecureStoreAdapter,
+    // Use appropriate storage for each platform
+    storage: Platform.OS === 'web' ? WebStorageAdapter : ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web', // Enable URL session detection on web
-    // Additional cookie/domain configuration
+    // Additional configuration for web CORS
     flowType: 'pkce',
+    ...(Platform.OS === 'web' && {
+      storageKey: 'sb-auth-token', // Consistent storage key for web
+    }),
   },
   global: {
     headers: {
       // Add custom headers to avoid cookie domain issues
       'X-Client-Platform': Platform.OS,
+      ...(Platform.OS === 'web' && {
+        'apikey': supabaseAnonKey,
+      }),
     },
   },
+  ...(Platform.OS === 'web' && {
+    // Additional web-specific configuration
+    db: {
+      schema: 'public',
+    },
+  }),
 });

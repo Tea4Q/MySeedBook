@@ -14,7 +14,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
 import { Seed } from '@/types/database'; // Adjust path if needed
@@ -45,9 +45,12 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '@/lib/auth'; // Assuming you have an auth context
 import { useResponsive } from '@/utils/responsive';
+import GuestStatusBanner from '@/components/GuestStatusBanner';
+import { guestDataManager } from '@/utils/guestDataManager';
 
 export default function InventoryScreen() {
   const { session } = useAuth(); // Get user session
+  // Removed guest limits for views - now unlimited
   const { colors } = useTheme(); // Get theme colors
   const responsive = useResponsive(); // Get responsive configuration
   const [seeds, setSeeds] = useState<Seed[]>([]);
@@ -69,9 +72,34 @@ export default function InventoryScreen() {
   const loadSeeds = useCallback(
     async (isRefresh = false) => {
       if (!session?.user) {
-        setLoading(false);
-        setRefreshing(false);
-        setSeeds([]); // Don't load mock data, just show empty state
+        // Guest user - load sample data
+        if (!isRefresh && !searchTerm) setLoading(true);
+        setError(null);
+        
+        try {
+          console.log('Guest mode: Loading sample seeds');
+          const allSeeds = await guestDataManager.getAllSeeds();
+          
+          // Apply search filter if there's a search term
+          let filteredSeeds = allSeeds;
+          if (searchTerm) {
+            filteredSeeds = allSeeds.filter(seed => 
+              seed.seed_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              seed.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (seed.description && seed.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+          }
+          
+          setSeeds(filteredSeeds);
+          console.log(`Guest mode: Loaded ${filteredSeeds.length} sample seeds`);
+        } catch (e: any) {
+          console.error('Error loading sample seeds:', e);
+          setError('Failed to load sample seeds');
+          setSeeds([]);
+        } finally {
+          if (!isRefresh) setLoading(false);
+          if (isRefresh) setRefreshing(false);
+        }
         return;
       }
 
@@ -121,7 +149,8 @@ export default function InventoryScreen() {
   useFocusEffect(
     useCallback(() => {
       loadSeeds();
-    }, [loadSeeds]) // Include loadSeeds dependency to ensure fresh data on focus
+      // No longer tracking view actions for guests - unlimited access
+    }, [loadSeeds]) // Removed guest tracking dependencies
   );
 
   // Handle highlighted seed scrolling separately
@@ -578,6 +607,9 @@ export default function InventoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Guest Status Banner */}
+      <GuestStatusBanner />
+      
       {/* Floating Add Button */}
       <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
         <PlusCircle size={28} color={colors.primaryText} />

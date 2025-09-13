@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { clearInvalidAuthState } from '../lib/auth';
 
 export async function testSignOutFix() {
   console.log('=== Testing Sign Out Fix ===');
@@ -29,13 +28,17 @@ export async function testSignOutFix() {
     console.log('Caught error during sign out test:', error);
   }
   
-  // Test 2: Test our clearInvalidAuthState function
-  console.log('\n2. Testing clearInvalidAuthState function...');
+  // Test 2: Test auth state clearing
+  console.log('\n2. Testing auth state clearing...');
   try {
-    await clearInvalidAuthState();
-    console.log('clearInvalidAuthState completed successfully');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.log('Sign out error (expected):', error.message);
+    } else {
+      console.log('Sign out completed successfully');
+    }
   } catch (error) {
-    console.log('Error in clearInvalidAuthState:', error);
+    console.log('Error in sign out:', error);
   }
   
   console.log('\n=== Sign Out Fix Test Complete ===');

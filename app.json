@@ -2,7 +2,7 @@
   "expo": {
     "name": "MySeedBook Catalogue",
     "slug": "myseedbook-catalogue",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "default",
     "icon": "./assets/images/icon1.png",
     "scheme": "myseedbook-catalogue",
@@ -20,12 +20,18 @@
       "bundleIdentifier": "com.myseedbook.catalogue",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "This app uses the camera to capture photos of your seeds and plants for your garden catalogue.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images of your seeds and plants.",
+        "NSMicrophoneUsageDescription": "This app may use the microphone for video recording features."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.myseedbook.catalogue",
-      "versionCode": 1,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon1.png",
         "backgroundColor": "#f0f9f0"
@@ -36,6 +42,9 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {

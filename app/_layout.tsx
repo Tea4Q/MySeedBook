@@ -8,13 +8,14 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
 
 
 function RootLayoutNav() {
-  const { session, initialized } = useAuth();
+  const { session, initialized, isGuest } = useAuth();
   const router = useRouter(); // Get router instance
   const insets = useSafeAreaInsets();
   const [fontsLoaded, fontError] = useFonts({
@@ -24,8 +25,17 @@ function RootLayoutNav() {
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
   const isAppReady = (fontsLoaded || fontError) && initialized;
-  // Only authenticate with valid session (no bypass flags in production)
-  const isAuthenticated = !!session;
+  // Authenticate with valid session OR guest mode
+  const isAuthenticated = !!session || isGuest;
+
+  // Debug auth state changes
+  console.log('🔍 Layout Debug:', {
+    session: !!session,
+    initialized,
+    isGuest,
+    isAppReady,
+    isAuthenticated
+  });
 
 
   useEffect(() => {
@@ -47,79 +57,16 @@ function RootLayoutNav() {
     
     if (!isAppReady) return;
 
-    // Get current path (web only)
-    let currentPath = '';
-    if (Platform.OS === 'web') {
-      currentPath = window.location.pathname + window.location.search;
+    // Hide splash screen
+    SplashScreen.hideAsync();
+
+    // Handle navigation based on auth state
+    if (!isAuthenticated) {
+      // User is not authenticated and not a guest - redirect to auth
+      console.log('🔄 Redirecting to auth screen - user not authenticated');
+      router.replace('/auth');
     }
-
-    // Helper: Save last route to localStorage
-    const saveLastRoute = (route: string) => {
-      if (Platform.OS === 'web' && route && route !== '/auth' && route !== '/auth/reset-password') {
-        window.localStorage.setItem('lastRoute', route);
-      }
-    };
-
-    // Helper: Restore last route from localStorage
-    const getLastRoute = () => {
-      if (Platform.OS === 'web') {
-        return window.localStorage.getItem('lastRoute') || '/(tabs)';
-      }
-      return '/(tabs)';
-    };
-
-    if (Platform.OS === 'web') {
-      // Check if this is a password reset link
-      const urlParams = new URLSearchParams(window.location.search);
-      const accessToken = urlParams.get('access_token');
-      const type = urlParams.get('type');
-      const isPasswordReset = accessToken && type === 'recovery';
-
-      // If it's a password reset link, navigate to reset password page
-      if (isPasswordReset) {
-        setTimeout(() => {
-          SplashScreen.hideAsync();
-        }, 1200);
-        router.replace('/auth/reset-password');
-        return;
-      }
-
-      // GUARD: If already on /auth/reset-password, do not redirect away
-      if (currentPath.startsWith('/auth/reset-password')) {
-        SplashScreen.hideAsync();
-        return;
-      }
-
-      // Save the last route if authenticated and not on auth screens
-      if (isAuthenticated && currentPath && !currentPath.startsWith('/auth')) {
-        saveLastRoute(currentPath);
-      }
-
-      setTimeout(() => {
-        SplashScreen.hideAsync();
-        if (isAuthenticated) {
-          // Restore last route if not already there
-          const lastRoute = getLastRoute();
-          if (currentPath !== lastRoute) {
-            router.replace(lastRoute as any);
-          }
-        } else {
-          router.replace('/auth');
-        }
-      }, 100);
-    } else {
-      // Mobile: Navigate to main app when authenticated, auth screen when not
-      SplashScreen.hideAsync();
-      if (isAuthenticated) {
-        setTimeout(() => {
-          SplashScreen.hideAsync();
-          router.replace('/(tabs)');
-        }, 500);
-      } else {
-        router.replace('/auth');
-      }
-    }
-  }, [isAppReady, isAuthenticated, router, session]);
+  }, [isAppReady, isAuthenticated, router]);
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {
@@ -162,11 +109,13 @@ function RootLayoutNav() {
 export default function RootLayout() {
   // Conditionally wrap with GestureHandlerRootView only on mobile platforms
   const AppContent = (
-    <ThemeProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 
   if (Platform.OS === 'web') {

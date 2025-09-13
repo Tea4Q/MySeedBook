@@ -41,7 +41,7 @@
     "@testing-library/react": "^16.3.0",
     "date-fns": "^3.6.0",
     "expo": "53.0.20",
-    "expo-blur": "^14.0.3",
+    "expo-blur": "^14.1.5",
     "expo-camera": "~16.1.11",
     "expo-constants": "~17.1.6",
     "expo-dev-client": "^5.2.4",
@@ -49,9 +49,10 @@
     "expo-haptics": "^14.0.1",
     "expo-image-manipulator": "~13.1.7",
     "expo-image-picker": "^16.1.4",
-    "expo-linear-gradient": "^14.0.2",
+    "expo-linear-gradient": "^14.1.5",
     "expo-linking": "~7.1.7",
     "expo-router": "~5.1.4",
+    "expo-screen-orientation": "~8.1.7",
     "expo-secure-store": "^14.2.3",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "^2.0.1",
@@ -75,8 +76,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "uuid": "^11.1.0",
-    "expo-screen-orientation": "~8.1.7"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

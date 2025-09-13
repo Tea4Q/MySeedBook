@@ -42,6 +42,7 @@ export default function AddSupplierForm({
   onCancel,
   embedded = false,
 }: AddSupplierFormProps) {
+  // Removed guest limits for suppliers - now unlimited
   const [formData, setFormData] = useState<Partial<Supplier>>({
     supplier_name: initialSupplierName,
     webaddress: '',
@@ -129,6 +130,8 @@ export default function AddSupplierForm({
       setError('Invalid email address');
       return;
     }
+
+    // Guests can now add unlimited suppliers
     setIsSubmitting(true);
     setError(null);
     try {
@@ -159,6 +162,7 @@ export default function AddSupplierForm({
         return;
       }
       if (onSuccess && createdSupplier) {
+        // No longer tracking supplier actions for guests
         onSuccess(createdSupplier);
       }
     } catch (err: any) {

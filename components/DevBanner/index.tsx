@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { ENV } from '@/config/env';
-import { useAuth, clearInvalidAuthState } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { router } from 'expo-router';
 
@@ -22,13 +22,8 @@ export const DevBanner: React.FC = () => {
         {
           text: 'Clear',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearInvalidAuthState();
-              router.replace('/auth');
-            } catch (error) {
-              console.error('Error clearing auth:', error);
-            }
+          onPress: () => {
+            router.replace('/auth');
           },
         },
       ]

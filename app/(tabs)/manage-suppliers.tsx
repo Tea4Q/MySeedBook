@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {
   View,
-  Text,
+  Text,     
   TextInput,
   Pressable,
   StyleSheet,
@@ -15,12 +15,17 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { Search, PlusCircle, Pencil, Trash2, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
+import { guestDataManager } from '@/utils/guestDataManager';
 import { useTheme } from '@/lib/theme';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '@/components/AddSupplierForm';
+import GuestStatusBanner from '@/components/GuestStatusBanner';
+import { DemoBanner } from '@/components/DemoBanner';
 
 export default function ManageSuppliersScreen() {
   const { colors } = useTheme();
+  const { isGuest } = useAuth();
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
@@ -30,6 +35,8 @@ export default function ManageSuppliersScreen() {
     supplier: Supplier | null;
   }>({ visible: false, supplier: null });
   const [showAddSupplierModal, setShowAddSupplierModal] = React.useState(false);
+
+  console.log('🔍 ManageSuppliersScreen rendered - isGuest:', isGuest);
 
   // Helper function to convert hex to rgba
   const hexToRgba = (hex: string, alpha: number) => {
@@ -43,12 +50,27 @@ export default function ManageSuppliersScreen() {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  React.useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  const loadSuppliers = async () => {
+  const loadSuppliers = React.useCallback(async () => {
     try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('🔍 loadSuppliers called - isGuest:', isGuest);
+      
+      if (isGuest) {
+        // Load sample + demo data for guests
+        console.log('👤Loading suppliers for guest user');
+        const guestSuppliers = await guestDataManager.getAllSuppliers();
+        console.log('✅ Loaded guest suppliers:', guestSuppliers.length);
+        console.log('📋 Supplier names:', guestSuppliers.map(s => s.supplier_name));
+        setSuppliers(guestSuppliers);
+        setIsLoading(false);
+        return;
+      }
+
+      // Regular user - load from Supabase
+      console.log('🔍 Loading suppliers from Supabase');
+      
       // Try to load suppliers with soft delete filter first
       let { data, error: supabaseError } = await supabase
         .from('suppliers')
@@ -71,11 +93,16 @@ export default function ManageSuppliersScreen() {
       if (supabaseError) throw supabaseError;
       setSuppliers(data || []);
     } catch (err) {
+      console.error('❌ Error loading suppliers:', err);
       setError(err instanceof Error ? err.message : 'Failed to load suppliers');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isGuest]);
+
+  React.useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]); // Include loadSuppliers in dependencies
 
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
@@ -221,6 +248,12 @@ export default function ManageSuppliersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Guest Status Banner */}
+      <GuestStatusBanner />
+      
+      {/* Demo Mode Banner */}
+      {isGuest && <DemoBanner type="supplier" compact={true} />}
+      
       {/* Floating Add Button */}
       <Pressable
         style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}
@@ -283,7 +316,7 @@ export default function ManageSuppliersScreen() {
                 <Text style={[styles.supplierName, { color: colors.text }]}>
                   {supplier.supplier_name}
                 </Text>
-                {supplier.webaddress && (
+                {supplier.webaddress && supplier.webaddress.trim() && (
                   <Text
                     style={[styles.webaddress, { color: colors.textSecondary }]}
                   >
