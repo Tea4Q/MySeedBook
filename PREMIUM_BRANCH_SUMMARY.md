@@ -69,7 +69,7 @@ PREMIUM TIER ($5.99/month or $49.99/year):
 ```typescript
 Pricing Strategy:
 - Monthly: $5.99 (impulse purchase threshold)
-- Yearly: $39.99 (44% savings, sweet spot for annual commitment)
+- Yearly: $49.99 (33% savings, sweet spot for annual commitment)
 - Expected conversion: 3-5%
 - Revenue projection: $1,200-$10,000/month
 ```

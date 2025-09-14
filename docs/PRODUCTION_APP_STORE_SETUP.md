@@ -42,7 +42,7 @@ Your premium monetization system is now complete and tested. This guide will wal
    Product ID: com.myseedbook.catalogue.premium.yearly
    Reference Name: Premium Yearly
    Subscription Duration: 1 Year
-   Price: $39.99 USD
+   Price: $49.99 USD
    ```
 
 2. Add localized information:
@@ -99,7 +99,7 @@ Your premium monetization system is now complete and tested. This guide will wal
    Product ID: myseedbook_premium_yearly
    Name: MySeedBook Premium Yearly
    Description: Yearly access to all premium features - Save 33%!
-   Price: $39.99 USD
+   Price: $49.99 USD
    Billing period: 1 year
    ```
 
@@ -189,7 +189,7 @@ const createNativeIAP = (): IAPInterface => {
 
 ### **Pricing Psychology**
 - **Monthly**: $5.99 (impulse purchase threshold)
-- **Yearly**: $39.99 (44% savings messaging)
+- **Yearly**: $49.99 (33% savings messaging)
 - **Free Trial**: 7 days (builds engagement)
 
 ### **Conversion Optimization**

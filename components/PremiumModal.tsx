@@ -193,7 +193,7 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
                 </Text>
               </View>
               <Text style={[styles.planTitle, { color: colors.text }]}>Premium Yearly</Text>
-              <Text style={[styles.planPrice, { color: colors.primary }]}>$39.99/year</Text>
+              <Text style={[styles.planPrice, { color: colors.primary }]}>$49.99/year</Text>
               <Text style={[styles.planSavings, { color: successColor }]}>Save 33% vs monthly</Text>
               <Text style={[styles.planEquivalent, { color: textSecondary }]}>
                 Just $3.33/month

@@ -25,7 +25,7 @@
 5. **Create Yearly Subscription**  
    - Product ID: `com.myseedbook.catalogue.premium.yearly`
    - Reference Name: "Premium Yearly"
-   - Price: $39.99/year (33% savings)
+   - Price: $49.99/year (33% savings)
    - Subscription Duration: 1 Year
 
 ### **2. Configure Subscription Details**
@@ -79,7 +79,7 @@ MySeedBook Premium provides advanced gardening features for serious gardeners. T
    - Product ID: `myseedbook_premium_yearly`
    - Name: "MySeedBook Premium Yearly"
    - Description: "Yearly access to all premium features with 33% savings"
-   - Price: $39.99 USD
+   - Price: $49.99 USD
    - Billing Period: 1 year
    - Mark as "Best Value"
 
@@ -125,7 +125,7 @@ Perfect for hobbyist and professional gardeners who want to optimize their growi
 
 SUBSCRIPTION PRICING:
 • Monthly: $5.99/month
-• Yearly: $39.99/year (Save 44%)
+• Yearly: $49.99/year (Save 33%)
 • Cancel anytime through your Google Play account
 
 Download now and transform your gardening experience!
@@ -142,7 +142,7 @@ Download now and transform your gardening experience!
 
 ### **Pricing Psychology**
 - **Monthly**: $5.99 (impulse purchase threshold)
-- **Yearly**: $39.99 (44% savings encourages annual commitment)
+- **Yearly**: $49.99 (44% savings encourages annual commitment)
 - **Free Trial**: 7 days (builds engagement before payment)
 
 ### **Revenue Projections**
