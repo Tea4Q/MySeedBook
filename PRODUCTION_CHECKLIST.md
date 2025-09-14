@@ -43,14 +43,14 @@
 - [x] Image handling for seed suppliers (RareSeeds, Burpee)
 - [x] Calendar events displaying correctly
 - [ ] Loading states and error messages user-friendly
-- [x ] Navigation flows intuitive
+- [x] Navigation flows intuitive
 - [ ] Performance on lower-end devices acceptable
 
 ## 📊 Data & Storage
 
 - [x] Calendar events RLS policies configured
-- [ x] Image storage bucket permissions configured
-- [x ] Database migrations applied
+- [x] Image storage bucket permissions configured
+- [x] Database migrations applied
 - [ ] Backup strategy in place
 - [ ] Data retention policies defined
 

@@ -217,7 +217,7 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
             {/* Monthly Plan */}
             <View style={[styles.pricingCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.planTitle, { color: colors.text }]}>Premium Monthly</Text>
-              <Text style={[styles.planPrice, { color: colors.text }]}>$4.99/month</Text>
+              <Text style={[styles.planPrice, { color: colors.text }]}>$5.99/month</Text>
               <Text style={[styles.planDescription, { color: textSecondary }]}>
                 Perfect for trying premium features
               </Text>

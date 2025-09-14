@@ -19,7 +19,7 @@
 4. **Create Monthly Subscription**
    - Product ID: `com.myseedbook.catalogue.premium.monthly`
    - Reference Name: "Premium Monthly"
-   - Price: $4.99/month
+   - Price: $5.99/month
    - Subscription Duration: 1 Month
 
 5. **Create Yearly Subscription**  
@@ -72,7 +72,7 @@ MySeedBook Premium provides advanced gardening features for serious gardeners. T
    - Product ID: `myseedbook_premium_monthly`
    - Name: "MySeedBook Premium Monthly"
    - Description: "Monthly access to all premium gardening features"
-   - Price: $4.99 USD
+   - Price: $5.99 USD
    - Billing Period: 1 month
 
 3. **Create Base Plan (Yearly)**
@@ -124,8 +124,8 @@ MySeedBook Catalogue is the complete solution for managing your garden. Track se
 Perfect for hobbyist and professional gardeners who want to optimize their growing success. Start free, upgrade when you're ready to unlock the full potential of your garden.
 
 SUBSCRIPTION PRICING:
-• Monthly: $4.99/month
-• Yearly: $39.99/year (Save 33%)
+• Monthly: $5.99/month
+• Yearly: $39.99/year (Save 44%)
 • Cancel anytime through your Google Play account
 
 Download now and transform your gardening experience!
@@ -138,11 +138,11 @@ Download now and transform your gardening experience!
 ### **Market Analysis**
 - **Gardening Apps**: $2.99-$9.99/month
 - **Productivity Apps**: $4.99-$14.99/month
-- **Your Position**: Mid-range premium at $4.99/month
+- **Your Position**: Mid-range premium at $5.99/month
 
 ### **Pricing Psychology**
-- **Monthly**: $4.99 (impulse purchase threshold)
-- **Yearly**: $39.99 (33% savings encourages annual commitment)
+- **Monthly**: $5.99 (impulse purchase threshold)
+- **Yearly**: $39.99 (44% savings encourages annual commitment)
 - **Free Trial**: 7 days (builds engagement before payment)
 
 ### **Revenue Projections**

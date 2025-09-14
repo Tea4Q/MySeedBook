@@ -27,7 +27,7 @@ Your premium monetization system is now complete and tested. This guide will wal
    Product ID: com.myseedbook.catalogue.premium.monthly
    Reference Name: Premium Monthly
    Subscription Duration: 1 Month
-   Price: $4.99 USD
+   Price: $5.99 USD
    ```
 
 3. Add localized information:
@@ -89,7 +89,7 @@ Your premium monetization system is now complete and tested. This guide will wal
    Product ID: myseedbook_premium_monthly
    Name: MySeedBook Premium Monthly
    Description: Monthly access to all premium gardening features
-   Price: $4.99 USD
+   Price: $5.99 USD
    Billing period: 1 month
    ```
 
@@ -188,8 +188,8 @@ const createNativeIAP = (): IAPInterface => {
 ## 📊 **Revenue Optimization Tips**
 
 ### **Pricing Psychology**
-- **Monthly**: $4.99 (below $5 impulse threshold)
-- **Yearly**: $39.99 (33% savings messaging)
+- **Monthly**: $5.99 (impulse purchase threshold)
+- **Yearly**: $39.99 (44% savings messaging)
 - **Free Trial**: 7 days (builds engagement)
 
 ### **Conversion Optimization**
@@ -204,7 +204,7 @@ const conversionStrategies = {
 ```
 
 ### **A/B Testing Opportunities**
-1. **Pricing tiers**: Test $3.99 vs $4.99 monthly
+1. **Pricing tiers**: Test $4.99 vs $5.99 monthly
 2. **Trial length**: 7 days vs 14 days
 3. **Feature messaging**: Benefits vs features
 4. **Upgrade prompts**: Timing and frequency

@@ -171,9 +171,11 @@ export default function SettingsScreen() {
       </View>
 
       {/* Development section - Premium Testing */}
-      {__DEV__ && (
+      {(__DEV__ || process.env.EXPO_PUBLIC_ENABLE_PREMIUM_TESTING === 'true') && (
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Development</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {__DEV__ ? 'Development' : 'Admin Tools'}
+          </Text>
           <Pressable 
             style={({ pressed }) => [
               styles.setting,
