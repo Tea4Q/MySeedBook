@@ -155,13 +155,10 @@ export default function AuthScreen() {
   }, [fadeAnim, scaleAnim, slideAnim, leafAnims]);
 
   const handleSignIn = async () => {
-    console.log('🔍 Regular sign in started');
     setIsLoading(true);
     setError(null);
     try {
-      console.log('🔍 Calling signIn...');
       await signIn(loginEmail, loginPassword);
-      console.log('✅ Regular sign in successful - navigation handled by layout');
       // Let _layout.tsx handle navigation after auth state changes
     } catch (err) {
       console.error('❌ Regular sign in error:', err);
@@ -221,13 +218,10 @@ export default function AuthScreen() {
   };
 
   const handleGuestSignIn = async () => {
-    console.log('🔍 Guest sign in started');
     setIsLoading(true);
     setError(null);
     try {
-      console.log('🔍 Calling signInAsGuest...');
       await signInAsGuest();
-      console.log('✅ Guest sign in successful - navigation handled by layout');
       // Let _layout.tsx handle navigation after auth state changes
     } catch (err) {
       console.error('❌ Guest sign in error:', err);
@@ -308,7 +302,7 @@ export default function AuthScreen() {
               />
             </View>
             <Text style={styles.appTitle}>Gardening Catalogue</Text>
-            <Text style={styles.appSubtitle}>Cultivate your green dreams</Text>
+            <Text style={styles.appSubtitle}>Cultivate your Garden dreams</Text>
           </View>
         </Animated.View>
 

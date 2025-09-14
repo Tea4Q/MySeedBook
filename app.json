@@ -2,7 +2,7 @@
   "expo": {
     "name": "MySeedBook Catalogue",
     "slug": "myseedbook-catalogue",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "default",
     "icon": "./assets/images/icon1.png",
     "scheme": "myseedbook-catalogue",
@@ -31,12 +31,11 @@
     },
     "android": {
       "package": "com.myseedbook.catalogue",
-      "versionCode": 5,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon1.png",
         "backgroundColor": "#f0f9f0"
       },
-      "orientation": "default",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -66,7 +65,8 @@
           "photosPermission": "Allow MySeedBook Catalogue to access your photo library to select images of your seeds and plants."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

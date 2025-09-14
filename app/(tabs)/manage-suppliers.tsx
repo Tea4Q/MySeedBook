@@ -20,7 +20,6 @@ import { guestDataManager } from '@/utils/guestDataManager';
 import { useTheme } from '@/lib/theme';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '@/components/AddSupplierForm';
-import GuestStatusBanner from '@/components/GuestStatusBanner';
 import { DemoBanner } from '@/components/DemoBanner';
 
 export default function ManageSuppliersScreen() {
@@ -248,10 +247,7 @@ export default function ManageSuppliersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Guest Status Banner */}
-      <GuestStatusBanner />
-      
-      {/* Demo Mode Banner */}
+      {/* Demo Mode Banner for Guest Users */}
       {isGuest && <DemoBanner type="supplier" compact={true} />}
       
       {/* Floating Add Button */}

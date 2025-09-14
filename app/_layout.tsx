@@ -28,15 +28,6 @@ function RootLayoutNav() {
   // Authenticate with valid session OR guest mode
   const isAuthenticated = !!session || isGuest;
 
-  // Debug auth state changes
-  console.log('🔍 Layout Debug:', {
-    session: !!session,
-    initialized,
-    isGuest,
-    isAppReady,
-    isAuthenticated
-  });
-
 
   useEffect(() => {
     // Configure screen orientation for mobile (more explicit)

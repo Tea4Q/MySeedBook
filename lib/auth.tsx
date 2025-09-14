@@ -106,14 +106,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔍 Auth event:', event, 'Session:', !!session);
       if (event === 'TOKEN_REFRESHED') {
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
       } else if (event === 'SIGNED_IN') {
-        console.log('🚀 SIGNED_IN detected - navigating to tabs');
         setSession(session);
         setUser(session?.user ?? null);
         // Navigate immediately after successful sign in
@@ -150,22 +148,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔍 Starting sign in process');
-      
       // Debug network connectivity on Android
       if (Platform.OS === 'android') {
         debugNetwork();
       }
       
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
       if (error) {
-        console.log('❌ Supabase signin error:', error);
         // Enhanced error handling for network issues
         const enhancedError = networkErrorHandler(error, 'signIn');
         throw enhancedError;
       }
-      
-      console.log('✅ Sign in successful');
     } catch (error: any) {
       logger.error('Sign in error:', error);
       
@@ -194,8 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      console.log('🔍 Starting signup process');
-      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -205,12 +197,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        console.log('❌ Supabase signup error:', error);
         const enhancedError = networkErrorHandler(error, 'signUp');
         throw enhancedError;
       }
-      
-      console.log('✅ Signup successful');
     } catch (error: any) {
       logger.error('Sign up error:', error);
       
@@ -299,13 +288,11 @@ const signOut = async () => {
 
   // Guest authentication functions
   const signInAsGuest = async () => {
-    console.log('🔍 Guest sign in - setting guest state');
     setIsGuest(true);
     setUser(null);
     setSession(null);
     await refreshGuestUsage();
     // Navigate immediately after successful guest sign in
-    console.log('🚀 Guest sign in complete - navigating to tabs');
     setTimeout(() => {
       router.replace('/(tabs)');
     }, 100);

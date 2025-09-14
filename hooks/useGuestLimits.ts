@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
@@ -7,7 +6,6 @@ import { guestTracker } from '@/utils/guestTracker';
 export function useGuestLimits() {
   const { isGuest, refreshGuestUsage } = useAuth();
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(false);
 
   const checkAndPromptForLimit = async (action: 'seed' | 'supplier' | 'view'): Promise<boolean> => {
     if (!isGuest) return true; // Not a guest, allow action
@@ -73,7 +71,6 @@ export function useGuestLimits() {
   };
 
   return {
-    isChecking,
     checkAndPromptForLimit,
     trackAction,
     showUpgradePrompt,

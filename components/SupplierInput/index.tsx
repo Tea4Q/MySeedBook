@@ -20,7 +20,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
-import { debounce } from '@/utils/debounce';
 import AddSupplierForm from '../AddSupplierForm';
 
 interface SupplierInputProps {
@@ -82,26 +81,23 @@ export function SupplierInput({
   }, [loadSuppliers]);
 
   // Debounced search function
-  const filterSuppliers = useCallback(
-    debounce((query: string) => {
-      if (!query.trim()) {
-        setFilteredSuppliers([]);
-        setShowDropdown(false);
-        return;
-      }
+  const filterSuppliers = useCallback((query: string) => {
+    if (!query.trim()) {
+      setFilteredSuppliers([]);
+      setShowDropdown(false);
+      return;
+    }
 
-      const searchTerms = query.toLowerCase().split(' ');
-      const filtered = suppliers.filter((supplier) =>
-        searchTerms.every((term) =>
-          supplier.supplier_name?.toLowerCase().includes(term)
-        )
-      );
-      
-      setFilteredSuppliers(filtered);
-      setShowDropdown(true);
-    }, 300),
-    [suppliers]
-  );
+    const searchTerms = query.toLowerCase().split(' ');
+    const filtered = suppliers.filter((supplier) =>
+      searchTerms.every((term) =>
+        supplier.supplier_name?.toLowerCase().includes(term)
+      )
+    );
+    
+    setFilteredSuppliers(filtered);
+    setShowDropdown(true);
+  }, [suppliers]);
 
   const handleInputChange = (text: string) => {
     setInputValue(text);
@@ -206,7 +202,7 @@ export function SupplierInput({
                   >
                     <Plus size={20} color="#ffffff" />
                     <Text style={styles.addNewText}>
-                      Add "{inputValue}" as new supplier
+                      Add &quot;{inputValue}&quot; as new supplier
                     </Text>
                   </TouchableOpacity>
                 )}

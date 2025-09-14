@@ -77,7 +77,6 @@ export default function InventoryScreen() {
         setError(null);
         
         try {
-          console.log('Guest mode: Loading sample seeds');
           const allSeeds = await guestDataManager.getAllSeeds();
           
           // Apply search filter if there's a search term
@@ -91,7 +90,6 @@ export default function InventoryScreen() {
           }
           
           setSeeds(filteredSeeds);
-          console.log(`Guest mode: Loaded ${filteredSeeds.length} sample seeds`);
         } catch (e: any) {
           console.error('Error loading sample seeds:', e);
           setError('Failed to load sample seeds');
