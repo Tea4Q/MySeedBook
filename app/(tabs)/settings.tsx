@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
 
-import { Bell, Sun, Moon, CloudRain, LogOut } from 'lucide-react-native';
+import { Bell, Sun, Moon, CloudRain, LogOut, TestTube } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { router } from 'expo-router';
@@ -169,6 +169,28 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
         <Text style={[styles.version, { color: colors.textSecondary }]}>Version 1.0.0</Text>
       </View>
+
+      {/* Development section - Premium Testing */}
+      {__DEV__ && (
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Development</Text>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.setting,
+              pressed && { backgroundColor: colors.surface, opacity: 0.7 }
+            ]}
+            onPress={() => router.push('/premium-test')}
+            android_ripple={{ color: colors.primary + '20' }}
+          >
+            <View style={styles.settingInfo}>
+              <TestTube size={24} color={colors.primary} />
+              <Text style={[styles.settingText, { color: colors.text }]}>
+                Test Premium Features
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+      )}
 
       {/* Sign Out section */}
       <View style={[styles.section, { borderBottomColor: colors.border }]}>
