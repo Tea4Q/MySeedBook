@@ -1,7 +1,7 @@
 # Privacy Policy - MySeedBook Catalogue
 
-**Effective Date:** [Insert Date]  
-**Last Updated:** [Insert Date]
+**Effective Date:** 09/15/2025  
+**Last Updated:** 09/15/2025
 
 ## Introduction
 
@@ -109,9 +109,9 @@ We may update this Privacy Policy to reflect changes in our practices or for leg
 
 If you have questions about this Privacy Policy or our data practices, please contact us:
 
-- **Email**: [Insert Support Email]
+- **Email**: info@chandraskinner@gmail.com
 - **App**: Use the "Contact Support" feature in app settings
-- **Mail**: [Insert Physical Address if required]
+
 
 ## Consent
 
