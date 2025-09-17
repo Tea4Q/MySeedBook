@@ -24,7 +24,23 @@ export const ENV = {
   api: {
     // Add any API-specific development settings here
     timeout: __DEV__ ? 10000 : 5000,
-  }
+  },
+
+  // Weather API configuration
+  weather: {
+    // OpenWeatherMap API - Free tier: 1000 calls/day, 60 calls/minute
+    apiKey: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY || 'demo-key',
+    baseUrl: 'https://api.openweathermap.org/data/2.5',
+    units: 'imperial', // Use Fahrenheit for US gardeners
+    // Frost temperature threshold (in Fahrenheit)
+    frostThreshold: 32,
+    // Gardening temperature thresholds
+    temperatures: {
+      coldSeason: 50,  // Cool season crops (lettuce, peas)
+      warmSeason: 65,  // Warm season crops (tomatoes, peppers)
+      hotSeason: 80,   // Hot season crops (okra, melons)
+    },
+  },
 };
 
 // Helper functions

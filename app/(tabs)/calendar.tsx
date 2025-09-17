@@ -34,6 +34,9 @@ import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { AnimatedWeatherIcon, CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIcon';
+import { WeatherDetailModal } from '../../components/Weather/WeatherDetailModal';
+import { calendarWeatherService } from '../../lib/services/calendarWeatherService';
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -145,6 +148,11 @@ export default function CalendarScreen() {
   const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isEventModalVisible, setIsEventModalVisible] = useState(false);
+  
+  // Weather-related state
+  const [weatherData, setWeatherData] = useState<{[key: string]: any}>({});
+  const [selectedDateWeather, setSelectedDateWeather] = useState<any>(null);
+  const [isWeatherModalVisible, setIsWeatherModalVisible] = useState(false);
   const lastTap = useRef<number | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<PlantingEvent>>({
     category: 'sow',
@@ -161,6 +169,7 @@ export default function CalendarScreen() {
   // When the month changes, fetch events for the new month
   useEffect(() => {
     fetchEventsForMonth(currentDate);
+    fetchWeatherForMonth(currentDate);
   }, [currentDate]);
 
   useEffect(() => {
@@ -253,6 +262,33 @@ export default function CalendarScreen() {
     }
   };
 
+  // Fetch weather data for the month
+  const fetchWeatherForMonth = async (date: Date) => {
+    try {
+      console.log('🌤️ Fetching weather for month:', format(date, 'MMMM yyyy'));
+      // Get weather for each day of the month
+      const startDate = startOfMonth(date);
+      const endDate = endOfMonth(date);
+      const days = eachDayOfInterval({ start: startDate, end: endDate });
+      
+      const monthWeatherData: { [key: string]: any } = {};
+      
+      for (const day of days) {
+        const weatherData = await calendarWeatherService.getWeatherForDate(day);
+        if (weatherData) {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          monthWeatherData[dateKey] = weatherData;
+          console.log('✅ Weather data for', dateKey, ':', weatherData.condition?.main);
+        }
+      }
+      
+      console.log('🌤️ Total weather days loaded:', Object.keys(monthWeatherData).length);
+      setWeatherData(monthWeatherData);
+    } catch (error) {
+      console.error('❌ Error fetching weather for month:', error);
+    }
+  };
+
   // Fetch seed growth data (days to germinate/harvest) by seedId
   const fetchSeedGrowthData = async (seedId: string) => {
     try {
@@ -309,20 +345,6 @@ export default function CalendarScreen() {
         event.date.getMonth() === date.getMonth() &&
         event.date.getFullYear() === date.getFullYear()
     );
-  };
-
-  const handleDatePress = (date: Date) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
-      // Double-tap detected: open add event modal and pre-fill date
-      openAddEventModal({ date });
-      lastTap.current = null;
-    } else {
-      // Single tap: highlight the date
-      lastTap.current = now;
-      setMarkedRange({ start: date, end: null }); // Highlight the tapped date
-    }
   };
 
   const getEventsForSelectedDate = () => {
@@ -560,6 +582,10 @@ export default function CalendarScreen() {
                 event.date.getFullYear() === date.getFullYear()
             );
 
+            // Get weather data for this date
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const dayWeatherData = weatherData[dateKey];
+
             return (
               
               <Pressable
@@ -572,14 +598,64 @@ export default function CalendarScreen() {
                   isEnd && [styles.dayEnd, { backgroundColor: colors.error + '80' }], // 80 = 50% opacity
                   dateEvents.length > 0 && [styles.dayWithEvent, { backgroundColor: colors.surface }],
                 ]}
-                onPress={() => handleDatePress(date)}
               >
-                <Text style={[
-                  styles.dayText, 
-                  { color: isCurrentMonth ? colors.text : colors.textSecondary }
-                ]}>
-                  {date.getDate()}
-                </Text>
+                <View style={styles.dayContent}>
+                  {/* Weather Icon - Centered at top */}
+                  {dayWeatherData && isCurrentMonth ? (
+                    <View style={styles.weatherIconContainer}>
+                      <Pressable
+                        onPress={() => {
+                          console.log('Weather icon pressed for:', dateKey);
+                          console.log('Weather data:', dayWeatherData);
+                          // Single tap on weather icon opens weather modal
+                          setSelectedDateWeather(dayWeatherData);
+                          setSelectedDate(date);
+                          setIsWeatherModalVisible(true);
+                        }}
+                        onPressIn={() => {}}
+                        onPressOut={() => {}}
+                      >
+                        <CalendarWeatherIcon 
+                          weatherCode={dayWeatherData.condition?.icon || dayWeatherData.condition?.main || dayWeatherData.weather?.[0]?.id || 'unknown'}
+                          size="large"
+                        />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.weatherIconPlaceholder} />
+                  )}
+                  
+                  {/* Date Number - Double tap for adding events */}
+                  <Pressable
+                    onPress={() => {
+                      console.log('Date number pressed:', date);
+                      const now = Date.now();
+                      const DOUBLE_TAP_DELAY = 300;
+                      console.log('Tap timing - now:', now, 'lastTap:', lastTap.current);
+                      
+                      if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
+                        console.log('Double-tap detected! Opening add event modal');
+                        // Double-tap on date number: open add event modal
+                        openAddEventModal({ date });
+                        lastTap.current = null;
+                      } else {
+                        console.log('Single tap - setting lastTap');
+                        // Single tap on date number: just highlight the date
+                        lastTap.current = now;
+                        setMarkedRange({ start: date, end: null });
+                      }
+                    }}
+                    style={styles.dateNumberContainer}
+                  >
+                    <Text style={[
+                      styles.dayText, 
+                      { color: isCurrentMonth ? colors.text : colors.textSecondary }
+                    ]}>
+                      {date.getDate()}
+                    </Text>
+                  </Pressable>
+                </View>
+                
                 <View style={styles.eventIndicators}>
                   {dateEvents.map((event) => (
                     <View
@@ -909,6 +985,16 @@ export default function CalendarScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Weather Detail Modal */}
+      {selectedDate && (
+        <WeatherDetailModal
+          visible={isWeatherModalVisible}
+          onClose={() => setIsWeatherModalVisible(false)}
+          date={selectedDate}
+          weatherData={selectedDateWeather}
+        />
+      )}
     </View>
   );
 }
@@ -953,13 +1039,38 @@ const styles = StyleSheet.create({
   },
   day: {
     width: '14.28%',
-    aspectRatio: 1,
-    justifyContent: 'center',
+    aspectRatio: 0.9, // Slightly taller to accommodate larger weather icons
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: 4,
+    padding: 2,
+    minHeight: 60, // Increased minimum height for larger weather icons
+  },
+  dayContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    width: '100%',
+  },
+  weatherIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    width: '100%',
+  },
+  weatherIconPlaceholder: {
+    height: 44,
+    width: '100%',
+  },
+  dateNumberContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -2, // Slight negative margin to bring date closer to weather icon
   },
   dayText: {
     fontSize: 16,
+  },
+  weatherIcon: {
+    opacity: 0.7,
   },
   dayOtherMonth: {
     // Style for dates from previous/next month

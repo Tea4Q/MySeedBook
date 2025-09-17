@@ -5,6 +5,7 @@ import {
   Calendar,
   Settings,
   Users,
+  CloudRain,
 } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import React from 'react';
@@ -55,6 +56,13 @@ export default function TabLayout() {
         options={{
           title: 'Planting Calendar',
           tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="weather"
+        options={{
+          title: 'Weather & Garden',
+          tabBarIcon: ({ color }) => <CloudRain size={24} color={color} />,
         }}
       />
       <Tabs.Screen
