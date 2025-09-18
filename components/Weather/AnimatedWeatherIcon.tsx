@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { StyleSheet, Animated, Pressable } from 'react-native';
 import WeatherIcon from './WeatherIcon';
 
 interface AnimatedWeatherIconProps {
@@ -130,27 +130,33 @@ export const CalendarWeatherIcon: React.FC<{
   });
   
   return (
-    <Animated.View style={[
-      styles.calendarIconContainer,
-      {
-        opacity: fadeAnim,
-        transform: [
-          { scale: Animated.multiply(scaleAnim, pressAnim) },
-          ...(weatherCode && (
-            weatherCode.toString().startsWith('11') || 
-            weatherCode.toString().startsWith('50')
-          ) ? [{ rotate: spin }] : [])
-        ]
-      }
-    ]}>
-      <WeatherIcon
-        condition={weatherCode}
-        size={iconSize}
-        styleVariant="fill"
-        autoPlay={true}
-        loop={true}
-      />
-    </Animated.View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={[
+        styles.calendarIconContainer,
+        {
+          opacity: fadeAnim,
+          transform: [
+            { scale: Animated.multiply(scaleAnim, pressAnim) },
+            ...(weatherCode && (
+              weatherCode.toString().startsWith('11') || 
+              weatherCode.toString().startsWith('50')
+            ) ? [{ rotate: spin }] : [])
+          ]
+        }
+      ]}>
+        <WeatherIcon
+          condition={weatherCode}
+          size={iconSize}
+          styleVariant="fill"
+          autoPlay={true}
+          loop={true}
+        />
+      </Animated.View>
+    </Pressable>
   );
 };
 

@@ -223,7 +223,7 @@ class LocationService {
   /**
    * Search for locations by name (using OpenWeatherMap Geocoding API)
    */
-  async searchLocations(query: string): Promise<Array<{ name: string; lat: number; lon: number; country: string }>> {
+  async searchLocations(query: string): Promise<{ name: string; lat: number; lon: number; country: string }[]> {
     try {
       const response = await fetch(
         `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=5&appid=${process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY}`

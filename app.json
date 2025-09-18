@@ -2,13 +2,13 @@
   "expo": {
     "name": "MySeedBook Catalogue",
     "slug": "myseedbook-catalogue",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "default",
     "icon": "./assets/images/icon1.png",
     "scheme": "myseedbook-catalogue",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "description": "A comprehensive gardening application for managing your seed collection and supplier information. Track planting seasons, harvest times, and maintain detailed records of your gardening inventory.",
+    "description": "A comprehensive gardening application with weather integration for managing your seed collection and supplier information. Track planting seasons, harvest times, get weather insights, and maintain detailed records of your gardening inventory with real-time weather data.",
     "primaryColor": "#336633",
     "splash": {
       "image": "./assets/images/splashScreenImage.png",
@@ -18,12 +18,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.myseedbook.catalogue",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses the camera to capture photos of your seeds and plants for your garden catalogue.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images of your seeds and plants.",
-        "NSMicrophoneUsageDescription": "This app may use the microphone for video recording features."
+        "NSMicrophoneUsageDescription": "This app may use the microphone for video recording features.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate weather information for your gardening activities."
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -31,7 +32,7 @@
     },
     "android": {
       "package": "com.myseedbook.catalogue",
-      "versionCode": 10,
+      "versionCode": 13,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon1.png",
         "backgroundColor": "#f0f9f0"
@@ -41,10 +42,8 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",

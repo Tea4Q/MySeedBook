@@ -14,6 +14,7 @@ import { CurrentWeatherCard, WeatherForecastCard, GardeningConditionsCard } from
 import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
 import { gardeningInsightsService } from '../../lib/services/gardeningInsightsService';
+import { usePremiumFeature } from '../../hooks/usePremiumFeature';
 import {
   CurrentWeather,
   WeatherForecast,
@@ -21,6 +22,8 @@ import {
 } from '../../types/weather';
 
 export default function WeatherScreen() {
+  const { checkFeature, showUpgradePrompt } = usePremiumFeature();
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null);
@@ -28,6 +31,15 @@ export default function WeatherScreen() {
   const [gardeningConditions, setGardeningConditions] = useState<GardeningConditions | null>(null);
   const [locationName, setLocationName] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user has access to weather features
+  useEffect(() => {
+    if (!checkFeature('weather_integration')) {
+      setShowPremiumModal(true);
+      return;
+    }
+    loadWeatherData();
+  }, [checkFeature]);
 
   // Load weather data
   const loadWeatherData = async (showRefresh = false) => {
@@ -121,6 +133,49 @@ export default function WeatherScreen() {
   const handleRecommendationPress = (recommendation: string) => {
     Alert.alert('Garden Tip', recommendation, [{ text: 'Got it!' }]);
   };
+
+  // Handle premium upgrade
+  const handlePremiumUpgrade = () => {
+    setShowPremiumModal(false);
+    showUpgradePrompt('Weather Integration');
+  };
+
+  // Show premium upgrade screen if user doesn't have weather integration
+  if (showPremiumModal) {
+    return (
+      <View style={styles.premiumContainer}>
+        <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
+        <Text style={styles.premiumTitle}>Weather Integration</Text>
+        <Text style={styles.premiumDescription}>
+          Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
+        </Text>
+        <View style={styles.premiumFeatures}>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Real-time weather conditions</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>7-day detailed forecast</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Gardening condition insights</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Personalized garden tips</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
+          <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={() => setShowPremiumModal(false)}>
+          <Text style={styles.backButtonText}>Back to Garden</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading && !currentWeather) {
     return (
@@ -286,5 +341,68 @@ const styles = StyleSheet.create({
     color: '#95A5A6',
     textAlign: 'center',
     marginTop: 4,
+  },
+  // Premium upgrade styles
+  premiumContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  premiumIcon: {
+    marginBottom: 24,
+  },
+  premiumTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  premiumDescription: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  premiumFeatures: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  featureText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    marginLeft: 16,
+    flex: 1,
+  },
+  upgradeButton: {
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginBottom: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    paddingVertical: 12,
+  },
+  backButtonText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

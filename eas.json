@@ -48,6 +48,18 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       }
+    },
+    "premium-weather": {
+      "extends": "production",
+      "env": {
+        "NODE_ENV": "production",
+        "FEATURE_WEATHER_INTEGRATION": "true"
+      },
+      "metadata": {
+        "buildProfile": "premium-weather",
+        "version": "1.3.0",
+        "features": ["weather_integration", "premium_features"]
+      }
     }
   },
   "submit": {

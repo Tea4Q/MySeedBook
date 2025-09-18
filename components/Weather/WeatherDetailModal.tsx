@@ -6,7 +6,6 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
-  Pressable,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { CalendarWeatherData } from '../../lib/services/calendarWeatherService';

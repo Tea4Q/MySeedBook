@@ -9,11 +9,6 @@ export class GardeningInsightsService {
    * Analyze current weather and provide gardening insights
    */
   analyzeCurrentConditions(weather: CurrentWeather): GardeningConditions {
-    const temp = weather.temperature;
-    const humidity = weather.humidity;
-    const windSpeed = weather.wind.speed;
-    const condition = weather.condition.main.toLowerCase();
-    
     // Determine overall suitability
     const suitability = this.calculateSuitability(weather);
     
@@ -46,7 +41,7 @@ export class GardeningInsightsService {
   /**
    * Analyze forecast and provide multi-day insights
    */
-  analyzeForecast(forecast: WeatherForecast[]): Array<GardeningConditions & { date: string }> {
+  analyzeForecast(forecast: WeatherForecast[]): (GardeningConditions & { date: string })[] {
     return forecast.map(day => ({
       date: day.date,
       ...this.analyzeCurrentConditions({
@@ -318,8 +313,6 @@ export class GardeningInsightsService {
   private calculateBestTimes(weather: CurrentWeather): { planting?: string; watering?: string; harvesting?: string } {
     const bestTimes: any = {};
     const temp = weather.temperature;
-    const sunrise = new Date(weather.sunrise);
-    const sunset = new Date(weather.sunset);
 
     // Best planting time
     if (temp > 80) {
@@ -385,7 +378,7 @@ export class GardeningInsightsService {
   /**
    * Calculate frost probability for the next few days
    */
-  calculateFrostRisk(forecast: WeatherForecast[]): Array<{ date: string; risk: 'none' | 'low' | 'moderate' | 'high' }> {
+  calculateFrostRisk(forecast: WeatherForecast[]): { date: string; risk: 'none' | 'low' | 'moderate' | 'high' }[] {
     return forecast.map(day => {
       const minTemp = day.temp.min;
       let risk: 'none' | 'low' | 'moderate' | 'high' = 'none';

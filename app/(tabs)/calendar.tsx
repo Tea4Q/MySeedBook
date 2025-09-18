@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Platform,
   View,
@@ -31,12 +31,13 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { supabase } from '@../../lib/supabase';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/lib/theme';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { AnimatedWeatherIcon, CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIcon';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIcon';
 import { WeatherDetailModal } from '../../components/Weather/WeatherDetailModal';
 import { calendarWeatherService } from '../../lib/services/calendarWeatherService';
+import { usePremiumFeature } from '../../hooks/usePremiumFeature';
 
 type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
 
@@ -62,33 +63,6 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   harvest: 'Harvest Date',
   germination: 'Germination Date',
 };
-
-const mockEvents: PlantingEvent[] = [
-  {
-    id: '1',
-    date: new Date(2024, 2, 15),
-    seedName: 'Brandywine Tomato',
-    seedId: '1',
-    category: 'sow',
-    notes: 'Start indoors under grow lights',
-  },
-  {
-    id: '2',
-    date: new Date(2024, 2, 20),
-    seedName: 'Brandywine Tomato',
-    seedId: '1',
-    category: 'germination',
-    notes: 'Expected germination date',
-  },
-  {
-    id: '3',
-    date: new Date(2024, 7, 15),
-    seedName: 'Brandywine Tomato',
-    seedId: '1',
-    category: 'harvest',
-    notes: 'Begin harvesting when fruits are pink and slightly soft',
-  },
-];
 
 interface DateCalculation {
   germinationDate: Date;
@@ -132,6 +106,7 @@ const calculateDates = (
 
 export default function CalendarScreen() {
   const { colors } = useTheme(); // Add theme support
+  const { checkFeature } = usePremiumFeature();
   const params = useLocalSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<PlantingEvent[]>([]);
@@ -166,18 +141,49 @@ export default function CalendarScreen() {
     fetchEvents();
   }, []);
 
+  // Fetch weather data for the month
+  const fetchWeatherForMonth = useCallback(async (date: Date) => {
+    // Only fetch weather if user has premium weather integration
+    if (!checkFeature('weather_integration')) {
+      return;
+    }
+    
+    try {
+      console.log('🌤️ Fetching weather for month:', format(date, 'MMMM yyyy'));
+      // Get weather for each day of the month
+      const startDate = startOfMonth(date);
+      const endDate = endOfMonth(date);
+      const days = eachDayOfInterval({ start: startDate, end: endDate });
+      
+      const monthWeatherData: { [key: string]: any } = {};
+      
+      for (const day of days) {
+        const weatherData = await calendarWeatherService.getWeatherForDate(day);
+        if (weatherData) {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          monthWeatherData[dateKey] = weatherData;
+          console.log('✅ Weather data for', dateKey, ':', weatherData.condition?.main);
+        }
+      }
+      
+      console.log('🌤️ Total weather days loaded:', Object.keys(monthWeatherData).length);
+      setWeatherData(monthWeatherData);
+    } catch (error) {
+      console.error('❌ Error fetching weather for month:', error);
+    }
+  }, [checkFeature]);
+
   // When the month changes, fetch events for the new month
   useEffect(() => {
     fetchEventsForMonth(currentDate);
     fetchWeatherForMonth(currentDate);
-  }, [currentDate]);
+  }, [currentDate, fetchWeatherForMonth]);
 
   useEffect(() => {
     if (isModalVisible) {
       fetchEventsForMonth(currentDate); // Fetch events for the current month when modal opens
-      fetchEventsForMonth(currentDate); // Fetch events for the current month when modal opens
     }
-  }, [isModalVisible]);
+  }, [isModalVisible, currentDate]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -262,33 +268,6 @@ export default function CalendarScreen() {
     }
   };
 
-  // Fetch weather data for the month
-  const fetchWeatherForMonth = async (date: Date) => {
-    try {
-      console.log('🌤️ Fetching weather for month:', format(date, 'MMMM yyyy'));
-      // Get weather for each day of the month
-      const startDate = startOfMonth(date);
-      const endDate = endOfMonth(date);
-      const days = eachDayOfInterval({ start: startDate, end: endDate });
-      
-      const monthWeatherData: { [key: string]: any } = {};
-      
-      for (const day of days) {
-        const weatherData = await calendarWeatherService.getWeatherForDate(day);
-        if (weatherData) {
-          const dateKey = format(day, 'yyyy-MM-dd');
-          monthWeatherData[dateKey] = weatherData;
-          console.log('✅ Weather data for', dateKey, ':', weatherData.condition?.main);
-        }
-      }
-      
-      console.log('🌤️ Total weather days loaded:', Object.keys(monthWeatherData).length);
-      setWeatherData(monthWeatherData);
-    } catch (error) {
-      console.error('❌ Error fetching weather for month:', error);
-    }
-  };
-
   // Fetch seed growth data (days to germinate/harvest) by seedId
   const fetchSeedGrowthData = async (seedId: string) => {
     try {
@@ -313,11 +292,29 @@ export default function CalendarScreen() {
         setDaysToGerminate('7');
         setDaysToHarvest('80');
       }
-    } catch (error) {
+    } catch {
       setDaysToGerminate('7');
       setDaysToHarvest('80');
     }
   };
+
+  // Centralized function to open Add Event modal with pre-filled data
+  const openAddEventModal = useCallback(({ seedId, seedName, date }: { seedId?: string; seedName?: string; date?: Date }) => {
+    setNewEvent({
+      category: 'sow',
+      date: date || new Date(),
+      seedId: seedId || '',
+      seedName: seedName || '',
+    });
+    setIsAddEventModalVisible(true);
+    // Optionally fetch seed growth data if seedId is provided
+    if (seedId) {
+      fetchSeedGrowthData(seedId);
+    } else {
+      setDaysToGerminate('7');
+      setDaysToHarvest('80');
+    }
+  }, []);
 
   // Open add event modal if coming from double press in inventory
   useEffect(() => {
@@ -328,7 +325,7 @@ export default function CalendarScreen() {
       openAddEventModal({ seedId: params.seedId as string, seedName: params.seedName as string });
     }
     // else do nothing (default state)
-  }, [params.openAddEvent, params.seedId, params.seedName]);
+  }, [params.openAddEvent, params.seedId, params.seedName, openAddEventModal]);
 
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(currentDate)),
@@ -337,15 +334,6 @@ export default function CalendarScreen() {
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const previousMonth = () => setCurrentDate(addMonths(currentDate, -1));
-
-  const getEventsForDate = (date: Date) => {
-    return events.filter(
-      (event) =>
-        event.date.getDate() === date.getDate() &&
-        event.date.getMonth() === date.getMonth() &&
-        event.date.getFullYear() === date.getFullYear()
-    );
-  };
 
   const getEventsForSelectedDate = () => {
     if (!selectedDate) return [];
@@ -375,7 +363,7 @@ export default function CalendarScreen() {
       // Note: seedId is optional - allow general garden events without specific seeds
 
       // Insert the main event
-      const { data: mainEventData, error: mainEventError } = await supabase
+      const { error: mainEventError } = await supabase
         .from('calendar_events')
         .insert({
           seed_id: newEvent.seedId || null, // Allow null for general events
@@ -465,24 +453,6 @@ export default function CalendarScreen() {
       alert('Error deleting event. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Centralized function to open Add Event modal with pre-filled data
-  const openAddEventModal = ({ seedId, seedName, date }: { seedId?: string; seedName?: string; date?: Date }) => {
-    setNewEvent({
-      category: 'sow',
-      date: date || new Date(),
-      seedId: seedId || '',
-      seedName: seedName || '',
-    });
-    setIsAddEventModalVisible(true);
-    // Optionally fetch seed growth data if seedId is provided
-    if (seedId) {
-      fetchSeedGrowthData(seedId);
-    } else {
-      setDaysToGerminate('7');
-      setDaysToHarvest('80');
     }
   };
 
@@ -601,16 +571,14 @@ export default function CalendarScreen() {
               >
                 <View style={styles.dayContent}>
                   {/* Weather Icon - Centered at top */}
-                  {dayWeatherData && isCurrentMonth ? (
+                  {checkFeature('weather_integration') && dayWeatherData && isCurrentMonth ? (
                     <View style={styles.weatherIconContainer}>
                       <Pressable
                         onPress={() => {
-                          console.log('Weather icon pressed for:', dateKey);
-                          console.log('Weather data:', dayWeatherData);
-                          // Single tap on weather icon opens weather modal
-                          setSelectedDateWeather(dayWeatherData);
-                          setSelectedDate(date);
-                          setIsWeatherModalVisible(true);
+                      // Single tap on weather icon opens weather modal
+                      setSelectedDateWeather(dayWeatherData);
+                      setSelectedDate(date);
+                      setIsWeatherModalVisible(true);
                         }}
                         onPressIn={() => {}}
                         onPressOut={() => {}}
@@ -628,18 +596,14 @@ export default function CalendarScreen() {
                   {/* Date Number - Double tap for adding events */}
                   <Pressable
                     onPress={() => {
-                      console.log('Date number pressed:', date);
                       const now = Date.now();
                       const DOUBLE_TAP_DELAY = 300;
-                      console.log('Tap timing - now:', now, 'lastTap:', lastTap.current);
                       
                       if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
-                        console.log('Double-tap detected! Opening add event modal');
                         // Double-tap on date number: open add event modal
                         openAddEventModal({ date });
                         lastTap.current = null;
                       } else {
-                        console.log('Single tap - setting lastTap');
                         // Single tap on date number: just highlight the date
                         lastTap.current = now;
                         setMarkedRange({ start: date, end: null });

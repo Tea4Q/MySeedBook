@@ -4,10 +4,8 @@ import {
   CurrentWeather,
   WeatherForecast,
   WeatherAlert,
-  WeatherCache,
   OpenWeatherCurrentResponse,
   OpenWeatherForecastResponse,
-  LocationSettings
 } from '../../types/weather';
 
 class WeatherService {
