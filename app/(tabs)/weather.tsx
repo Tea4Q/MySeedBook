@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { CurrentWeatherCard, WeatherForecastCard, GardeningConditionsCard } from '../../components/Weather';
 import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
@@ -170,7 +171,7 @@ export default function WeatherScreen() {
         <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
           <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={() => setShowPremiumModal(false)}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
           <Text style={styles.backButtonText}>Back to Garden</Text>
         </TouchableOpacity>
       </View>
