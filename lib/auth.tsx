@@ -5,7 +5,6 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { guestTracker, GuestUsage } from '../utils/guestTracker';
-import { debugNetwork, networkErrorHandler } from '../utils/networkDebug';
 // import { isLoading } from 'expo-font';
 // import { set } from 'date-fns';
 // import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
@@ -148,17 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      // Debug network connectivity on Android
-      if (Platform.OS === 'android') {
-        debugNetwork();
-      }
-      
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        // Enhanced error handling for network issues
-        const enhancedError = networkErrorHandler(error, 'signIn');
-        throw enhancedError;
+        throw error;
       }
     } catch (error: any) {
       logger.error('Sign in error:', error);
@@ -197,8 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        const enhancedError = networkErrorHandler(error, 'signUp');
-        throw enhancedError;
+        throw error;
       }
     } catch (error: any) {
       logger.error('Sign up error:', error);

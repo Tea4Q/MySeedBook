@@ -95,7 +95,6 @@ export default function PremiumSettingsScreen() {
               unlimited_suppliers: 'Unlimited Suppliers',
               unlimited_photos: 'Unlimited Photos',
               advanced_calendar: 'Advanced Calendar',
-              weather_integration: 'Weather Integration',
               plant_identification: 'Plant Identification',
               data_export: 'Data Export & Backup',
               priority_support: 'Priority Support'

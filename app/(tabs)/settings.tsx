@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
 
-import { Bell, Sun, Moon, CloudRain, LogOut, TestTube } from 'lucide-react-native';
+import { Bell, Sun, Moon, LogOut, TestTube } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { router } from 'expo-router';
@@ -11,7 +11,6 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const [notifications] = useState({
     plantingReminders: false,
-    weatherAlerts: false,
   });
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -76,20 +75,6 @@ export default function SettingsScreen() {
           </View>
           <Switch
             value={notifications.plantingReminders}
-            onValueChange={() => {}} // Disabled
-            trackColor={{ false: colors.border, true: colors.textSecondary }}
-            thumbColor={colors.textSecondary}
-            ios_backgroundColor={colors.border}
-            disabled={true}
-          />
-        </View>
-        <View style={[styles.setting, styles.disabledSetting]}>
-          <View style={styles.settingInfo}>
-            <CloudRain size={24} color={colors.textSecondary} />
-            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Weather Alerts</Text>
-          </View>
-          <Switch
-            value={notifications.weatherAlerts}
             onValueChange={() => {}} // Disabled
             trackColor={{ false: colors.border, true: colors.textSecondary }}
             thumbColor={colors.textSecondary}
@@ -181,7 +166,7 @@ export default function SettingsScreen() {
               styles.setting,
               pressed && { backgroundColor: colors.surface, opacity: 0.7 }
             ]}
-            onPress={() => router.push('/premium-test')}
+            onPress={() => router.push('/premium-settings')}
             android_ripple={{ color: colors.primary + '20' }}
           >
             <View style={styles.settingInfo}>

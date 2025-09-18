@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { WeatherMeteocon } from './MeteoconsFinal';
+import WeatherIcon from './WeatherIcon';
 
 interface AnimatedWeatherIconProps {
   weatherCode: string | number;
@@ -49,9 +49,12 @@ export const AnimatedWeatherIcon: React.FC<AnimatedWeatherIconProps> = ({
         transform: [{ scale: pulseAnim }]
       }
     ]}>
-      <WeatherMeteocon
-        weatherCode={weatherCode}
+      <WeatherIcon
+        condition={weatherCode}
         size={size}
+        styleVariant="fill"
+        autoPlay={true}
+        loop={true}
       />
     </Animated.View>
   );
@@ -140,10 +143,12 @@ export const CalendarWeatherIcon: React.FC<{
         ]
       }
     ]}>
-      <WeatherMeteocon
-        weatherCode={weatherCode}
+      <WeatherIcon
+        condition={weatherCode}
         size={iconSize}
-        style={styles.calendarIcon}
+        styleVariant="fill"
+        autoPlay={true}
+        loop={true}
       />
     </Animated.View>
   );

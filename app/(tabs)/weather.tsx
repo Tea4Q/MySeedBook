@@ -14,8 +14,6 @@ import { CurrentWeatherCard, WeatherForecastCard, GardeningConditionsCard } from
 import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
 import { gardeningInsightsService } from '../../lib/services/gardeningInsightsService';
-import { debugWeatherAPI, testWeatherAPICall } from '../../utils/weatherDebug';
-import { setupDallasLocation, enableCurrentLocation, debugLocationSettings } from '../../utils/locationDebug';
 import {
   CurrentWeather,
   WeatherForecast,
@@ -41,10 +39,6 @@ export default function WeatherScreen() {
       }
       setError(null);
 
-      // Debug API configuration
-      console.log('🌤️ Loading weather data...');
-      debugWeatherAPI();
-
       // Get best location
       const location = await locationService.getBestLocation();
       setLocationName(location.name);
@@ -66,10 +60,6 @@ export default function WeatherScreen() {
 
     } catch (err) {
       console.error('❌ Error loading weather data:', err);
-      
-      // Test API call directly for debugging
-      console.log('🔍 Testing API call directly...');
-      const testResult = await testWeatherAPICall();
       
       setError(`Failed to load weather data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       
@@ -103,7 +93,7 @@ export default function WeatherScreen() {
         {
           text: 'Use Current Location',
           onPress: async () => {
-            const success = await enableCurrentLocation();
+            const success = await locationService.enableCurrentLocation();
             if (success) {
               Alert.alert('Success', 'Current location enabled! Refreshing weather...', [
                 { text: 'OK', onPress: () => loadWeatherData(true) }
@@ -116,15 +106,11 @@ export default function WeatherScreen() {
         {
           text: 'Set to Dallas',
           onPress: async () => {
-            await setupDallasLocation();
+            await locationService.setupDallasLocation();
             Alert.alert('Success', 'Dallas set as your location! Refreshing weather...', [
               { text: 'OK', onPress: () => loadWeatherData(true) }
             ]);
           }
-        },
-        {
-          text: 'Debug Info',
-          onPress: debugLocationSettings
         },
         { text: 'Cancel', style: 'cancel' }
       ]

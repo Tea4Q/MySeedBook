@@ -18,7 +18,6 @@ import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { Mail, Lock, User, Eye, EyeOff, Leaf } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
-import { debugNetwork } from '@/utils/networkDebug';
 
 export default function AuthScreen() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -169,9 +168,6 @@ export default function AuthScreen() {
           errorMessage.includes('NetworkError') ||
           errorMessage.includes('fetch resource') ||
           errorMessage.includes('Network request failed')) {
-        if (Platform.OS === 'android') {
-          debugNetwork();
-        }
         setError(`${errorMessage}\n\n💡 Tip: You can continue as a guest to explore the app offline!`);
       } else {
         setError(errorMessage);
