@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
 
-import { Bell, Sun, Moon, LogOut, TestTube } from 'lucide-react-native';
+import { Bell, Sun, Moon, LogOut, TestTube, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { router } from 'expo-router';
@@ -148,6 +148,25 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         </View>
+      </View>
+
+      <View style={[styles.section, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Help & Support</Text>
+        <Pressable 
+          style={({ pressed }) => [
+            styles.setting,
+            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
+          ]}
+          onPress={() => router.push('/feedback')}
+          android_ripple={{ color: colors.primary + '20' }}
+        >
+          <View style={styles.settingInfo}>
+            <MessageSquare size={24} color={colors.primary} />
+            <Text style={[styles.settingText, { color: colors.text }]}>
+              Send Feedback
+            </Text>
+          </View>
+        </Pressable>
       </View>
 
       <View style={[styles.section, { borderBottomColor: colors.border }]}>

@@ -8,6 +8,7 @@ import {
   Alert
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { Crown, CheckCircle, Settings, ExternalLink } from 'lucide-react-native';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
 import PremiumModal from '../components/PremiumModal';
@@ -40,20 +41,8 @@ export default function PremiumSettingsScreen() {
   };
 
   const handleContactSupport = () => {
-    Alert.alert(
-      'Contact Support',
-      'Need help? Contact our premium support team.',
-      [
-        {
-          text: 'Email Support',
-          onPress: () => {
-            // TODO: Open email client
-            console.log('Opening email client for premium support');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    // Navigate to feedback form for premium support
+    router.push('/feedback');
   };
 
   if (isPremium) {

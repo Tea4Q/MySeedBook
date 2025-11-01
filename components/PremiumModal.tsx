@@ -7,7 +7,8 @@ import {
   ScrollView,
   Modal,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { Crown, Check, X, Star } from 'lucide-react-native';
@@ -132,12 +133,15 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
   return (
     <Modal
       visible={visible}
+      transparent={true}
       animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalContent, { backgroundColor: colors.background }]} onPress={(e) => e.stopPropagation()}>
+          <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable onPress={onClose} style={styles.closeButton}>
             <X size={24} color={colors.text} />
@@ -259,12 +263,48 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
             </Text>
           </View>
         </ScrollView>
-      </View>
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    ...Platform.select({
+      web: {
+        position: 'fixed' as any,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+      }
+    })
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 600,
+    height: '90%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    ...Platform.select({
+      web: {
+        maxHeight: '90vh' as any,
+      }
+    })
+  },
   container: {
     flex: 1,
   },
@@ -295,7 +335,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 20,
   },
   featuresContainer: {

@@ -81,9 +81,7 @@
         "projectId": "debc61fc-b3ac-46ad-9220-6c452667b7e3"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.3.0",
     "updates": {
       "url": "https://u.expo.dev/debc61fc-b3ac-46ad-9220-6c452667b7e3"
     }

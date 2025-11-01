@@ -12,23 +12,22 @@
       },
       "ios": {
         "buildConfiguration": "Debug"
-      },
-      "env": {
-        "NODE_ENV": "development"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "NODE_ENV": "staging"
       }
     },
     "production": {
       "autoIncrement": true,
       "distribution": "store",
+      "node": "22.12.0",
+      "yarn": "1.22.22",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
@@ -36,9 +35,6 @@
       "ios": {
         "buildConfiguration": "Release",
         "simulator": false
-      },
-      "env": {
-        "NODE_ENV": "production"
       },
       "channel": "production"
     },
@@ -52,13 +48,7 @@
     "premium-weather": {
       "extends": "production",
       "env": {
-        "NODE_ENV": "production",
         "FEATURE_WEATHER_INTEGRATION": "true"
-      },
-      "metadata": {
-        "buildProfile": "premium-weather",
-        "version": "1.3.0",
-        "features": ["weather_integration", "premium_features"]
       }
     }
   },

@@ -16,6 +16,7 @@ import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
 import { gardeningInsightsService } from '../../lib/services/gardeningInsightsService';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
+import PremiumModal from '../../components/PremiumModal';
 import {
   CurrentWeather,
   WeatherForecast,
@@ -23,8 +24,9 @@ import {
 } from '../../types/weather';
 
 export default function WeatherScreen() {
-  const { checkFeature, showUpgradePrompt } = usePremiumFeature();
+  const { checkFeature } = usePremiumFeature();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null);
@@ -40,7 +42,8 @@ export default function WeatherScreen() {
       return;
     }
     loadWeatherData();
-  }, [checkFeature]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   // Load weather data
   const loadWeatherData = async (showRefresh = false) => {
@@ -137,44 +140,51 @@ export default function WeatherScreen() {
 
   // Handle premium upgrade
   const handlePremiumUpgrade = () => {
-    setShowPremiumModal(false);
-    showUpgradePrompt('Weather Integration');
+    setShowUpgradeModal(true);
   };
 
   // Show premium upgrade screen if user doesn't have weather integration
   if (showPremiumModal) {
     return (
-      <View style={styles.premiumContainer}>
-        <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
-        <Text style={styles.premiumTitle}>Weather Integration</Text>
-        <Text style={styles.premiumDescription}>
-          Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
-        </Text>
-        <View style={styles.premiumFeatures}>
-          <View style={styles.featureItem}>
-            <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Real-time weather conditions</Text>
+      <>
+        <View style={styles.premiumContainer}>
+          <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
+          <Text style={styles.premiumTitle}>Weather Integration</Text>
+          <Text style={styles.premiumDescription}>
+            Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
+          </Text>
+          <View style={styles.premiumFeatures}>
+            <View style={styles.featureItem}>
+              <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
+              <Text style={styles.featureText}>Real-time weather conditions</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
+              <Text style={styles.featureText}>7-day detailed forecast</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
+              <Text style={styles.featureText}>Gardening condition insights</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
+              <Text style={styles.featureText}>Personalized garden tips</Text>
+            </View>
           </View>
-          <View style={styles.featureItem}>
-            <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>7-day detailed forecast</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Gardening condition insights</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Personalized garden tips</Text>
-          </View>
+          <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
+            <Text style={styles.backButtonText}>Back to Garden</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
-          <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
-          <Text style={styles.backButtonText}>Back to Garden</Text>
-        </TouchableOpacity>
-      </View>
+
+        <PremiumModal
+          visible={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          feature="Weather Integration"
+        />
+      </>
     );
   }
 
@@ -201,60 +211,68 @@ export default function WeatherScreen() {
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#4A90E2']}
-          tintColor="#4A90E2"
-        />
-      }
-    >
-      <View style={styles.header}>
-        <View style={styles.locationContainer}>
-          <TouchableOpacity onPress={handleLocationPress} style={styles.locationButton}>
-            <FontAwesome5 name="map-marker-alt" size={16} color="#4A90E2" />
-            <Text style={styles.locationText}>{locationName}</Text>
-            <FontAwesome5 name="chevron-right" size={12} color="#7F8C8D" />
-          </TouchableOpacity>
+    <>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#4A90E2']}
+            tintColor="#4A90E2"
+          />
+        }
+      >
+        <View style={styles.header}>
+          <View style={styles.locationContainer}>
+            <TouchableOpacity onPress={handleLocationPress} style={styles.locationButton}>
+              <FontAwesome5 name="map-marker-alt" size={16} color="#4A90E2" />
+              <Text style={styles.locationText}>{locationName}</Text>
+              <FontAwesome5 name="chevron-right" size={12} color="#7F8C8D" />
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={styles.lastUpdated}>
+            Last updated: {currentWeather ? new Date(currentWeather.timestamp).toLocaleTimeString() : '--:--'}
+          </Text>
         </View>
-        
-        <Text style={styles.lastUpdated}>
-          Last updated: {currentWeather ? new Date(currentWeather.timestamp).toLocaleTimeString() : '--:--'}
-        </Text>
-      </View>
 
-      {currentWeather && (
-        <CurrentWeatherCard 
-          weather={currentWeather}
-        />
-      )}
+        {currentWeather && (
+          <CurrentWeatherCard 
+            weather={currentWeather}
+          />
+        )}
 
-      {gardeningConditions && (
-        <GardeningConditionsCard 
-          conditions={gardeningConditions}
-          onRecommendationPress={handleRecommendationPress}
-        />
-      )}
+        {gardeningConditions && (
+          <GardeningConditionsCard 
+            conditions={gardeningConditions}
+            onRecommendationPress={handleRecommendationPress}
+          />
+        )}
 
-      {forecast.length > 0 && (
-        <WeatherForecastCard 
-          forecast={forecast}
-          showTitle={true}
-        />
-      )}
+        {forecast.length > 0 && (
+          <WeatherForecastCard 
+            forecast={forecast}
+            showTitle={true}
+          />
+        )}
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Weather data provided by OpenWeatherMap
-        </Text>
-        <Text style={styles.footerSubtext}>
-          Pull down to refresh • Tap location to change
-        </Text>
-      </View>
-    </ScrollView>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Weather data provided by OpenWeatherMap
+          </Text>
+          <Text style={styles.footerSubtext}>
+            Pull down to refresh • Tap location to change
+          </Text>
+        </View>
+      </ScrollView>
+
+      <PremiumModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="Weather Integration"
+      />
+    </>
   );
 }
 

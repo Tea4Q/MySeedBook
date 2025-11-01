@@ -86,8 +86,8 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add-seed" />
         <Stack.Screen name="edit-supplier/[id]" />
+        <Stack.Screen name="feedback" />
         <Stack.Screen name="auth" />
-        <Stack.Screen name="splash-test" />
         {/* Add signup if needed */}
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />

@@ -146,9 +146,13 @@ export default function InventoryScreen() {
   // Initial load and re-load on focus
   useFocusEffect(
     useCallback(() => {
-      loadSeeds();
+      // Only reload if not already loaded or if we need to refresh
+      if (seeds.length === 0 || !searchTerm) {
+        loadSeeds();
+      }
       // No longer tracking view actions for guests - unlimited access
-    }, [loadSeeds]) // Removed guest tracking dependencies
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Empty dependency array - only run on focus
   );
 
   // Handle highlighted seed scrolling separately
@@ -159,7 +163,8 @@ export default function InventoryScreen() {
         flatListRef.current.scrollToIndex({ animated: true, index });
       }
     }
-  }, [highlightedSeedId, seeds.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightedSeedId, seeds.length]);
 
   // Auto-clear highlight after 3 seconds
   useEffect(() => {
@@ -178,7 +183,8 @@ export default function InventoryScreen() {
       loadSeeds();
     }, 300); // Debounce search
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]); // Only reload when search term changes
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
