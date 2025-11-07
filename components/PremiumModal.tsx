@@ -36,20 +36,30 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
       const success = await premiumManager.purchaseSubscription(productId);
       
       if (success) {
-        Alert.alert(
-          '🎉 Welcome to Premium!',
-          'Thank you for upgrading! You now have access to all premium features.',
-          [
-            {
-              text: 'Get Started',
-              onPress: () => {
-                onClose();
+        if (Platform.OS === 'web') {
+          // Web-friendly notification
+          onClose();
+          // Use setTimeout to show alert after modal closes
+          setTimeout(() => {
+            alert('🎉 Welcome to Premium!\n\nThank you for upgrading! You now have access to all premium features.');
+          }, 100);
+        } else {
+          Alert.alert(
+            '🎉 Welcome to Premium!',
+            'Thank you for upgrading! You now have access to all premium features.',
+            [
+              {
+                text: 'Get Started',
+                onPress: () => {
+                  onClose();
+                }
               }
-            }
-          ]
-        );
+            ]
+          );
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error('Purchase error:', error);
       Alert.alert(
         'Purchase Failed',
         'We couldn\'t complete your purchase. Please try again or contact support if the problem persists.',
