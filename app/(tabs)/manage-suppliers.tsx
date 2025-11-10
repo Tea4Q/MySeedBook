@@ -255,7 +255,7 @@ export default function ManageSuppliersScreen() {
         style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}
         onPress={() => setShowAddSupplierModal(true)}
       >
-        <PlusCircle size={28} color={colors.primaryText} />
+        <PlusCircle size={28} color={colors.warning} />
       </Pressable>
 
       <View

@@ -10,6 +10,7 @@ export interface PremiumFeatures {
   advanced_calendar: boolean;
   weather_integration: boolean;
   plant_identification: boolean;
+  barcode_scanner: boolean;
   data_export: boolean;
   priority_support: boolean;
 }
@@ -158,6 +159,7 @@ class PremiumManager {
         advanced_calendar: false,
         weather_integration: false,
         plant_identification: false,
+        barcode_scanner: false,
         data_export: false,
         priority_support: false
       }
@@ -233,6 +235,7 @@ class PremiumManager {
           advanced_calendar: true,
           weather_integration: true,
           plant_identification: true,
+          barcode_scanner: true,
           data_export: true,
           priority_support: true
         }
@@ -342,6 +345,29 @@ class PremiumManager {
     } catch (error) {
       console.error('Error disconnecting IAP:', error);
     }
+  }
+
+  // Development helper - enable premium for testing
+  async enableTestPremium(): Promise<void> {
+    if (!__DEV__) {
+      console.warn('Test premium can only be enabled in development mode');
+      return;
+    }
+    
+    await this.simulatePurchase(SUBSCRIPTION_PRODUCTS.monthly);
+    console.log('Test premium features enabled');
+  }
+
+  // Development helper - disable premium for testing
+  async disableTestPremium(): Promise<void> {
+    if (!__DEV__) {
+      console.warn('Test premium can only be disabled in development mode');
+      return;
+    }
+    
+    this.subscription = this.getDefaultSubscription();
+    await AsyncStorage.setItem('user_subscription', JSON.stringify(this.subscription));
+    console.log('Test premium features disabled');
   }
 }
 

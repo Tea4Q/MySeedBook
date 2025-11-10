@@ -48,15 +48,16 @@ export const WeatherForecastCard: React.FC<WeatherForecastCardProps> = ({
   return (
     <View style={styles.container}>
       {showTitle && (
-        <Text style={styles.title}>5-Day Forecast</Text>
+        <Text style={styles.title}>5-Day Forecast (Scroll to see all →)</Text>
       )}
       
       <ScrollView 
         horizontal 
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
+        pagingEnabled={false}
       >
-        {forecast.slice(0, 5).map((day, index) => (
+        {forecast.map((day, index) => (
           <View key={day.date} style={[styles.dayCard, index === 0 && styles.firstCard]}>
             <Text style={styles.dayLabel}>{formatDate(day.date)}</Text>
             

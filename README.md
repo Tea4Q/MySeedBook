@@ -15,17 +15,26 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 - **Rich Descriptions**: Scrollable text areas with detailed growing information
 - **Visual Organization**: Color-coded seed types with intuitive icons
 - **Search & Filter**: Quick discovery of seeds in your collection
+- **Barcode Scanner** (Premium): Scan seed package barcodes for quick inventory entry
 
 ### 📅 Garden Planning
 - **Planting Calendar**: Schedule and track planting activities
 - **Season Management**: Track planting and harvest seasons
 - **Quick Navigation**: Double-tap seeds to create calendar events
+- **Weather Integration** (Premium): 5-day forecast with animated icons and gardening insights
 
 ### 🎨 Modern Interface
 - **Responsive Grid**: Optimized 2-column layout for larger screens
 - **Touch-Friendly**: Swipe gestures on mobile, action buttons on web
 - **Smooth Scrolling**: Enhanced description areas with proper scroll handling
 - **Platform-Aware**: Interface adapts to each platform's conventions
+
+### 💎 Premium Features
+- **Barcode Scanner**: Scan seed package barcodes for instant inventory entry (iOS/Android)
+- **Weather Integration**: Real-time weather data with 5-day forecasts
+- **Advanced Calendar**: Enhanced planning tools with weather insights
+- **Unlimited Storage**: No limits on seeds, suppliers, or photos
+- **Priority Support**: Direct feedback and premium customer service
 
 ## 🚀 Get Started
 

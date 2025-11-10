@@ -31,12 +31,15 @@ import {
   Mountain,
   FlaskRound as Flask,
   CircleAlert as AlertCircle,
+  Scan,
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
+import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
+import PremiumModal from '@/components/PremiumModal';
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
@@ -89,6 +92,10 @@ export default function AddOrEditSeedScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
   const { checkAndPromptForLimit, trackAction } = useGuestLimits();
+  
+  // Barcode scanner state
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -96,9 +103,35 @@ export default function AddOrEditSeedScreen() {
     newSupplierName?: string;
     reloadSuppliers?: string;
     seed?: string; // JSON string of seed data for editing
+    scannedData?: string; // JSON string of scanned barcode data
   }>();
 
   const isEditing = !!params.seed; // Check if we're editing
+
+  // Handle scanned barcode data
+  useEffect(() => {
+    if (params.scannedData) {
+      try {
+        const scanned = JSON.parse(params.scannedData);
+        setSeedPackage((prev) => ({
+          ...prev,
+          seed_name: scanned.seed_name || prev.seed_name,
+          type: scanned.type || prev.type,
+          description: scanned.description 
+            ? (prev.description ? `${prev.description}\n\n${scanned.description}` : scanned.description)
+            : prev.description,
+        }));
+        
+        Alert.alert(
+          'Barcode Scanned!',
+          'Seed information has been loaded. Please review and complete the details.',
+          [{ text: 'OK' }]
+        );
+      } catch (error) {
+        console.error('Error parsing scanned data:', error);
+      }
+    }
+  }, [params.scannedData]);
 
   useEffect(() => {
     if (params.newSupplierID) {
@@ -674,6 +707,34 @@ export default function AddOrEditSeedScreen() {
     setShowDatePicker(false);
   };
 
+  // --- Barcode Scan Handlers ---
+  const handleBarcodeScan = (data: ScannedSeedData) => {
+    // Auto-fill form with scanned data
+    setSeedPackage((prev) => ({
+      ...prev,
+      seed_name: data.seedName || prev.seed_name,
+      type: data.type || prev.type,
+      description: data.description || prev.description,
+    }));
+
+    // Try to find matching supplier
+    if (data.supplier) {
+      // This would need to search through available suppliers
+      // For now, just log it
+      console.log('Scanned supplier:', data.supplier);
+    }
+
+    Alert.alert(
+      'Barcode Scanned!',
+      `Seed information loaded. Please review and complete the details.`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleUpgradeRequired = () => {
+    setShowPremiumModal(true);
+  };
+
   // --- Render the component ---
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -723,6 +784,19 @@ export default function AddOrEditSeedScreen() {
         </View>
         {/* Form Section */}
         <View style={styles.formSection}>
+          {/* Barcode Scanner Button - Mobile Only */}
+          {(Platform.OS === 'ios' || Platform.OS === 'android') && !isEditing && (
+            <Pressable
+              style={[styles.barcodeButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowBarcodeScanner(true)}
+            >
+              <Scan size={20} color={colors.primaryText} />
+              <Text style={[styles.barcodeButtonText, { color: colors.primaryText }]}>
+                Scan Seed Package Barcode
+              </Text>
+            </Pressable>
+          )}
+
           {/* Seed Name */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Seed Name *</Text>
@@ -1255,6 +1329,20 @@ export default function AddOrEditSeedScreen() {
         {/* End of formSection View */}
       </KeyboardAwareScrollView>
       {/* End of KeyboardAwareScrollView */}
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
+        onUpgradeRequired={handleUpgradeRequired}
+      />
+
+      {/* Premium Modal */}
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+      />
     </View>
   );
 }
@@ -1685,5 +1773,25 @@ const styles = StyleSheet.create({
   supplierInput: {
     flex: 1,
     minWidth: 150, // Ensure adequate space for supplier
+  },
+  // Barcode scanner button styles
+  barcodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  barcodeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

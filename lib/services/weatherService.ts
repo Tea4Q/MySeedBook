@@ -195,7 +195,7 @@ class WeatherService {
           type: this.determinePrecipitationType(middayData)
         } : undefined
       };
-    }).slice(0, 5); // Return 5-day forecast
+    }); // Return all available forecast days (usually 5-6 days)
   }
 
   /**

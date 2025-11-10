@@ -63,6 +63,12 @@
           "photosPermission": "Allow MySeedBook Catalogue to access your photo library to select images of your seeds and plants."
         }
       ],
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow MySeedBook Catalogue to use the camera to scan seed package barcodes for quick inventory management."
+        }
+      ],
       "expo-web-browser",
       "expo-secure-store",
       "expo-font"

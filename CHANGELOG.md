@@ -1,5 +1,54 @@
 # MySeedBook Catalogue - Development Changelog
 
+## Version 1.3.1 - November 8, 2025
+*Barcode Scanner & Premium Features Enhancement*
+
+### 🎯 New Features
+- **Barcode Scanner (Premium)**
+  - Scan seed package barcodes for quick inventory entry
+  - Mobile-only feature (iOS/Android) with camera integration
+  - Premium-gated with upgrade prompts for free users
+  - Brand recognition for major seed companies (Burpee, Ferry-Morse, Botanical Interests, etc.)
+  - Open Food Facts API integration for seed package information
+  - Auto-fill seed name, type, variety, and description from scanned data
+  - Floating scan button on inventory screen for quick access
+  - Scan button on add-seed form
+
+### 🔧 Bug Fixes & Improvements
+- **Premium Settings UI**
+  - Added "Barcode Scanner" to premium features list display
+  - Added floating back button for proper navigation
+  - Implemented development toggle for testing premium features
+  - Fixed premium status checking in BarcodeScannerModal
+  - Added `enableTestPremium()` and `disableTestPremium()` methods to premiumManager
+
+- **Weather Screen**
+  - Fixed infinite loading spinner issue
+  - Consolidated duplicate `useEffect` hooks
+  - Proper loading state management when premium access is denied
+  - Eliminated race conditions in weather data loading
+
+- **Platform Compatibility**
+  - Platform-specific module loading for expo-barcode-scanner
+  - Prevents native module loading attempts on web platform
+  - Strict iOS/Android detection (`Platform.OS === 'ios' || Platform.OS === 'android'`)
+  - Graceful web fallback with "Mobile Feature Only" message
+
+### 📚 Documentation
+- Updated README.md with barcode scanner feature
+- Updated PROJECT_STATUS.md with completion details
+- Created comprehensive BARCODE_SCANNER_FEATURE.md (to be added)
+- Added premium features section to README
+
+### 🏗️ Technical Improvements
+- Added expo-barcode-scanner dependency with camera permissions
+- Created BarcodeScannerModal component (560+ lines)
+- Created seedDataLookup utility (260+ lines)
+- Updated premiumManager with barcode_scanner feature flag
+- Enhanced app.json with camera permission configuration
+
+---
+
 ## Version 1.2.0 - September 14, 2025
 *Production-Ready Release*
 

@@ -42,6 +42,7 @@
     "axios": "^1.12.2",
     "date-fns": "^3.6.0",
     "expo": "~54.0.23",
+    "expo-barcode-scanner": "^13.0.1",
     "expo-blur": "~15.0.7",
     "expo-constants": "~18.0.10",
     "expo-dev-client": "~6.0.17",

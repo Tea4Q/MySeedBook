@@ -5,22 +5,46 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert
+  Alert,
+  Switch
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { Crown, CheckCircle, Settings, ExternalLink } from 'lucide-react-native';
+import { Crown, CheckCircle, Settings, ExternalLink, ArrowLeft, TestTube } from 'lucide-react-native';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
 import PremiumModal from '../components/PremiumModal';
+import { premiumManager } from '../utils/premiumManager';
 
 export default function PremiumSettingsScreen() {
   const { colors } = useTheme();
   const { isPremium, subscription } = usePremiumFeature();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [isTestPremium, setIsTestPremium] = useState(isPremium);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleToggleTestPremium = async () => {
+    try {
+      if (isTestPremium) {
+        await premiumManager.disableTestPremium();
+        setIsTestPremium(false);
+        Alert.alert('Test Premium Disabled', 'Premium features have been disabled. Please restart the app to see changes.', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      } else {
+        await premiumManager.enableTestPremium();
+        setIsTestPremium(true);
+        Alert.alert('Test Premium Enabled', 'Premium features have been enabled. Please restart the app to see changes.', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error toggling test premium:', error);
+      Alert.alert('Error', 'Failed to toggle premium features. Please try again.');
+    }
   };
 
   const handleManageSubscription = () => {
@@ -47,28 +71,53 @@ export default function PremiumSettingsScreen() {
 
   if (isPremium) {
     return (
-      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Premium Status */}
-        <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
-          <View style={styles.statusHeader}>
-            <Crown size={32} color={colors.primary} />
-            <View style={styles.statusContent}>
-              <Text style={[styles.statusTitle, { color: colors.text }]}>
-                Premium Active
-              </Text>
-              <Text style={[styles.statusSubtitle, { color: colors.primary }]}>
-                {subscription.tier === 'premium-yearly' ? 'Yearly Plan' : 'Monthly Plan'}
+      <>
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+          {/* Development Test Toggle (only in __DEV__) */}
+          {__DEV__ && (
+            <View style={[styles.testCard, { backgroundColor: colors.card, borderColor: '#FFA500' }]}>
+              <View style={styles.testHeader}>
+                <TestTube size={24} color="#FFA500" />
+                <Text style={[styles.testTitle, { color: colors.text }]}>Development Mode</Text>
+              </View>
+              <View style={styles.testToggleRow}>
+                <Text style={[styles.testToggleText, { color: colors.text + '80' }]}>
+                  Test Premium Features
+                </Text>
+                <Switch
+                  value={isTestPremium}
+                  onValueChange={handleToggleTestPremium}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={isTestPremium ? '#FFFFFF' : '#F4F3F4'}
+                />
+              </View>
+              <Text style={[styles.testNote, { color: colors.text + '80' }]}>
+                Toggle this to test premium features without a real subscription. Restart the app after toggling.
               </Text>
             </View>
-            <CheckCircle size={24} color={colors.primary} />
+          )}
+
+          {/* Premium Status */}
+          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+            <View style={styles.statusHeader}>
+              <Crown size={32} color={colors.primary} />
+              <View style={styles.statusContent}>
+                <Text style={[styles.statusTitle, { color: colors.text }]}>
+                  Premium Active
+                </Text>
+                <Text style={[styles.statusSubtitle, { color: colors.primary }]}>
+                  {subscription.tier === 'premium-yearly' ? 'Yearly Plan' : 'Monthly Plan'}
+                </Text>
+              </View>
+              <CheckCircle size={24} color={colors.primary} />
+            </View>
+            
+            <View style={styles.statusDetails}>
+              <Text style={[styles.statusDetailText, { color: colors.text + '80' }]}>
+                Active until: {formatDate(subscription.expiresAt)}
+              </Text>
+            </View>
           </View>
-          
-          <View style={styles.statusDetails}>
-            <Text style={[styles.statusDetailText, { color: colors.text + '80' }]}>
-              Active until: {formatDate(subscription.expiresAt)}
-            </Text>
-          </View>
-        </View>
 
         {/* Premium Features */}
         <View style={[styles.featuresCard, { backgroundColor: colors.card }]}>
@@ -85,6 +134,7 @@ export default function PremiumSettingsScreen() {
               unlimited_photos: 'Unlimited Photos',
               advanced_calendar: 'Advanced Calendar',
               plant_identification: 'Plant Identification',
+              barcode_scanner: 'Barcode Scanner',
               data_export: 'Data Export & Backup',
               priority_support: 'Priority Support'
             };
@@ -129,6 +179,12 @@ export default function PremiumSettingsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      
+      {/* Floating Back Button */}
+      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.card }]}>
+        <ArrowLeft size={24} color={colors.text} />
+      </Pressable>
+      </>
     );
   }
 
@@ -136,6 +192,30 @@ export default function PremiumSettingsScreen() {
   return (
     <>
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Development Test Toggle (only in __DEV__) */}
+        {__DEV__ && (
+          <View style={[styles.testCard, { backgroundColor: colors.card, borderColor: '#FFA500' }]}>
+            <View style={styles.testHeader}>
+              <TestTube size={24} color="#FFA500" />
+              <Text style={[styles.testTitle, { color: colors.text }]}>Development Mode</Text>
+            </View>
+            <View style={styles.testToggleRow}>
+              <Text style={[styles.testToggleText, { color: colors.text + '80' }]}>
+                Test Premium Features
+              </Text>
+              <Switch
+                value={isTestPremium}
+                onValueChange={handleToggleTestPremium}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={isTestPremium ? '#FFFFFF' : '#F4F3F4'}
+              />
+            </View>
+            <Text style={[styles.testNote, { color: colors.text + '80' }]}>
+              Toggle this to test premium features without a real subscription. Restart the app after toggling.
+            </Text>
+          </View>
+        )}
+
         {/* Free Status */}
         <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.statusHeader}>
@@ -203,6 +283,11 @@ export default function PremiumSettingsScreen() {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Floating Back Button */}
+      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.card }]}>
+        <ArrowLeft size={24} color={colors.text} />
+      </Pressable>
       
       <PremiumModal
         visible={showPremiumModal}
@@ -339,5 +424,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  floatingBackButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  testCard: {
+    borderRadius: 16,
+    borderWidth: 2,
+    padding: 20,
+    marginBottom: 20,
+  },
+  testHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  testTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  testToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  testToggleText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
 });

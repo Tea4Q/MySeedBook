@@ -11,6 +11,8 @@
 ### Recent Completion: Weather Integration & Premium Features (November 2025)
 - ✅ **Weather Integration** - 5-day forecast with animated Meteocons icons
 - ✅ **Premium Subscription System** - Monthly ($5.99) and Yearly ($49.99) tiers
+- ✅ **Barcode Scanner** (Premium) - Scan seed packages for quick inventory (iOS/Android)
+- ✅ **Premium Settings UI** - Test premium features toggle for development
 - ✅ **Feedback System** - User feedback collection with Supabase backend
 - ✅ **Dependency Fixes** - Resolved bundling issues with pretty-format and Lottie
 - ✅ **Web Platform Support** - Fixed Alert compatibility and bundle generation
@@ -37,11 +39,24 @@
 
 - ✅ **Premium subscription system**
   - Two-tier pricing: Monthly ($5.99) and Yearly ($49.99 - save 33%)
-  - Premium feature gating for weather access
+  - Premium feature gating for weather access and barcode scanner
   - Simulated IAP for development (ready for App Store/Play Store IAP)
   - Web-compatible purchase flow with platform-specific alerts
   - Subscription persistence with AsyncStorage
+  - Development toggle for testing premium features
   - See `docs/MONETIZATION_SETUP_GUIDE.md` for IAP setup
+
+- ✅ **Barcode scanner feature** (Premium)
+  - Mobile-only barcode scanning (iOS/Android)
+  - expo-barcode-scanner integration with camera permissions
+  - Premium-gated feature with upgrade prompts
+  - Seed package brand recognition (Burpee, Ferry-Morse, etc.)
+  - Open Food Facts API integration for seed lookup
+  - Auto-fill seed information from scanned barcodes
+  - Platform-specific module loading prevents web errors
+  - Floating scan button on inventory screen
+  - Scan button on add-seed form
+  - See `docs/BARCODE_SCANNER_FEATURE.md` for complete documentation
 
 - ✅ **Feedback system**
   - User feedback collection modal

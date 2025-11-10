@@ -36,10 +36,7 @@ import {
   Carrot,
   Apple,
   Cherry,
-  Nut,
-  Grape,
-  Bean,
-  MoreHorizontal,
+  Scan,
 } from 'lucide-react-native';
 
 import { Swipeable } from 'react-native-gesture-handler';
@@ -47,6 +44,8 @@ import { useAuth } from '@/lib/auth'; // Assuming you have an auth context
 import { useResponsive } from '@/utils/responsive';
 import GuestStatusBanner from '@/components/GuestStatusBanner';
 import { guestDataManager } from '@/utils/guestDataManager';
+import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
+import PremiumModal from '@/components/PremiumModal';
 
 export default function InventoryScreen() {
   const { session } = useAuth(); // Get user session
@@ -62,6 +61,8 @@ export default function InventoryScreen() {
     null
   );
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const router = useRouter();
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -194,6 +195,27 @@ export default function InventoryScreen() {
 
   const handleAddSeed = () => {
     router.push('/add-seed');
+  };
+
+  const handleBarcodeScan = (data: ScannedSeedData) => {
+    // Navigate to add-seed with scanned data
+    router.push({
+      pathname: '/add-seed',
+      params: {
+        scannedData: JSON.stringify({
+          seed_name: data.seedName,
+          type: data.type,
+          description: data.description,
+          supplier: data.supplier,
+          barcode: data.barcode,
+        }),
+      },
+    });
+    setShowBarcodeScanner(false);
+  };
+
+  const handleUpgradeRequired = () => {
+    setShowPremiumModal(true);
   };
 
   const handleEdit = (seed: Seed) => {
@@ -614,9 +636,19 @@ export default function InventoryScreen() {
       {/* Guest Status Banner */}
       <GuestStatusBanner />
       
+      {/* Floating Barcode Scanner Button - Mobile Only */}
+      {(Platform.OS === 'ios' || Platform.OS === 'android') && (
+        <Pressable 
+          onPress={() => setShowBarcodeScanner(true)} 
+          style={[styles.floatingScanButton, { backgroundColor: colors.primary }]}
+        >
+          <Scan size={24} color={colors.warning} />
+        </Pressable>
+      )}
+
       {/* Floating Add Button */}
       <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
-        <PlusCircle size={28} color={colors.primaryText} />
+        <PlusCircle size={24} color={colors.warning} />
       </Pressable>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
@@ -691,6 +723,20 @@ export default function InventoryScreen() {
           }
         />
       )}
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        visible={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
+        onUpgradeRequired={handleUpgradeRequired}
+      />
+
+      {/* Premium Modal */}
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+      />
     </View>
   );
 }
@@ -705,6 +751,19 @@ const styles = StyleSheet.create({
     right: 24,
     zIndex: 1000,
     padding: 16,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  floatingScanButton: {
+    position: 'absolute',
+    bottom: 100, // Position above the add button
+    right: 24,
+    zIndex: 1000,
+    padding: 14,
     borderRadius: 28,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

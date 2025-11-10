@@ -35,16 +35,6 @@ export default function WeatherScreen() {
   const [locationName, setLocationName] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  // Check if user has access to weather features
-  useEffect(() => {
-    if (!checkFeature('weather_integration')) {
-      setShowPremiumModal(true);
-      return;
-    }
-    loadWeatherData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
-
   // Load weather data
   const loadWeatherData = async (showRefresh = false) => {
     try {
@@ -90,10 +80,16 @@ export default function WeatherScreen() {
     }
   };
 
-  // Initial load
+  // Initial load - Check premium access and load weather data
   useEffect(() => {
+    if (!checkFeature('weather_integration')) {
+      setShowPremiumModal(true);
+      setLoading(false); // Stop loading if no premium access
+      return;
+    }
     loadWeatherData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   // Handle refresh
   const onRefresh = () => {

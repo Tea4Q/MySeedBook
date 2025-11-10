@@ -162,11 +162,10 @@ export default function CalendarScreen() {
         if (weatherData) {
           const dateKey = format(day, 'yyyy-MM-dd');
           monthWeatherData[dateKey] = weatherData;
-          console.log('✅ Weather data for', dateKey, ':', weatherData.condition?.main);
         }
       }
       
-      console.log('🌤️ Total weather days loaded:', Object.keys(monthWeatherData).length);
+      console.log('🌤️ Weather data loaded for', format(date, 'MMMM yyyy'), ':', Object.keys(monthWeatherData).length, 'days');
       setWeatherData(monthWeatherData);
     } catch (error) {
       console.error('❌ Error fetching weather for month:', error);
@@ -177,7 +176,8 @@ export default function CalendarScreen() {
   useEffect(() => {
     fetchEventsForMonth(currentDate);
     fetchWeatherForMonth(currentDate);
-  }, [currentDate, fetchWeatherForMonth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
 
   useEffect(() => {
     if (isModalVisible) {

@@ -19,6 +19,11 @@ ios/
 *.key
 *.mobileprovision
 
+# build artifacts
+*.apk
+*.aab
+*.ipa
+
 # metro
 .metro-health-check*
 
