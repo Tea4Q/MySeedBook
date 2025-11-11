@@ -1,13 +1,20 @@
 # Barcode Scanner Feature Documentation
 
 **Status**: ✅ Complete and Production Ready  
-**Version**: 1.3.1  
-**Date**: November 8, 2025  
+**Version**: 1.3.2  
+**Date**: November 10, 2025  
 **Premium Feature**: Yes (Requires Premium Subscription)
 
 ## Overview
 
 The Barcode Scanner feature allows premium users to quickly add seeds to their inventory by scanning seed package barcodes. This mobile-only feature uses the device camera to scan UPC/EAN barcodes and automatically fills in seed information.
+
+## Recent Updates (v1.3.2)
+
+### Migration to expo-camera
+- **Replaced expo-barcode-scanner with expo-camera**: The barcode scanner package had Kotlin compilation issues causing Android build failures. We migrated to expo-camera which includes barcode scanning capabilities and is more stable.
+- **Updated component**: BarcodeScannerModal now uses CameraView with barcodeScannerSettings
+- **Same functionality**: All barcode scanning features remain the same for end users
 
 ## Key Features
 
@@ -28,9 +35,10 @@ The Barcode Scanner feature allows premium users to quickly add seeds to their i
 - UPC-A
 - UPC-E
 - EAN-13
+- EAN-8
 - QR Code
-- Data Matrix
 - Code 128
+- Code 39
 
 ## Technical Implementation
 
@@ -38,14 +46,14 @@ The Barcode Scanner feature allows premium users to quickly add seeds to their i
 
 ```json
 {
-  "expo-barcode-scanner": "^13.0.1"
+  "expo-camera": "^17.0.9"
 }
 ```
 
 ### Installation
 
 ```bash
-npx expo install expo-barcode-scanner -- --legacy-peer-deps
+npx expo install expo-camera --legacy-peer-deps
 ```
 
 ### Configuration
@@ -56,7 +64,7 @@ npx expo install expo-barcode-scanner -- --legacy-peer-deps
   "expo": {
     "plugins": [
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
           "cameraPermission": "Allow MySeedBook Catalogue to use the camera to scan seed package barcodes for quick inventory management."
         }
@@ -227,19 +235,50 @@ useEffect(() => {
 
 **Module Loading**:
 ```typescript
-let BarcodeScannerModule: any = null;
+let CameraView: any = null;
+let Camera: any = null;
 
 if (Platform.OS === 'ios' || Platform.OS === 'android') {
   try {
-    const BarcodeScanner = require('expo-barcode-scanner');
-    BarcodeScannerModule = BarcodeScanner.BarCodeScanner;
-  } catch (error) {
-    console.log('Barcode scanner not available on this platform');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Camera = require('expo-camera');
+    CameraView = Camera.CameraView;
+  } catch {
+    console.log('Camera not available on this platform');
   }
 }
 ```
 
 **Camera Permissions**:
+```typescript
+const requestCameraPermission = async () => {
+  if (!Camera) {
+    setHasPermission(false);
+    return;
+  }
+
+  try {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setHasPermission(status === 'granted');
+  } catch (error) {
+    console.error('Error requesting camera permission:', error);
+    setHasPermission(false);
+  }
+};
+```
+
+**Rendering the Scanner**:
+```typescript
+return (
+  <CameraView
+    onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+    barcodeScannerSettings={{
+      barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39'],
+    }}
+    style={StyleSheet.absoluteFillObject}
+  />
+);
+```
 - Automatically requested on first scanner open
 - User-friendly error message if permission denied
 - Platform-specific permission settings links
@@ -342,8 +381,9 @@ The scanner recognizes these major seed companies by barcode prefix:
 **Issue**: Scanner modal opens but camera doesn't activate  
 **Solution**: 
 - Check camera permissions in device settings
-- Ensure `expo-barcode-scanner` is installed correctly
+- Ensure `expo-camera` is installed correctly
 - Verify platform is iOS or Android (not web)
+- Check for Kotlin compilation errors in Android builds (fixed in v1.3.2)
 
 ### Barcode Not Detected
 **Issue**: Scanner doesn't recognize barcode  
@@ -354,7 +394,7 @@ The scanner recognizes these major seed companies by barcode prefix:
 - Check if barcode format is supported
 
 ### Web Platform Error
-**Issue**: "Cannot find native module 'ExpoBarCodeScanner'" on web  
+**Issue**: "Cannot find native module" on web  
 **Solution**: This is expected - feature is mobile-only. Error should be caught gracefully with platform checks.
 
 ### Premium Gate Not Working
@@ -363,6 +403,10 @@ The scanner recognizes these major seed companies by barcode prefix:
 - Verify premium status in `premiumManager.getSubscription()`
 - Check `barcode_scanner` feature flag
 - Use development toggle to test premium features
+
+### Build Failures (Resolved in v1.3.2)
+**Issue**: Gradle build failed with Kotlin compilation error for expo-barcode-scanner  
+**Solution**: Migrated to expo-camera which includes barcode scanning and is more stable
 
 ## Security & Privacy
 
@@ -411,5 +455,6 @@ The scanner recognizes these major seed companies by barcode prefix:
 ## Related Documentation
 - [Premium Features Guide](MONETIZATION_SETUP_GUIDE.md)
 - [Camera Permissions](../app.json)
-- [expo-barcode-scanner docs](https://docs.expo.dev/versions/latest/sdk/bar-code-scanner/)
+- [expo-camera docs](https://docs.expo.dev/versions/latest/sdk/camera/)
 - [Open Food Facts API](https://world.openfoodfacts.org/data)
+- [Changelog](../CHANGELOG.md) - See version 1.3.2 for migration details

@@ -1,5 +1,32 @@
 # MySeedBook Catalogue - Development Changelog
 
+## Version 1.3.2 - November 10, 2025
+*Camera Integration & Mobile UI Fixes*
+
+### 🔧 Bug Fixes & Improvements
+- **Replaced expo-barcode-scanner with expo-camera**
+  - Fixed Kotlin compilation errors in Android builds
+  - Resolved Gradle build failures related to barcode scanner
+  - Migrated to expo-camera with barcode scanning capabilities
+  - More stable and better maintained by Expo team
+  - Updated BarcodeScannerModal to use CameraView component
+
+- **Premium Modal Scrolling Fixes**
+  - Fixed scrolling issues on Samsung S25 Edge and similar devices
+  - Changed modal height from fixed `height: '90%'` to `maxHeight: '90%'`
+  - Added proper ScrollView contentContainerStyle for bottom padding
+  - Improved footer spacing (60px bottom padding + 20px top margin)
+  - Restructured overlay to prevent interference with scroll gestures
+  - Ensures all premium upgrade buttons are visible and accessible
+
+### 🏗️ Technical Improvements
+- Updated app.json with expo-camera plugin configuration
+- Removed expo-barcode-scanner from dependencies
+- Updated package.json and package-lock.json
+- Fixed modal layout for better mobile responsiveness
+
+---
+
 ## Version 1.3.1 - November 8, 2025
 *Barcode Scanner & Premium Features Enhancement*
 
