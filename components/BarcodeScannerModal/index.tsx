@@ -15,19 +15,19 @@ import { premiumManager } from '@/utils/premiumManager';
 import { lookupSeedByBarcode, type SeedLookupResult } from '@/utils/seedDataLookup';
 
 // Platform-specific imports - only load on mobile
-let BarcodeScannerModule: any = null;
-let PermissionsModule: any = null;
+let CameraView: any = null;
+let Camera: any = null;
 
 // Only import on native platforms
 if (Platform.OS === 'ios' || Platform.OS === 'android') {
   try {
-    const BarcodeScanner = require('expo-barcode-scanner');
-    BarcodeScannerModule = BarcodeScanner.BarCodeScanner;
-    PermissionsModule = BarcodeScanner.BarCodeScanner;
-  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Camera = require('expo-camera');
+    CameraView = Camera.CameraView;
+  } catch {
     // Silently fail on web or if module not available
     if (__DEV__) {
-      console.log('Barcode scanner not available on this platform');
+      console.log('Camera not available on this platform');
     }
   }
 }
@@ -87,13 +87,13 @@ export default function BarcodeScannerModal({
   };
 
   const requestCameraPermission = async () => {
-    if (!PermissionsModule) {
+    if (!Camera) {
       setHasPermission(false);
       return;
     }
 
     try {
-      const { status } = await PermissionsModule.requestPermissionsAsync();
+      const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
     } catch (error) {
       console.error('Error requesting camera permission:', error);
@@ -297,14 +297,15 @@ export default function BarcodeScannerModal({
   }
 
   // Render barcode scanner
-  const BarCodeScanner = BarcodeScannerModule;
-
   return (
     <Modal visible={visible} transparent={false} animationType="slide">
       <View style={styles.scannerContainer}>
-        {BarCodeScanner && (
-          <BarCodeScanner
-            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        {CameraView && (
+          <CameraView
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39'],
+            }}
             style={StyleSheet.absoluteFillObject}
           />
         )}

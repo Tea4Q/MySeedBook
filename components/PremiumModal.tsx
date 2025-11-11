@@ -148,8 +148,12 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.modalContent, { backgroundColor: colors.background }]} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.modalOverlay}>
+        <Pressable 
+          style={StyleSheet.absoluteFill} 
+          onPress={onClose}
+        />
+        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
           <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -169,7 +173,11 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
           </View>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Features List */}
           <View style={styles.featuresContainer}>
             <Text style={[styles.featuresTitle, { color: colors.text }]}>
@@ -274,8 +282,8 @@ export default function PremiumModal({ visible, onClose, feature }: PremiumModal
           </View>
         </ScrollView>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -301,7 +309,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 600,
-    height: '90%',
+    maxHeight: '90%',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -347,6 +355,9 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   featuresContainer: {
     marginVertical: 24,
@@ -463,7 +474,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: 60,
+    marginTop: 20,
   },
   restoreButton: {
     paddingVertical: 12,

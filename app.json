@@ -64,7 +64,7 @@
         }
       ],
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
           "cameraPermission": "Allow MySeedBook Catalogue to use the camera to scan seed package barcodes for quick inventory management."
         }
