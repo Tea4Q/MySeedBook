@@ -74,6 +74,7 @@
     "react-native-date-picker": "^5.0.11",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-get-random-values": "^1.11.0",
+    "react-native-iap": "^14.4.41",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-reanimated": "~4.1.1",

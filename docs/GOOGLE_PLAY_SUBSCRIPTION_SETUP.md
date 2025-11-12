@@ -1,0 +1,447 @@
+# Google Play Subscription Setup Guide
+
+**Date**: November 12, 2025  
+**Purpose**: Configure subscription products in Google Play Console for MySeedBook Premium  
+**Timeline**: Complete before v1.3.1 billing integration
+
+---
+
+## Overview
+
+This guide walks through creating subscription products in Google Play Console. These products must be created **before** implementing billing in the app.
+
+---
+
+## Prerequisites
+
+- [ ] Google Play Console access
+- [ ] App created in Play Console (com.myseedbook.catalogue)
+- [ ] Merchant account set up (for receiving payments)
+
+---
+
+## Step 1: Set Up Merchant Account (If Not Done)
+
+### Check Merchant Status
+
+1. Go to **Google Play Console**
+2. Click **All applications** → Select your app
+3. Navigate to **Monetization** → **Monetization setup**
+4. Check if merchant account is linked
+
+### Link Merchant Account (If Needed)
+
+1. Click **Set up a merchant account**
+2. Follow prompts to create/link Google Merchant Center account
+3. Provide business information:
+   - Business name
+   - Business address
+   - Tax information
+   - Bank account details
+4. Complete verification (may take 1-3 days)
+
+**Note**: You can create subscription products while merchant verification is pending.
+
+---
+
+## Step 2: Create Monthly Subscription
+
+### Navigate to Subscriptions
+
+1. Open **Google Play Console**
+2. Select **MySeedBook Catalogue** app
+3. Go to **Monetization** → **Subscriptions**
+4. Click **Create subscription**
+
+### Configure Monthly Product
+
+**Base Plan Details**:
+
+| Field | Value |
+|-------|-------|
+| **Product ID** | `myseedbook_premium_monthly` |
+| **Name** | MySeedBook Premium Monthly |
+| **Description** | Unlimited seeds, weather forecasts, barcode scanning, and priority support. Cancel anytime. |
+
+**Subscription Details**:
+
+| Field | Value |
+|-------|-------|
+| **Billing period** | 1 month (recurring) |
+| **Base price** | $4.99 USD |
+| **Free trial** | 7 days (recommended) |
+| **Grace period** | 3 days (for failed payments) |
+
+**Additional Settings**:
+
+- ✅ **Auto-renewing**: Yes
+- ✅ **Backwards compatible**: Yes (for older app versions)
+- ✅ **Proration mode**: Immediate with time proration
+- ⬜ **Introductory price**: Skip for now (can add later)
+
+**Countries**:
+- Select **All countries** or target specific regions
+
+**Activation**:
+- Status: **Active**
+- Start date: Immediately
+
+### Click "Create" and "Activate"
+
+---
+
+## Step 3: Create Yearly Subscription
+
+### Create Second Subscription
+
+1. Still in **Monetization** → **Subscriptions**
+2. Click **Create subscription** again
+
+### Configure Yearly Product
+
+**Base Plan Details**:
+
+| Field | Value |
+|-------|-------|
+| **Product ID** | `myseedbook_premium_yearly` |
+| **Name** | MySeedBook Premium Yearly |
+| **Description** | Get 12 months for the price of 8! Unlimited seeds, weather forecasts, barcode scanning, and priority support. Best value. |
+
+**Subscription Details**:
+
+| Field | Value |
+|-------|-------|
+| **Billing period** | 1 year (recurring) |
+| **Base price** | $39.99 USD (33% savings vs monthly) |
+| **Free trial** | 7 days (optional, recommended) |
+| **Grace period** | 3 days |
+
+**Additional Settings**:
+
+- ✅ **Auto-renewing**: Yes
+- ✅ **Backwards compatible**: Yes
+- ✅ **Proration mode**: Immediate with time proration
+
+**Countries**:
+- Select **All countries** or match monthly subscription
+
+**Activation**:
+- Status: **Active**
+- Start date: Immediately
+
+### Click "Create" and "Activate"
+
+---
+
+## Step 4: Set Up License Testers
+
+For testing purchases without being charged:
+
+### Add Test Accounts
+
+1. Go to **Settings** → **License Testing**
+2. Click **Add license testers**
+3. Add email addresses of testers:
+   - Your Gmail account
+   - Developer team members
+   - QA testers
+
+**Example**:
+```
+youremail@gmail.com
+developer@example.com
+qa.tester@example.com
+```
+
+### Test Response Settings
+
+- Select: **RESPOND_NORMALLY** (real purchase flow, no charges)
+- Or: **RESPOND_WITH_SUCCESS** (instant success, for debugging)
+
+### Save Changes
+
+---
+
+## Step 5: Verify Subscription Setup
+
+### Check Subscription List
+
+1. Go to **Monetization** → **Subscriptions**
+2. Verify you see:
+   - ✅ **myseedbook_premium_monthly** - Active
+   - ✅ **myseedbook_premium_yearly** - Active
+
+### Review Pricing
+
+| Subscription | Monthly Price | Yearly Price | Annual Savings |
+|--------------|---------------|--------------|----------------|
+| Monthly | $4.99 | $59.88 | - |
+| Yearly | - | $39.99 | $19.89 (33%) |
+
+### Test Product IDs Match Code
+
+**In Play Console**:
+- `myseedbook_premium_monthly` ✅
+- `myseedbook_premium_yearly` ✅
+
+**In Code** (`premiumManager.ts`):
+```typescript
+android: 'myseedbook_premium_monthly' ✅
+android: 'myseedbook_premium_yearly' ✅
+```
+
+**Must match exactly!**
+
+---
+
+## Step 6: Optional Features (Add Later)
+
+### Introductory Offers
+
+**First Month Discount**:
+- Trial: Free for 7 days
+- Then: $1.99 for first month
+- Then: $4.99/month regular price
+
+**How to Add**:
+1. Edit subscription → **Offers**
+2. Create offer → **Introductory price**
+3. Set promotional price and duration
+
+### Promotional Codes
+
+**Use Cases**:
+- Influencer partnerships
+- Giveaways
+- Customer retention
+
+**How to Add**:
+1. Subscription → **Offers** → **Promo codes**
+2. Generate codes
+3. Distribute to users
+
+### Base Plans (Multiple Options)
+
+**Example**:
+- Basic: $4.99/month (Weather only)
+- Premium: $7.99/month (Weather + Barcode)
+
+**Current Setup**: Single premium tier (recommended for launch)
+
+---
+
+## Pricing Recommendations
+
+### Monthly Subscription ($4.99)
+
+**Why $4.99**:
+- ✅ Industry standard for mobile productivity apps
+- ✅ Psychological pricing (under $5)
+- ✅ Affordable for hobbyist gardeners
+- ✅ Premium enough to indicate value
+
+**Comparable Apps**:
+- Gardening apps: $3.99 - $9.99/month
+- Productivity apps: $4.99 - $14.99/month
+- Inventory apps: $2.99 - $7.99/month
+
+### Yearly Subscription ($39.99)
+
+**Why $39.99**:
+- ✅ 33% savings vs monthly ($19.89 saved)
+- ✅ Under $40 psychological threshold
+- ✅ Encourages annual commitment
+- ✅ Better revenue per user
+
+**Annual Revenue**:
+- Monthly x 12: $59.88
+- Yearly: $39.99
+- Discount: $19.89 (33% off)
+
+### Alternative Pricing Tiers (Consider Later)
+
+**Aggressive Growth**:
+- Monthly: $2.99
+- Yearly: $24.99
+- Strategy: High volume, low friction
+
+**Premium Positioning**:
+- Monthly: $7.99
+- Yearly: $59.99
+- Strategy: Higher quality perception
+
+**Freemium Heavy**:
+- Monthly: $9.99
+- Yearly: $79.99
+- Free tier: 10 seeds (current: 3)
+- Strategy: Free users drive growth
+
+---
+
+## Step 7: Revenue & Taxation Setup
+
+### Payment Profile
+
+1. Go to **Settings** → **Payments profile**
+2. Verify business information:
+   - Legal business name
+   - Business address
+   - Tax ID (if applicable)
+   - Bank account for payouts
+
+### Taxation
+
+**US Developers**:
+- Provide W-9 form
+- Google handles sales tax collection
+
+**International Developers**:
+- Provide tax forms (W-8BEN, etc.)
+- May need VAT registration
+
+**Google's Cut**:
+- Standard: 30% (first year)
+- Reduced: 15% (after $1M revenue or subscriptions after year 1)
+
+**Example Revenue**:
+- User pays: $4.99
+- Google takes: $1.50 (30%)
+- You receive: $3.49
+
+---
+
+## Step 8: Documentation
+
+### Product Information for Marketing
+
+**Monthly Subscription**:
+```
+MySeedBook Premium Monthly
+$4.99/month
+
+• Unlimited seed inventory
+• 7-day weather forecasts
+• Barcode scanner for quick entry
+• Unlimited suppliers
+• Advanced calendar features
+• Priority support
+• Cancel anytime
+
+7-day free trial included
+```
+
+**Yearly Subscription**:
+```
+MySeedBook Premium Yearly
+$39.99/year (Save 33%!)
+
+Everything in Monthly, plus:
+• Save $19.89 per year
+• Pay once, garden all year
+• Best value for serious gardeners
+
+7-day free trial included
+```
+
+### Feature Comparison Table
+
+| Feature | Free | Premium |
+|---------|------|---------|
+| Seeds | Up to 3 | Unlimited ✓ |
+| Suppliers | Up to 2 | Unlimited ✓ |
+| Weather | - | 7-day forecast ✓ |
+| Barcode Scanner | - | Scan packages ✓ |
+| Photos per seed | Up to 5 | Unlimited ✓ |
+| Calendar | Basic | Advanced ✓ |
+| Support | Community | Priority ✓ |
+| Price | Free | $4.99/mo or $39.99/yr |
+
+---
+
+## Testing Checklist
+
+After setup, verify:
+
+- [ ] Both subscription products visible in Play Console
+- [ ] Product IDs match code exactly
+- [ ] Prices set correctly ($4.99, $39.99)
+- [ ] Free trials enabled (7 days)
+- [ ] Grace period set (3 days)
+- [ ] Products activated
+- [ ] License testers added
+- [ ] Test response set to RESPOND_NORMALLY
+- [ ] Merchant account linked (or pending)
+
+---
+
+## Next Steps
+
+1. ✅ Complete subscription setup in Play Console
+2. ⏭️ Install `react-native-iap` in app
+3. ⏭️ Implement purchase flow in `premiumManager.ts`
+4. ⏭️ Test with license tester accounts
+5. ⏭️ Submit v1.3.1 with billing enabled
+
+---
+
+## Troubleshooting
+
+### "Subscription not showing in app"
+
+**Cause**: Product ID mismatch  
+**Fix**: Ensure Play Console IDs match code exactly
+
+### "Purchase fails during test"
+
+**Cause**: Not added as license tester  
+**Fix**: Add email to Settings → License Testing
+
+### "Merchant account required"
+
+**Cause**: No payment profile  
+**Fix**: Complete merchant verification in Play Console
+
+### "Product already exists"
+
+**Cause**: Product ID used before  
+**Fix**: Use different ID or delete old product
+
+---
+
+## Timeline
+
+**Immediate** (Today):
+- Create subscription products (15 minutes)
+- Add license testers (5 minutes)
+
+**After App Approval** (Week 2):
+- Install billing library (30 minutes)
+- Implement purchase flow (4-6 hours)
+- Test thoroughly (2-3 hours)
+
+**Week 3**:
+- Submit v1.3.1 update
+- Start earning revenue 💰
+
+---
+
+## Support Resources
+
+- [Google Play Billing Documentation](https://developer.android.com/google/play/billing)
+- [Subscription Setup Guide](https://support.google.com/googleplay/android-developer/answer/140504)
+- [Testing In-App Purchases](https://developer.android.com/google/play/billing/test)
+- [Pricing Best Practices](https://developer.android.com/distribute/best-practices/earn/subscriptions)
+
+---
+
+**Created**: November 12, 2025  
+**Status**: Ready to implement  
+**Priority**: High (monetization)
+
+---
+
+## Related Documentation
+
+- [Premium Features Implementation](../utils/premiumManager.ts)
+- [Billing Integration Code](BILLING_INTEGRATION_GUIDE.md) - Coming next
+- [Production Checklist](../PRODUCTION_CHECKLIST.md)
