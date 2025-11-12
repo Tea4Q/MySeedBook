@@ -16,14 +16,15 @@ import { lookupSeedByBarcode, type SeedLookupResult } from '@/utils/seedDataLook
 
 // Platform-specific imports - only load on mobile
 let CameraView: any = null;
-let Camera: any = null;
+let requestCameraPermissionsAsync: any = null;
 
 // Only import on native platforms
 if (Platform.OS === 'ios' || Platform.OS === 'android') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Camera = require('expo-camera');
-    CameraView = Camera.CameraView;
+    const ExpoCamera = require('expo-camera');
+    CameraView = ExpoCamera.CameraView;
+    requestCameraPermissionsAsync = ExpoCamera.Camera?.requestCameraPermissionsAsync;
   } catch {
     // Silently fail on web or if module not available
     if (__DEV__) {
@@ -73,6 +74,7 @@ export default function BarcodeScannerModal({
     if (visible && isPlatformSupported) {
       requestCameraPermission();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, isPlatformSupported]);
 
   const checkPremiumStatus = async () => {
@@ -87,13 +89,13 @@ export default function BarcodeScannerModal({
   };
 
   const requestCameraPermission = async () => {
-    if (!Camera) {
+    if (!isPlatformSupported || !requestCameraPermissionsAsync) {
       setHasPermission(false);
       return;
     }
 
     try {
-      const { status } = await Camera.requestCameraPermissionsAsync();
+      const { status } = await requestCameraPermissionsAsync();
       setHasPermission(status === 'granted');
     } catch (error) {
       console.error('Error requesting camera permission:', error);
