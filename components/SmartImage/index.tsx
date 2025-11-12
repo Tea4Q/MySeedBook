@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Image, ImageProps, ImageStyle, StyleProp } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { ImageStyle, StyleProp } from 'react-native';
 import { ENV, isSupabaseUrl } from '@/config/env';
 
-interface SmartImageProps extends Omit<ImageProps, 'source'> {
+interface SmartImageProps {
   uri: string;
   fallbackUri?: string;
   localUri?: string; // For development preview
   style?: StyleProp<ImageStyle>;
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
   onLoadStart?: () => void;
   onLoadEnd?: () => void;
   onError?: (error: any) => void;
@@ -17,10 +19,10 @@ export const SmartImage: React.FC<SmartImageProps> = ({
   fallbackUri,
   localUri,
   style,
+  resizeMode = 'cover',
   onLoadStart,
   onLoadEnd,
   onError,
-  ...imageProps
 }) => {
   const [hasError, setHasError] = useState(false);
 
@@ -64,12 +66,14 @@ export const SmartImage: React.FC<SmartImageProps> = ({
   const imageUri = getOptimalUri();
 
   return (
-    <Image
-      {...imageProps}
+    <ExpoImage
       source={{ uri: imageUri }}
       style={style}
+      contentFit={resizeMode}
+      transition={200}
+      cachePolicy="memory-disk"
       onLoadStart={handleLoadStart}
-      onLoadEnd={handleLoadEnd}
+      onLoad={handleLoadEnd}
       onError={handleError}
     />
   );
