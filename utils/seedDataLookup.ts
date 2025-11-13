@@ -41,6 +41,23 @@ const SEED_BRAND_PREFIXES: Record<string, string> = {
   // Add more as discovered
 };
 
+// Baker Creek / Rare Seeds Code128 product codes
+// These are internal product codes, not UPC barcodes
+const BAKER_CREEK_CODES: Record<string, {
+  name: string;
+  type: string;
+  variety?: string;
+  description?: string;
+}> = {
+  'CN179': {
+    name: 'Mammoth Russian Sunflower',
+    type: 'flower',
+    variety: 'Mammoth Russian',
+    description: 'Giant sunflowers that can grow up to 12 feet tall. Large, edible seeds.',
+  },
+  // Add more Baker Creek codes as you scan them
+};
+
 // Common seed types by package indicators
 const SEED_TYPE_KEYWORDS: Record<string, string> = {
   tomato: 'vegetable',
@@ -74,7 +91,23 @@ export async function lookupSeedByBarcode(
 ): Promise<SeedLookupResult> {
   console.log(`Looking up barcode: ${barcode} (${barcodeType})`);
 
-  // Check if it's a known seed brand
+  // Check for Baker Creek Code128 barcodes first
+  if (barcodeType.toLowerCase().includes('code128') || barcodeType.toLowerCase().includes('code_128')) {
+    const bakerCreekData = BAKER_CREEK_CODES[barcode.toUpperCase()];
+    if (bakerCreekData) {
+      console.log('✅ Found Baker Creek product:', bakerCreekData.name);
+      return {
+        seedName: bakerCreekData.name,
+        type: bakerCreekData.type,
+        variety: bakerCreekData.variety,
+        description: bakerCreekData.description,
+        supplier: 'Baker Creek / Rare Seeds',
+        confidence: 'high',
+      };
+    }
+  }
+
+  // Check if it's a known seed brand by UPC prefix
   const supplier = identifySupplier(barcode);
   
   // Try to get additional information from external APIs
