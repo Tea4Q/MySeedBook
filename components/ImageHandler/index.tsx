@@ -1,4 +1,3 @@
-// This component allows users to upload images from their device or add images from a web URL.
 import React, { useState, useCallback, useEffect } from 'react'; // Added useEffect
 import {
   View,
@@ -14,6 +13,7 @@ import { Camera, Globe, Trash2 } from 'lucide-react-native';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
+import { File } from 'expo-file-system';
 
 // Define the Imageinfo interface
 interface Imageinfo {
@@ -53,7 +53,7 @@ const validateImageUrl = async (url: string, retries = 2): Promise<boolean> => {
       if (response instanceof Response && (response.ok || response.status === 206)) {
         return true;
       }
-    } catch (error) {
+    } catch {
       // Silent failure, will retry
     }
 
@@ -128,20 +128,26 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           throw new Error('You must be logged in to upload images. Please sign in and try again.');
         }
 
-        const response = await fetch(localUri);
-        const blob = await response.blob();
+        // Determine file extension first
         const fileExt = localUri.split('.').pop()?.toLowerCase() || 'jpg';
         const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         const extensionToUse = validExtensions.includes(fileExt)
           ? fileExt
           : 'jpg';
+
+        // Create a File instance and read as ArrayBuffer
+        const file = new File(localUri);
+        const arrayBuffer = await file.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: `image/${extensionToUse}` });
+        
         const fileName = `${Date.now()}_${uuidv4().substring(
           0,
           8
-        )}.${extensionToUse}`;        // Organize files in user-specific folders for better security
+        )}.${extensionToUse}`;        
+        // Organize files in user-specific folders for better security
         const filePath = `${user.id}/${fileName}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from(bucketName) // Use bucketName prop
           .upload(filePath, blob, {
             cacheControl: '3600',
@@ -309,7 +315,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       )}.${extensionToUse}`;
       const filePath = fileName;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from(bucketName) // Use bucketName prop
         .upload(filePath, blob, {
           cacheControl: '3600',
@@ -435,7 +441,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       // Use Expo ImagePicker or any other library to select an image
       // Example using Expo ImagePicker:
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -453,9 +459,8 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   // --- Notify Parent Component of Changes ---
   useEffect(() => {
     // Only notify parent when images actually change
-    // Don't include onImagesChange in dependencies to prevent infinite loops
     onImagesChange(images);
-  }, [images]); // Only depend on images, not onImagesChange
+  }, [images, onImagesChange]);
 
   // --- Render ---
   return (

@@ -1,22 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Conditionally import IAP - only for production builds, not Expo Go
-let RNIap: any = null;
-
-// Type definitions for IAP (used when IAP is not available)
-type Purchase = any;
-type PurchaseError = any;
-
-// Only import on production builds (not Expo Go)
-if (Platform.OS !== 'web' && !__DEV__) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    RNIap = require('react-native-iap');
-  } catch {
-    console.log('IAP not available in development');
-  }
-}
+// IAP will be added in v1.3.2 - currently all users are on free tier
 
 export type SubscriptionTier = 'free' | 'premium' | 'premium-yearly';
 
@@ -92,68 +77,24 @@ class PremiumManager {
     if (this.isInitialized) return;
 
     try {
-      // Initialize IAP connection (only on native platforms)
-      if (Platform.OS !== 'web') {
-        await RNIap.initConnection();
-        console.log('IAP connection initialized');
-
-        // Set up purchase listeners
-        this.setupPurchaseListeners();
-      }
+      // IAP will be added in v1.3.2 - currently no native IAP connection
+      console.log('PremiumManager initialized (IAP disabled for now)');
       
       // Load cached subscription status
       await this.loadSubscriptionFromStorage();
-      
-      // Validate current purchases
-      await this.validatePurchases();
       
       this.isInitialized = true;
       console.log('PremiumManager initialized successfully');
     } catch (error) {
       console.error('Failed to initialize PremiumManager:', error);
-      // Even if IAP fails, continue with cached subscription
       await this.loadSubscriptionFromStorage();
       this.isInitialized = true;
     }
   }
 
   private setupPurchaseListeners(): void {
-    if (Platform.OS === 'web') return;
-
-    // Listen for purchase updates
-    this.purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
-      async (purchase: Purchase) => {
-        console.log('Purchase updated:', purchase);
-        
-        const receipt = purchase.transactionId;
-        if (receipt) {
-          try {
-            // Acknowledge purchase (Android)
-            if (Platform.OS === 'android' && purchase.purchaseToken) {
-              await RNIap.acknowledgePurchaseAndroid(purchase.purchaseToken);
-            }
-            
-            // Finish transaction (iOS)
-            await RNIap.finishTransaction({ purchase, isConsumable: false });
-            
-            // Activate subscription
-            await this.activateSubscription(purchase.productId, purchase);
-            
-            console.log('Purchase completed successfully');
-          } catch (error) {
-            console.error('Error finishing purchase:', error);
-          }
-        }
-      }
-    );
-
-    // Listen for purchase errors
-    this.purchaseErrorSubscription = RNIap.purchaseErrorListener(
-      (error: PurchaseError) => {
-        console.warn('Purchase error:', error);
-        // Handle error (show alert to user, etc.)
-      }
-    );
+    // IAP listeners will be added in v1.3.2
+    console.log('IAP listeners not configured (billing coming in v1.3.2)');
   }
 
   async loadSubscriptionFromStorage(): Promise<void> {
@@ -199,33 +140,8 @@ class PremiumManager {
   }
 
   async validatePurchases(): Promise<void> {
-    if (Platform.OS === 'web') return;
-
-    try {
-      const purchases = await RNIap.getAvailablePurchases();
-      console.log('Available purchases:', purchases);
-      
-      if (purchases && purchases.length > 0) {
-        // Find most recent valid subscription
-        const validSubscription = purchases.find((p: Purchase) => 
-          SUBSCRIPTION_SKUS.includes(p.productId)
-        );
-
-        if (validSubscription) {
-          await this.activateSubscription(validSubscription.productId, validSubscription);
-          console.log('Restored subscription:', validSubscription.productId);
-        }
-      } else {
-        // No active purchases, revert to free tier
-        if (this.subscription?.isActive) {
-          console.log('No active purchases found, reverting to free tier');
-          this.subscription = this.getDefaultSubscription();
-          await AsyncStorage.setItem('user_subscription', JSON.stringify(this.subscription));
-        }
-      }
-    } catch (error) {
-      console.error('Error validating purchases:', error);
-    }
+    // IAP validation will be added in v1.3.2
+    console.log('IAP validation skipped (billing coming in v1.3.2)');
   }
 
   async purchaseSubscription(productId: string): Promise<boolean> {
@@ -383,13 +299,8 @@ class PremiumManager {
   }
 
   async disconnect(): Promise<void> {
-    try {
-      if (Platform.OS !== 'web') {
-        await RNIap.endConnection();
-      }
-    } catch (error) {
-      console.error('Error disconnecting IAP:', error);
-    }
+    // IAP connection will be added in v1.3.2
+    console.log('IAP disconnect skipped (billing coming in v1.3.2)');
   }
 
   // Development helper - enable premium for testing

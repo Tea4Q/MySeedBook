@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Upload, Loader } from 'lucide-react-native';
@@ -19,8 +18,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
 
       if (Platform.OS === 'web') {
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [4, 3],
           quality: 0.8,
@@ -37,7 +35,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
         }
 
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [4, 3],
           quality: 0.8,
@@ -61,7 +59,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
       setError(null);
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,

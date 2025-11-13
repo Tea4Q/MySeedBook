@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,7 +17,7 @@ import {
   Check,
   Image as ImageIcon,
 } from 'lucide-react-native';
-import { FlipType, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 interface ImageCaptureProps {
   onImageCaptured: (uri: string | null) => void;
@@ -44,7 +43,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       );
 
       return processedResult.uri;
-    } catch (err) {
+    } catch {
       throw new Error('Failed to process image');
     } finally {
       setIsProcessing(false);
@@ -65,7 +64,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -88,7 +87,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       setError(null);
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         // mediaTypes: [ImagePicker.MediaType.IMAGE, ImagePicker.MediaType.VIDEO],
         allowsEditing: true,
         aspect: [4, 3],
@@ -114,7 +113,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       const processedUri = await processImage(selectedImage);
       onImageCaptured(processedUri);
       setSelectedImage(null);
-    } catch (err) {
+    } catch {
       setError('Failed to process image');
     }
   };
