@@ -135,11 +135,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           ? fileExt
           : 'jpg';
 
-        // Create a File instance and read as ArrayBuffer
-        const file = new File(localUri);
-        const arrayBuffer = await file.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: `image/${extensionToUse}` });
-        
+        // Use supabase's decode option for uploading file URIs directly
         const fileName = `${Date.now()}_${uuidv4().substring(
           0,
           8
@@ -147,12 +143,16 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         // Organize files in user-specific folders for better security
         const filePath = `${user.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
+        // For React Native, we need to read the file from the URI
+        // Create a FormData approach or use the file URI directly
+        const file = new File(localUri);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from(bucketName) // Use bucketName prop
-          .upload(filePath, blob, {
+          .upload(filePath, file, {
             cacheControl: '3600',
             upsert: false,
-            contentType: blob.type || `image/${extensionToUse}`,
+            contentType: `image/${extensionToUse}`,
           });
         if (uploadError) throw uploadError;
 

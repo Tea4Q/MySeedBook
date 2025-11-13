@@ -709,13 +709,19 @@ export default function AddOrEditSeedScreen() {
 
   // --- Barcode Scan Handlers ---
   const handleBarcodeScan = (data: ScannedSeedData) => {
+    console.log('📦 Barcode scan data received:', JSON.stringify(data, null, 2));
+    
     // Auto-fill form with scanned data
-    setSeedPackage((prev) => ({
-      ...prev,
-      seed_name: data.seedName || prev.seed_name,
-      type: data.type || prev.type,
-      description: data.description || prev.description,
-    }));
+    setSeedPackage((prev) => {
+      const updated = {
+        ...prev,
+        seed_name: data.seedName || prev.seed_name,
+        type: data.type || prev.type,
+        description: data.description || prev.description,
+      };
+      console.log('📦 Updated seed package:', JSON.stringify(updated, null, 2));
+      return updated;
+    });
 
     // Try to find matching supplier
     if (data.supplier) {
@@ -726,7 +732,7 @@ export default function AddOrEditSeedScreen() {
 
     Alert.alert(
       'Barcode Scanned!',
-      `Seed information loaded. Please review and complete the details.`,
+      `Seed information loaded${data.seedName ? `: ${data.seedName}` : ''}. Please review and complete the details.`,
       [{ text: 'OK' }]
     );
   };
