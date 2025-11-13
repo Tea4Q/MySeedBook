@@ -140,47 +140,45 @@ export default function WeatherScreen() {
   };
 
   // Show premium upgrade screen if user doesn't have weather integration
-  if (showPremiumModal) {
+  if (showPremiumModal && !showUpgradeModal) {
     return (
-      <>
-        <View style={styles.premiumContainer}>
-          <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
-          <Text style={styles.premiumTitle}>Weather Integration</Text>
-          <Text style={styles.premiumDescription}>
-            Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
-          </Text>
-          <View style={styles.premiumFeatures}>
-            <View style={styles.featureItem}>
-              <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
-              <Text style={styles.featureText}>Real-time weather conditions</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
-              <Text style={styles.featureText}>7-day detailed forecast</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
-              <Text style={styles.featureText}>Gardening condition insights</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
-              <Text style={styles.featureText}>Personalized garden tips</Text>
-            </View>
+      <View style={styles.premiumContainer}>
+        <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
+        <Text style={styles.premiumTitle}>Weather Integration</Text>
+        <Text style={styles.premiumDescription}>
+          Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
+        </Text>
+        <View style={styles.premiumFeatures}>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Real-time weather conditions</Text>
           </View>
-          <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
-            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
-            <Text style={styles.backButtonText}>Back to Garden</Text>
-          </TouchableOpacity>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>7-day detailed forecast</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Gardening condition insights</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
+            <Text style={styles.featureText}>Personalized garden tips</Text>
+          </View>
         </View>
+        <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
+          <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
+          <Text style={styles.backButtonText}>Back to Garden</Text>
+        </TouchableOpacity>
 
         <PremiumModal
           visible={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
           feature="Weather Integration"
         />
-      </>
+      </View>
     );
   }
 
@@ -262,12 +260,6 @@ export default function WeatherScreen() {
           </Text>
         </View>
       </ScrollView>
-
-      <PremiumModal
-        visible={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        feature="Weather Integration"
-      />
     </>
   );
 }
