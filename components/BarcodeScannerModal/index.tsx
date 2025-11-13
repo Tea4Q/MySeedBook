@@ -72,6 +72,9 @@ export default function BarcodeScannerModal({
 
   useEffect(() => {
     if (visible && isPlatformSupported) {
+      console.log('📷 BarcodeScannerModal opened - requesting camera permission');
+      console.log('📷 CameraView available:', !!CameraView);
+      console.log('📷 requestCameraPermissionsAsync available:', !!requestCameraPermissionsAsync);
       requestCameraPermission();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,24 +84,29 @@ export default function BarcodeScannerModal({
     try {
       await premiumManager.initialize();
       const subscription = premiumManager.getSubscription();
-      setIsPremium(subscription?.features.barcode_scanner || false);
+      const hasPremium = subscription?.features.barcode_scanner || false;
+      console.log('📷 Barcode scanner premium check:', hasPremium);
+      setIsPremium(hasPremium);
     } catch (error) {
-      console.error('Error checking premium status:', error);
+      console.error('❌ Error checking premium status:', error);
       setIsPremium(false);
     }
   };
 
   const requestCameraPermission = async () => {
     if (!isPlatformSupported || !requestCameraPermissionsAsync) {
+      console.log('❌ Camera not supported or requestCameraPermissionsAsync not available');
       setHasPermission(false);
       return;
     }
 
     try {
+      console.log('📷 Requesting camera permissions...');
       const { status } = await requestCameraPermissionsAsync();
+      console.log('📷 Camera permission status:', status);
       setHasPermission(status === 'granted');
     } catch (error) {
-      console.error('Error requesting camera permission:', error);
+      console.error('❌ Error requesting camera permission:', error);
       setHasPermission(false);
     }
   };
@@ -302,7 +310,7 @@ export default function BarcodeScannerModal({
   return (
     <Modal visible={visible} transparent={false} animationType="slide">
       <View style={styles.scannerContainer}>
-        {CameraView && (
+        {CameraView ? (
           <CameraView
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
             barcodeScannerSettings={{
@@ -310,6 +318,21 @@ export default function BarcodeScannerModal({
             }}
             style={StyleSheet.absoluteFillObject}
           />
+        ) : (
+          <View style={[styles.content, { backgroundColor: colors.card, flex: 1, justifyContent: 'center' }]}>
+            <Text style={[styles.message, { color: colors.text }]}>
+              Camera not available
+            </Text>
+            <Text style={[styles.message, { color: colors.textSecondary, fontSize: 14 }]}>
+              Please ensure you&apos;re using a physical device or restart the app
+            </Text>
+            <Pressable
+              style={[styles.button, { backgroundColor: colors.primary, marginTop: 16 }]}
+              onPress={onClose}
+            >
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Close</Text>
+            </Pressable>
+          </View>
         )}
 
         {/* Overlay */}
