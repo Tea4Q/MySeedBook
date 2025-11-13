@@ -130,11 +130,12 @@ export async function lookupSeedByBarcode(
     console.error('Error querying external APIs:', error);
   }
 
-  // Fallback: Return basic information based on barcode structure
+  // Fallback: Return minimal information - let user fill in details
+  // This allows scanning any seed package and entering the correct information
   return {
-    seedName: `Seed Package (${barcode.slice(-6)})`,
+    seedName: undefined, // Leave empty so user can enter the correct name
     supplier: supplier,
-    description: `Scanned from barcode ${barcode}. Please verify and complete the seed information manually.`,
+    description: `Barcode: ${barcode}${supplier ? ` (${supplier})` : ''}. Package scanned successfully - please enter seed details.`,
     confidence: supplier ? 'medium' : 'low',
   };
 }

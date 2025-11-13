@@ -732,7 +732,9 @@ export default function AddOrEditSeedScreen() {
 
     Alert.alert(
       'Barcode Scanned!',
-      `Seed information loaded${data.seedName ? `: ${data.seedName}` : ''}. Please review and complete the details.`,
+      data.seedName 
+        ? `Found: ${data.seedName}. Please review and complete the details.`
+        : `Barcode captured (${data.barcode}). Please enter the seed name and details from your package.`,
       [{ text: 'OK' }]
     );
   };
