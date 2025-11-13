@@ -40,6 +40,7 @@ import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
+import { saveBarcodeMapping } from '@/utils/barcodeMemory';
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
@@ -96,6 +97,7 @@ export default function AddOrEditSeedScreen() {
   // Barcode scanner state
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [scannedBarcodeData, setScannedBarcodeData] = useState<{ barcode: string; barcodeType: string } | null>(null);
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -313,6 +315,7 @@ export default function AddOrEditSeedScreen() {
     setErrors({});
     setSelectedSupplier(null);
     setPriceInput(''); // Reset price input display
+    setScannedBarcodeData(null); // Clear scanned barcode data
   };
 
   const router = useRouter();
@@ -454,6 +457,21 @@ export default function AddOrEditSeedScreen() {
           category: 'purchase',
           notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
         });
+      }
+
+      // Save barcode mapping to memory if this seed was scanned
+      if (scannedBarcodeData && seedPackage.seed_name) {
+        await saveBarcodeMapping(
+          scannedBarcodeData.barcode,
+          scannedBarcodeData.barcodeType,
+          {
+            seedName: seedPackage.seed_name,
+            type: seedPackage.type || undefined,
+            description: seedPackage.description || undefined,
+            supplier: selectedSupplier?.supplier_name || undefined,
+          }
+        );
+        console.log(`💾 Learned barcode: ${scannedBarcodeData.barcode} -> ${seedPackage.seed_name}`);
       }
 
       // Reset form state
@@ -710,6 +728,12 @@ export default function AddOrEditSeedScreen() {
   // --- Barcode Scan Handlers ---
   const handleBarcodeScan = (data: ScannedSeedData) => {
     console.log('📦 Barcode scan data received:', JSON.stringify(data, null, 2));
+    
+    // Store barcode data for later saving to memory
+    setScannedBarcodeData({
+      barcode: data.barcode,
+      barcodeType: data.barcodeType,
+    });
     
     // Auto-fill form with scanned data
     setSeedPackage((prev) => {

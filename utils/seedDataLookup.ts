@@ -4,14 +4,17 @@
  * This service provides barcode-to-seed information mapping.
  * It can be extended to integrate with various APIs and databases:
  * 
- * 1. Local Database: Pre-populated seed catalog with common seed packages
- * 2. Open Food Facts API: For packaged seeds with UPC codes
- * 3. Custom Seed Database API: Industry-specific seed catalogs
- * 4. OCR Enhancement: Extract additional info from package images
+ * 1. User Memory: Previously scanned barcodes (learned by the app)
+ * 2. Local Database: Pre-populated seed catalog with common seed packages
+ * 3. Open Food Facts API: For packaged seeds with UPC codes
+ * 4. Custom Seed Database API: Industry-specific seed catalogs
+ * 5. OCR Enhancement: Extract additional info from package images
  * 
  * Current implementation provides a foundation with common seed brands
  * and allows manual entry fallback for unknown barcodes.
  */
+
+import { lookupBarcodeInMemory } from './barcodeMemory';
 
 export interface SeedLookupResult {
   seedName?: string;
@@ -91,7 +94,21 @@ export async function lookupSeedByBarcode(
 ): Promise<SeedLookupResult> {
   console.log(`Looking up barcode: ${barcode} (${barcodeType})`);
 
-  // Check for Baker Creek Code128 barcodes first
+  // Priority 1: Check user's learned barcodes (memory)
+  const memoryResult = await lookupBarcodeInMemory(barcode);
+  if (memoryResult) {
+    console.log('💾 Found in user memory:', memoryResult.seedName);
+    return {
+      seedName: memoryResult.seedName,
+      type: memoryResult.type,
+      variety: memoryResult.variety,
+      description: memoryResult.description,
+      supplier: memoryResult.supplier,
+      confidence: 'high',
+    };
+  }
+
+  // Priority 2: Check for Baker Creek Code128 barcodes
   if (barcodeType.toLowerCase().includes('code128') || barcodeType.toLowerCase().includes('code_128')) {
     const bakerCreekData = BAKER_CREEK_CODES[barcode.toUpperCase()];
     if (bakerCreekData) {
@@ -107,10 +124,10 @@ export async function lookupSeedByBarcode(
     }
   }
 
-  // Check if it's a known seed brand by UPC prefix
+  // Priority 3: Check if it's a known seed brand by UPC prefix
   const supplier = identifySupplier(barcode);
   
-  // Try to get additional information from external APIs
+  // Priority 4: Try to get additional information from external APIs
   try {
     // Option 1: Try Open Food Facts (for packaged seeds)
     const openFoodFactsData = await queryOpenFoodFacts(barcode);
