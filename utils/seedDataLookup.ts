@@ -46,19 +46,20 @@ const SEED_BRAND_PREFIXES: Record<string, string> = {
 
 // Baker Creek / Rare Seeds Code128 product codes
 // These are internal product codes, not UPC barcodes
+// Add codes as you scan and identify them
 const BAKER_CREEK_CODES: Record<string, {
   name: string;
   type: string;
   variety?: string;
   description?: string;
 }> = {
-  'CN179': {
-    name: 'Mammoth Russian Sunflower',
-    type: 'flower',
-    variety: 'Mammoth Russian',
-    description: 'Giant sunflowers that can grow up to 12 feet tall. Large, edible seeds.',
-  },
-  // Add more Baker Creek codes as you scan them
+  // Add Baker Creek codes here as you learn them
+  // Example:
+  // 'CN123': {
+  //   name: 'Seed Name',
+  //   type: 'vegetable',
+  //   description: 'Seed description',
+  // },
 };
 
 // Common seed types by package indicators
