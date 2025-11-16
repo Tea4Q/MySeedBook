@@ -39,76 +39,76 @@ export const WeatherForecastCard: React.FC<WeatherForecastCardProps> = ({
     return '#9013FE'; // Hot - Purple
   };
 
-  const getPrecipitationText = (forecast: WeatherForecast): string => {
-    if (!forecast.precipitation) return '';
-    
-    const prob = Math.round(forecast.precipitation.probability);
-    if (prob === 0) return '';
-    
-    return `${prob}% chance`;
-  };
+  const renderDayCard = (day: WeatherForecast, index: number) => (
+    <View key={day.date} style={[styles.dayCard, index === 0 && styles.firstCard]}>
+      {/* Date Header */}
+      <Text style={styles.dayLabel}>{formatDate(day.date)}</Text>
+      
+      {/* Weather Icon */}
+      <View style={styles.iconContainer}>
+        <WeatherMeteocon
+          weatherCode={day.condition.icon || '01d'}
+          size={40}
+          style={styles.weatherIcon}
+        />
+      </View>
+      
+      {/* Temperature */}
+      <View style={styles.tempRow}>
+        <Text style={[styles.temp, { color: getTemperatureColor(day.temp.max) }]}>
+          {Math.round(day.temp.max)}°
+        </Text>
+        <Text style={styles.tempDivider}>/</Text>
+        <Text style={[styles.temp, styles.tempLow]}>
+          {Math.round(day.temp.min)}°
+        </Text>
+      </View>
+
+      {/* Condition Description */}
+      <Text style={styles.condition} numberOfLines={2}>
+        {day.condition.description}
+      </Text>
+
+      {/* Weather Details Grid */}
+      <View style={styles.detailsGrid}>
+        {/* Precipitation */}
+        <View style={styles.detailRow}>
+          <FontAwesome5 name="tint" size={12} color="#4A90E2" />
+          <Text style={styles.detailLabel}>Rain</Text>
+          <Text style={styles.detailValue}>
+            {day.precipitation?.probability ? `${Math.round(day.precipitation.probability)}%` : '0%'}
+          </Text>
+        </View>
+
+        {/* Humidity */}
+        <View style={styles.detailRow}>
+          <FontAwesome5 name="water" size={12} color="#50C878" />
+          <Text style={styles.detailLabel}>Humid</Text>
+          <Text style={styles.detailValue}>{day.humidity}%</Text>
+        </View>
+
+        {/* Wind */}
+        <View style={styles.detailRow}>
+          <FontAwesome5 name="wind" size={12} color="#95A5A6" />
+          <Text style={styles.detailLabel}>Wind</Text>
+          <Text style={styles.detailValue}>{Math.round(day.wind.speed)} mph</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       {showTitle && (
         <Text style={styles.title}>
-          {isTablet ? '7-Day Forecast' : '7-Day Forecast (Swipe left to see more →)'}
+          {isTablet ? '7-Day Forecast' : '7-Day Forecast'}
         </Text>
       )}
       
       {isTablet ? (
         // Grid layout for tablets - no scrolling needed
         <View style={styles.gridContainer}>
-          {forecast.map((day, index) => (
-            <View key={day.date} style={[styles.dayCard, styles.gridCard, index === 0 && styles.firstCard]}>
-              <Text style={styles.dayLabel}>{formatDate(day.date)}</Text>
-              
-              <WeatherMeteocon
-                weatherCode={day.condition.icon || '01d'}
-                size={32}
-                style={styles.weatherIcon}
-              />
-              
-              <View style={styles.temperatureContainer}>
-                <Text style={[styles.highTemp, { color: getTemperatureColor(day.temp.max) }]}>
-                  {Math.round(day.temp.max)}°
-                </Text>
-                <Text style={styles.lowTemp}>
-                  {Math.round(day.temp.min)}°
-                </Text>
-              </View>
-
-              <Text style={styles.condition} numberOfLines={2}>
-                {day.condition.description}
-              </Text>
-
-              {day.precipitation && day.precipitation.probability > 0 && (
-                <View style={styles.precipitationContainer}>
-                  <FontAwesome5 
-                    name="tint" 
-                    size={12} 
-                    color="#4A90E2" 
-                    style={styles.precipIcon}
-                  />
-                  <Text style={styles.precipitationText}>
-                    {getPrecipitationText(day)}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.detailsContainer}>
-                <View style={styles.detailItem}>
-                  <FontAwesome5 name="tint" size={10} color="#4A90E2" />
-                  <Text style={styles.detailText}>{day.humidity}%</Text>
-                </View>
-                
-                <View style={styles.detailItem}>
-                  <FontAwesome5 name="wind" size={10} color="#50C878" />
-                  <Text style={styles.detailText}>{Math.round(day.wind.speed)}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
+          {forecast.map((day, index) => renderDayCard(day, index))}
         </View>
       ) : (
         // Horizontal scroll for phones
@@ -120,56 +120,7 @@ export const WeatherForecastCard: React.FC<WeatherForecastCardProps> = ({
           nestedScrollEnabled={true}
           scrollEnabled={true}
         >
-          {forecast.map((day, index) => (
-            <View key={day.date} style={[styles.dayCard, index === 0 && styles.firstCard]}>
-              <Text style={styles.dayLabel}>{formatDate(day.date)}</Text>
-              
-              <WeatherMeteocon
-                weatherCode={day.condition.icon || '01d'}
-                size={32}
-                style={styles.weatherIcon}
-              />
-              
-              <View style={styles.temperatureContainer}>
-                <Text style={[styles.highTemp, { color: getTemperatureColor(day.temp.max) }]}>
-                  {Math.round(day.temp.max)}°
-                </Text>
-                <Text style={styles.lowTemp}>
-                  {Math.round(day.temp.min)}°
-                </Text>
-              </View>
-
-              <Text style={styles.condition} numberOfLines={2}>
-                {day.condition.description}
-              </Text>
-
-              {day.precipitation && day.precipitation.probability > 0 && (
-                <View style={styles.precipitationContainer}>
-                  <FontAwesome5 
-                    name="tint" 
-                    size={12} 
-                    color="#4A90E2" 
-                    style={styles.precipIcon}
-                  />
-                  <Text style={styles.precipitationText}>
-                    {getPrecipitationText(day)}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.detailsContainer}>
-                <View style={styles.detailItem}>
-                  <FontAwesome5 name="tint" size={10} color="#4A90E2" />
-                  <Text style={styles.detailText}>{day.humidity}%</Text>
-                </View>
-                
-                <View style={styles.detailItem}>
-                  <FontAwesome5 name="wind" size={10} color="#50C878" />
-                  <Text style={styles.detailText}>{Math.round(day.wind.speed)}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
+          {forecast.map((day, index) => renderDayCard(day, index))}
         </ScrollView>
       )}
     </View>
@@ -209,83 +160,87 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     marginRight: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#F8F9FA',
-    minWidth: 110,
-    width: 110,
-  },
-  gridCard: {
-    flex: 1,
-    minWidth: 120,
-    maxWidth: 150,
-    marginRight: 0,
+    minWidth: 140,
+    width: 140,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   firstCard: {
     backgroundColor: '#E3F2FD',
+    borderColor: '#90CAF9',
   },
   dayLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#2C3E50',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  iconContainer: {
+    marginBottom: 10,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   weatherIcon: {
-    marginBottom: 8,
+    // Icon sizing handled by component
   },
-  temperatureContainer: {
+  tempRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    gap: 4,
   },
-  highTemp: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    lineHeight: 24,
+  temp: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 26,
   },
-  lowTemp: {
-    fontSize: 16,
+  tempDivider: {
+    fontSize: 18,
+    color: '#95A5A6',
+    fontWeight: '400',
+  },
+  tempLow: {
     color: '#7F8C8D',
-    lineHeight: 20,
   },
   condition: {
     fontSize: 12,
-    color: '#2C3E50',
+    color: '#34495E',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     textTransform: 'capitalize',
-    minHeight: 32,
+    height: 32,
+    lineHeight: 16,
   },
-  precipitationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  precipIcon: {
-    marginRight: 4,
-  },
-  precipitationText: {
-    fontSize: 11,
-    color: '#4A90E2',
-    fontWeight: '500',
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  detailsGrid: {
     width: '100%',
+    gap: 6,
   },
-  detailItem: {
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingVertical: 3,
+    gap: 6,
   },
-  detailText: {
+  detailLabel: {
     fontSize: 11,
     color: '#7F8C8D',
-    marginLeft: 4,
     fontWeight: '500',
+    width: 40,
+  },
+  detailValue: {
+    fontSize: 11,
+    color: '#2C3E50',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
   },
 });
