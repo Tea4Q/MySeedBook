@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import LottieView from 'lottie-react-native';
 
@@ -47,6 +47,16 @@ export default function WeatherIcon({
   loop = true 
 }: WeatherIconProps) {
   const iconName = toIconName(condition);
+  const animationRef = useRef<LottieView>(null);
+
+  useEffect(() => {
+    if (autoPlay && animationRef.current) {
+      // Small delay to ensure component is mounted
+      setTimeout(() => {
+        animationRef.current?.play();
+      }, 100);
+    }
+  }, [autoPlay, iconName]);
 
   if (Platform.OS === 'web') {
     // Use the official Meteocons SVGs on web (animate via SMIL in browsers)
@@ -68,11 +78,15 @@ export default function WeatherIcon({
   return (
     <View style={{ width: size, height: size }}>
       <LottieView 
+        ref={animationRef}
+        key={`${iconName}-${autoPlay}-${loop}`}
         source={source} 
         autoPlay={autoPlay}
         loop={loop}
+        speed={1.0}
         style={{ width: size, height: size }} 
         resizeMode="contain"
+        hardwareAccelerationAndroid
       />
     </View>
   );
