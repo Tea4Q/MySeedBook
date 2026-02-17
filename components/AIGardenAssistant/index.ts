@@ -1,0 +1,1 @@
+export { default as AIGardenAssistant } from './AIGardenAssistant';

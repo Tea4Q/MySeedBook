@@ -23,7 +23,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses the camera to capture photos of your seeds and plants for your garden catalogue.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images of your seeds and plants.",
-        "NSMicrophoneUsageDescription": "This app may use the microphone for video recording features.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record voice notes while you work in your garden, allowing hands-free note-taking about your plants and seeds.",
         "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate weather information for your gardening activities."
       },
       "config": {

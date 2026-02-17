@@ -35,12 +35,14 @@ import {
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
+import { VoiceNotes } from '@/components/VoiceNotes';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
 import { saveBarcodeMapping } from '@/utils/barcodeMemory';
+import { AI_FEATURES } from '@/config/ai';
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
@@ -1334,6 +1336,28 @@ export default function AddOrEditSeedScreen() {
               multiline
               numberOfLines={4}
             />
+            
+            {/* Voice Notes Enhancement */}
+            {AI_FEATURES.voice_notes && (
+              <>
+                <Text style={[styles.voiceNotesLabel, { color: colors.textSecondary }]}>
+                  Or record a voice note:
+                </Text>
+                <VoiceNotes
+                  onTextExtracted={(voiceText) => {
+                    const existingNotes = seedPackage.notes || '';
+                    const separator = existingNotes ? '\n\n' : '';
+                    setSeedPackage((prev) => ({ 
+                      ...prev, 
+                      notes: existingNotes + separator + '[Voice Note] ' + voiceText 
+                    }));
+                  }}
+                  placeholder="Record garden observations"
+                  maxDuration={45}
+                  allowPlayback={true}
+                />
+              </>
+            )}
           </View>
         </View>
 
@@ -1825,5 +1849,12 @@ const styles = StyleSheet.create({
   barcodeButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Voice notes style
+  voiceNotesLabel: {
+    fontSize: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
 });

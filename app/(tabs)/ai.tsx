@@ -1,0 +1,495 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Platform,
+} from 'react-native';
+import { Brain, MessageCircle, ShoppingCart, Mic, Sparkles } from 'lucide-react-native';
+import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
+import { AIGardenAssistant } from '@/components/AIGardenAssistant';
+import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
+import { VoiceNotes } from '@/components/VoiceNotes';
+import { Seed, Supplier } from '@/types/database';
+import { AI_FEATURES, AIConfig } from '@/config/ai';
+import { supabase } from '@/lib/supabase';
+import { guestDataManager } from '@/utils/guestDataManager';
+
+type ActiveView = 'overview' | 'chat' | 'shopping' | 'voice';
+
+export default function AIScreen() {
+  const { session } = useAuth();
+  const { colors } = useTheme();
+  const responsive = useResponsive();
+  
+  const [activeView, setActiveView] = useState<ActiveView>('overview');
+  const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
+  const [userSuppliers, setUserSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [voiceText, setVoiceText] = useState('');
+
+  useEffect(() => {
+    loadUserData();
+  }, [session]);
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      if (session?.user) {
+        // Load authenticated user data
+        const [seedsResponse, suppliersResponse] = await Promise.all([
+          supabase
+            .from('seeds')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .is('deleted_at', null),
+          supabase
+            .from('suppliers')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .is('deleted_at', null),
+        ]);
+
+        if (seedsResponse.data) setUserSeeds(seedsResponse.data);
+        if (suppliersResponse.data) setUserSuppliers(suppliersResponse.data);
+        
+      } else {
+        // Load guest data
+        const guestManager = guestDataManager.getInstance();
+        const [seeds, suppliers] = await Promise.all([
+          guestManager.getAllSeeds(),
+          guestManager.getAllSuppliers(),
+        ]);
+        
+        setUserSeeds(seeds);
+        setUserSuppliers(suppliers);
+      }
+    } catch (error) {
+      console.error('Error loading user data for AI:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVoiceTextExtracted = (text: string) => {
+    setVoiceText(text);
+    // Could auto-navigate to chat and send the voice text
+    if (text.trim()) {
+      setActiveView('chat');
+    }
+  };
+
+  const renderFeatureCard = (
+    title: string,
+    description: string,
+    icon: any,
+    viewId: ActiveView,
+    available: boolean = true,
+    comingSoon: boolean = false
+  ) => (
+    <Pressable
+      style={[
+        styles.featureCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: available ? 1 : 0.6,
+        },
+        activeView === viewId && { borderColor: colors.primary, borderWidth: 2 },
+      ]}
+      onPress={() => available && !comingSoon && setActiveView(viewId)}
+      disabled={!available || comingSoon}
+    >
+      <View style={[styles.featureIconContainer, { backgroundColor: colors.primary + '20' }]}>
+        {React.createElement(icon, { size: 24, color: colors.primary })}
+      </View>
+      <View style={styles.featureContent}>
+        <View style={styles.featureHeader}>
+          <Text style={[styles.featureTitle, { color: colors.text }]}>
+            {title}
+          </Text>
+          {comingSoon && (
+            <View style={[styles.comingSoonBadge, { backgroundColor: colors.warning }]}>
+              <Text style={[styles.comingSoonText, { color: colors.background }]}>
+                Phase 2
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>
+          {description}
+        </Text>
+      </View>
+    </Pressable>
+  );
+
+  const renderOverview = () => (
+    <View style={styles.overviewContainer}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View style={[styles.headerIcon, { backgroundColor: colors.primary + '20' }]}>
+          <Brain size={32} color={colors.primary} />
+        </View>
+        <View>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            AI Garden Assistant
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            Phase 1 Features Available
+          </Text>
+        </View>
+      </View>
+
+      {/* Statistics */}
+      <View style={styles.statsContainer}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {userSeeds.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Seeds in Collection
+          </Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {userSuppliers.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Trusted Suppliers
+          </Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {AIConfig.isConfigured() ? '✓' : '✗'}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            AI Configured
+          </Text>
+        </View>
+      </View>
+
+      {/* Feature Cards */}
+      <View style={styles.featuresGrid}>
+        {renderFeatureCard(
+          'AI Garden Chat',
+          'Get personalized gardening advice and answers to your plant questions.',
+          MessageCircle,
+          'chat',
+          AI_FEATURES.ai_chat
+        )}
+        
+        {renderFeatureCard(
+          'Smart Shopping',
+          'Receive AI-powered recommendations for seeds that complement your garden.',
+          ShoppingCart,
+          'shopping',
+          AI_FEATURES.smart_shopping
+        )}
+        
+        {renderFeatureCard(
+          'Voice Garden Notes',
+          'Record voice notes hands-free while working in your garden.',
+          Mic,
+          'voice',
+          AI_FEATURES.voice_notes && Platform.OS !== 'web'
+        )}
+      </View>
+
+      {/* Coming Soon Preview */}
+      <View style={styles.comingSoonContainer}>
+        <Text style={[styles.comingSoonTitle, { color: colors.text }]}>
+          Coming in Phase 2
+        </Text>
+        <View style={styles.comingSoonGrid}>
+          {renderFeatureCard(
+            'Plant Health Scanner',
+            'Photo-based disease and pest identification.',
+            Sparkles,
+            'overview',
+            false,
+            true
+          )}
+          {renderFeatureCard(
+            'Smart Planting Calendar',
+            'AI-optimized planting schedules based on your location.',
+            Sparkles,
+            'overview',
+            false,
+            true
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderActiveView = () => {
+    switch (activeView) {
+      case 'chat':
+        return (
+          <AIGardenAssistant
+            userSeeds={userSeeds}
+            userSuppliers={userSuppliers}
+            location="Your Garden" // Could be enhanced with actual location
+          />
+        );
+      case 'shopping':
+        return (
+          <SmartShoppingAssistant
+            userSeeds={userSeeds}
+            userSuppliers={userSuppliers}
+            location="Your Location"
+          />
+        );
+      case 'voice':
+        return (
+          <View style={styles.voiceContainer}>
+            <Text style={[styles.voiceTitle, { color: colors.text }]}>
+              Voice Garden Notes
+            </Text>
+            <Text style={[styles.voiceSubtitle, { color: colors.textSecondary }]}>
+              Record voice notes while working in your garden. The text will be extracted automatically.
+            </Text>
+            
+            <VoiceNotes
+              onTextExtracted={handleVoiceTextExtracted}
+              placeholder="Tap to record garden observations"
+              maxDuration={60}
+              allowPlayback={true}
+            />
+            
+            {voiceText && (
+              <View style={[styles.extractedTextContainer, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.extractedTextLabel, { color: colors.textSecondary }]}>
+                  Extracted Text:
+                </Text>
+                <Text style={[styles.extractedText, { color: colors.text }]}>
+                  {voiceText}
+                </Text>
+                
+                <Pressable
+                  style={[styles.useTextButton, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    setActiveView('chat');
+                    // The chat component could be enhanced to accept initial text
+                  }}
+                >
+                  <MessageCircle size={16} color={colors.background} />
+                  <Text style={[styles.useTextButtonText, { color: colors.background }]}>
+                    Continue in AI Chat
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        );
+      default:
+        return renderOverview();
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Brain size={48} color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          Loading AI Features...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Navigation Bar (if not overview) */}
+      {activeView !== 'overview' && (
+        <View style={[styles.navigationBar, { backgroundColor: colors.surface }]}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => setActiveView('overview')}
+          >
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>
+              ← Back to AI Features
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Content */}
+      {renderActiveView()}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  navigationBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  overviewContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  featuresGrid: {
+    gap: 16,
+    marginBottom: 32,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 16,
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  featureDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  comingSoonBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  comingSoonContainer: {
+    marginTop: 16,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  comingSoonGrid: {
+    gap: 12,
+  },
+  voiceContainer: {
+    flex: 1,
+    padding: 16,
+    gap: 24,
+  },
+  voiceTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  voiceSubtitle: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  extractedTextContainer: {
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  extractedTextLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  extractedText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  useTextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 8,
+  },
+  useTextButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});

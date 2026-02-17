@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   CloudRain,
+  Brain,
 } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import React from 'react';
@@ -63,6 +64,13 @@ export default function TabLayout() {
         options={{
           title: 'Weather & Garden',
           tabBarIcon: ({ color }) => <CloudRain size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ai"
+        options={{
+          title: 'AI Assistant',
+          tabBarIcon: ({ color }) => <Brain size={24} color={color} />,
         }}
       />
       <Tabs.Screen
