@@ -15,6 +15,14 @@ export interface PremiumFeatures {
   barcode_scanner: boolean;
   data_export: boolean;
   priority_support: boolean;
+  // AI Features (Phase 1)
+  ai_garden_assistant: boolean;
+  smart_shopping_assistant: boolean;
+  voice_notes: boolean;
+  // AI Features (Phase 2 - Future)
+  plant_health_diagnostics: boolean;
+  smart_planting_calendar: boolean;
+  harvest_prediction: boolean;
 }
 
 export interface UserSubscription {
@@ -134,7 +142,15 @@ class PremiumManager {
         plant_identification: false,
         barcode_scanner: false,
         data_export: false,
-        priority_support: false
+        priority_support: false,
+        // AI Features (Phase 1)
+        ai_garden_assistant: false,
+        smart_shopping_assistant: false,
+        voice_notes: false,
+        // AI Features (Phase 2 - Future)
+        plant_health_diagnostics: false,
+        smart_planting_calendar: false,
+        harvest_prediction: false,
       }
     };
   }

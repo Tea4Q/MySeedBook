@@ -7,15 +7,17 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import { Brain, MessageCircle, ShoppingCart, Mic, Sparkles } from 'lucide-react-native';
+import { Brain, MessageCircle, ShoppingCart, Mic, Sparkles, Crown } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { usePremiumFeature } from '@/hooks/usePremiumFeature';
 import { AIGardenAssistant } from '@/components/AIGardenAssistant';
 import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
 import { VoiceNotes } from '@/components/VoiceNotes';
+import PremiumModal from '@/components/PremiumModal';
 import { Seed, Supplier } from '@/types/database';
-import { AI_FEATURES, AIConfig } from '@/config/ai';
+import { AIConfig, getAIFeatures } from '@/config/ai';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
 
@@ -25,16 +27,32 @@ export default function AIScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
+  const { isPremium, checkFeature, showUpgradePrompt } = usePremiumFeature();
   
   const [activeView, setActiveView] = useState<ActiveView>('overview');
   const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
   const [userSuppliers, setUserSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [voiceText, setVoiceText] = useState('');
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [aiFeatures, setAIFeatures] = useState({
+    voice_notes: false,
+    ai_chat: false,
+    smart_shopping: false,
+    plant_identification: false,
+    disease_diagnosis: false,
+    harvest_prediction: false,
+  });
 
   useEffect(() => {
     loadUserData();
-  }, [session]);
+    loadAIFeatures();
+  }, [session, isPremium]);
+
+  const loadAIFeatures = async () => {
+    const features = await getAIFeatures();
+    setAIFeatures(features);
+  };
 
   const loadUserData = async () => {
     try {
@@ -80,7 +98,19 @@ export default function AIScreen() {
     setVoiceText(text);
     // Could auto-navigate to chat and send the voice text
     if (text.trim()) {
-      setActiveView('chat');
+      if (aiFeatures.ai_chat) {
+        setActiveView('chat');
+      } else {
+        showUpgradePrompt('AI Garden Chat');
+      }
+    }
+  };
+
+  const handleFeatureNavigation = (viewId: ActiveView, featureName: keyof typeof aiFeatures, displayName: string) => {
+    if (aiFeatures[featureName]) {
+      setActiveView(viewId);
+    } else {
+      showUpgradePrompt(displayName);
     }
   };
 
@@ -89,44 +119,67 @@ export default function AIScreen() {
     description: string,
     icon: any,
     viewId: ActiveView,
-    available: boolean = true,
+    featureKey: keyof typeof aiFeatures,
     comingSoon: boolean = false
-  ) => (
-    <Pressable
-      style={[
-        styles.featureCard,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: available ? 1 : 0.6,
-        },
-        activeView === viewId && { borderColor: colors.primary, borderWidth: 2 },
-      ]}
-      onPress={() => available && !comingSoon && setActiveView(viewId)}
-      disabled={!available || comingSoon}
-    >
-      <View style={[styles.featureIconContainer, { backgroundColor: colors.primary + '20' }]}>
-        {React.createElement(icon, { size: 24, color: colors.primary })}
-      </View>
-      <View style={styles.featureContent}>
-        <View style={styles.featureHeader}>
-          <Text style={[styles.featureTitle, { color: colors.text }]}>
-            {title}
-          </Text>
-          {comingSoon && (
-            <View style={[styles.comingSoonBadge, { backgroundColor: colors.warning }]}>
-              <Text style={[styles.comingSoonText, { color: colors.background }]}>
-                Phase 2
-              </Text>
+  ) => {
+    const hasFeature = aiFeatures[featureKey];
+    const isPremiumFeature = !hasFeature && !comingSoon;
+    
+    return (
+      <Pressable
+        style={[
+          styles.featureCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            opacity: comingSoon ? 0.6 : 1,
+          },
+          activeView === viewId && { borderColor: colors.primary, borderWidth: 2 },
+        ]}
+        onPress={() => {
+          if (comingSoon) return;
+          handleFeatureNavigation(viewId, featureKey, title);
+        }}
+        disabled={comingSoon}
+      >
+        <View style={[styles.featureIconContainer, { backgroundColor: colors.primary + '20' }]}>
+          {React.createElement(icon, { size: 24, color: colors.primary })}
+        </View>
+        <View style={styles.featureContent}>
+          <View style={styles.featureHeader}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>
+              {title}
+            </Text>
+            <View style={styles.featureBadges}>
+              {isPremiumFeature && (
+                <View style={[styles.premiumBadge, { backgroundColor: colors.warning }]}>
+                  <Crown size={12} color={colors.background} />
+                  <Text style={[styles.premiumText, { color: colors.background }]}>
+                    Premium
+                  </Text>
+                </View>
+              )}
+              {comingSoon && (
+                <View style={[styles.comingSoonBadge, { backgroundColor: colors.textSecondary }]}>
+                  <Text style={[styles.comingSoonText, { color: colors.background }]}>
+                    Phase 2
+                  </Text>
+                </View>
+              )}
             </View>
+          </View>
+          <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>
+            {description}
+          </Text>
+          {isPremiumFeature && (
+            <Text style={[styles.upgradeHint, { color: colors.warning }]}>
+              Tap to upgrade for access
+            </Text>
           )}
         </View>
-        <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>
-          {description}
-        </Text>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   const renderOverview = () => (
     <View style={styles.overviewContainer}>
@@ -165,10 +218,10 @@ export default function AIScreen() {
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.statNumber, { color: colors.primary }]}>
-            {AIConfig.isConfigured() ? '✓' : '✗'}
+            {isPremium ? '✓' : '✗'}
           </Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            AI Configured
+            Premium Status
           </Text>
         </View>
       </View>
@@ -180,7 +233,7 @@ export default function AIScreen() {
           'Get personalized gardening advice and answers to your plant questions.',
           MessageCircle,
           'chat',
-          AI_FEATURES.ai_chat
+          'ai_chat'
         )}
         
         {renderFeatureCard(
@@ -188,7 +241,7 @@ export default function AIScreen() {
           'Receive AI-powered recommendations for seeds that complement your garden.',
           ShoppingCart,
           'shopping',
-          AI_FEATURES.smart_shopping
+          'smart_shopping'
         )}
         
         {renderFeatureCard(
@@ -196,7 +249,7 @@ export default function AIScreen() {
           'Record voice notes hands-free while working in your garden.',
           Mic,
           'voice',
-          AI_FEATURES.voice_notes && Platform.OS !== 'web'
+          'voice_notes'
         )}
       </View>
 
@@ -211,7 +264,7 @@ export default function AIScreen() {
             'Photo-based disease and pest identification.',
             Sparkles,
             'overview',
-            false,
+            'plant_identification',
             true
           )}
           {renderFeatureCard(
@@ -219,7 +272,7 @@ export default function AIScreen() {
             'AI-optimized planting schedules based on your location.',
             Sparkles,
             'overview',
-            false,
+            'harvest_prediction',
             true
           )}
         </View>
@@ -321,6 +374,13 @@ export default function AIScreen() {
 
       {/* Content */}
       {renderActiveView()}
+
+      {/* Premium Modal */}
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        feature="AI Garden Assistant"
+      />
     </View>
   );
 }
@@ -425,13 +485,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  featureBadges: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
   },
   featureDescription: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  upgradeHint: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  premiumText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   comingSoonBadge: {
     paddingHorizontal: 8,

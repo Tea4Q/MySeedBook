@@ -36,6 +36,8 @@ import {
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
 import { VoiceNotes } from '@/components/VoiceNotes';
+import { usePremiumFeature } from '@/hooks/usePremiumFeature';
+import PremiumModal from '@/components/PremiumModal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
@@ -90,6 +92,7 @@ interface Imageinfo {
 export default function AddOrEditSeedScreen() {
   const { colors } = useTheme(); // Add theme colors
   const { user } = useAuth(); // Add auth context
+  const { checkFeature, showUpgradePrompt } = usePremiumFeature();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -1338,24 +1341,38 @@ export default function AddOrEditSeedScreen() {
             />
             
             {/* Voice Notes Enhancement */}
-            {AI_FEATURES.voice_notes && (
+            {Platform.OS !== 'web' && (
               <>
                 <Text style={[styles.voiceNotesLabel, { color: colors.textSecondary }]}>
-                  Or record a voice note:
+                  {checkFeature('voice_notes') ? 'Or record a voice note:' : 'Voice notes available with Premium:'}
                 </Text>
-                <VoiceNotes
-                  onTextExtracted={(voiceText) => {
-                    const existingNotes = seedPackage.notes || '';
-                    const separator = existingNotes ? '\n\n' : '';
-                    setSeedPackage((prev) => ({ 
-                      ...prev, 
-                      notes: existingNotes + separator + '[Voice Note] ' + voiceText 
-                    }));
-                  }}
-                  placeholder="Record garden observations"
-                  maxDuration={45}
-                  allowPlayback={true}
-                />
+                {checkFeature('voice_notes') ? (
+                  <VoiceNotes
+                    onTextExtracted={(voiceText) => {
+                      const existingNotes = seedPackage.notes || '';
+                      const separator = existingNotes ? '\n\n' : '';
+                      setSeedPackage((prev) => ({ 
+                        ...prev, 
+                        notes: existingNotes + separator + '[Voice Note] ' + voiceText 
+                      }));
+                    }}
+                    placeholder="Record garden observations"
+                    maxDuration={45}
+                    allowPlayback={true}
+                  />
+                ) : (
+                  <Pressable
+                    style={[styles.upgradePromptButton, { 
+                      backgroundColor: colors.warning + '20',
+                      borderColor: colors.warning 
+                    }]}
+                    onPress={() => showUpgradePrompt('Voice Notes')}
+                  >
+                    <Text style={[styles.upgradePromptText, { color: colors.warning }]}>
+                      🎤 Upgrade to Premium for hands-free voice notes
+                    </Text>
+                  </Pressable>
+                )}
               </>
             )}
           </View>
@@ -1856,5 +1873,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     fontStyle: 'italic',
+  },
+  upgradePromptButton: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  upgradePromptText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

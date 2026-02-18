@@ -1,6 +1,7 @@
 // AI Service Configuration
 import { Platform } from 'react-native';
 import OpenAI from 'openai';
+import { premiumManager } from '@/utils/premiumManager';
 
 // OpenAI Configuration
 export class AIConfig {
@@ -78,11 +79,26 @@ Consider:
 Format as JSON with: seed_name, supplier, reason, confidence (0-1), season_relevance, and price_range if known.`,
 };
 
-// Feature flags for AI capabilities
+// Premium-integrated AI features checker
+export const getAIFeatures = async () => {
+  await premiumManager.initialize();
+  const subscription = premiumManager.getSubscription();
+  
+  return {
+    voice_notes: subscription?.features.voice_notes && Platform.OS !== 'web', // Voice only on mobile
+    ai_chat: subscription?.features.ai_garden_assistant || false,
+    smart_shopping: subscription?.features.smart_shopping_assistant || false,
+    plant_identification: subscription?.features.plant_health_diagnostics || false, // Phase 2
+    disease_diagnosis: subscription?.features.plant_health_diagnostics || false, // Phase 2
+    harvest_prediction: subscription?.features.harvest_prediction || false, // Phase 3
+  };
+};
+
+// Legacy feature flags (deprecated - use getAIFeatures instead)
 export const AI_FEATURES = {
-  voice_notes: Platform.OS !== 'web', // Voice only on mobile
-  ai_chat: true,
-  smart_shopping: true,
+  voice_notes: Platform.OS !== 'web', // Will be checked against premium at runtime
+  ai_chat: true, // Will be checked against premium at runtime
+  smart_shopping: true, // Will be checked against premium at runtime
   plant_identification: false, // Phase 2
   disease_diagnosis: false, // Phase 2
   harvest_prediction: false, // Phase 3
