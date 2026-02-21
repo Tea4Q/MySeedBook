@@ -9,9 +9,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Mic, MicOff, Play, Pause, Volume2, Trash2 } from 'lucide-react-native';
-import { useTheme } from '@/hooks/useTheme';
-import { VoiceNote } from '@/types/ai';
-import { VOICE_CONFIG, AIConfig } from '@/config/ai';
+import { useTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
+import { AIConfig } from '@/config/ai';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import * as Speech from 'expo-speech';
 
@@ -39,7 +39,7 @@ export default function VoiceNotes({
   
   const recordingRef = useRef<Audio.Recording | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {

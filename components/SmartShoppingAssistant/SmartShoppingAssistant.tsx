@@ -9,8 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { ShoppingCart, ExternalLink, Star, TrendingUp, Calendar } from 'lucide-react-native';
-import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { ShoppingRecommendation, AIGardenContext } from '@/types/ai';
 import { Seed, Supplier } from '@/types/database';
 import { AIConfig, SHOPPING_AI_CONFIG } from '@/config/ai';

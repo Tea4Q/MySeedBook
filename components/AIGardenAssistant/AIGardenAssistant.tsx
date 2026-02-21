@@ -12,8 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MessageCircle, Send, Lightbulb, Sprout, User, Bot } from 'lucide-react-native';
-import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
 import { AIMessage, AIConversation, AIGardenContext } from '@/types/ai';
 import { Seed, Supplier } from '@/types/database';
 import { AIConfig, GARDEN_AI_CONFIG } from '@/config/ai';
@@ -32,7 +32,6 @@ export default function AIGardenAssistant({
   userSuppliers = [],
   location 
 }: AIGardenAssistantProps) {
-  const { session } = useAuth();
   const { colors } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
   

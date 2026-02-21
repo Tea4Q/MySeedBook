@@ -1,23 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
-  Platform,
 } from 'react-native';
 import { Brain, MessageCircle, ShoppingCart, Mic, Sparkles, Crown } from 'lucide-react-native';
-import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
 import { AIGardenAssistant } from '@/components/AIGardenAssistant';
 import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
 import { VoiceNotes } from '@/components/VoiceNotes';
 import PremiumModal from '@/components/PremiumModal';
 import { Seed, Supplier } from '@/types/database';
-import { AIConfig, getAIFeatures } from '@/config/ai';
+import { getAIFeatures } from '@/config/ai';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
 
@@ -26,8 +23,7 @@ type ActiveView = 'overview' | 'chat' | 'shopping' | 'voice';
 export default function AIScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
-  const responsive = useResponsive();
-  const { isPremium, checkFeature, showUpgradePrompt } = usePremiumFeature();
+  const { isPremium, showUpgradePrompt } = usePremiumFeature();
   
   const [activeView, setActiveView] = useState<ActiveView>('overview');
   const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
@@ -44,17 +40,12 @@ export default function AIScreen() {
     harvest_prediction: false,
   });
 
-  useEffect(() => {
-    loadUserData();
-    loadAIFeatures();
-  }, [session, isPremium]);
-
-  const loadAIFeatures = async () => {
+  const loadAIFeatures = useCallback(async () => {
     const features = await getAIFeatures();
     setAIFeatures(features);
-  };
+  }, []);
 
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -78,10 +69,9 @@ export default function AIScreen() {
         
       } else {
         // Load guest data
-        const guestManager = guestDataManager.getInstance();
         const [seeds, suppliers] = await Promise.all([
-          guestManager.getAllSeeds(),
-          guestManager.getAllSuppliers(),
+          guestDataManager.getAllSeeds(),
+          guestDataManager.getAllSuppliers(),
         ]);
         
         setUserSeeds(seeds);
@@ -92,7 +82,12 @@ export default function AIScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    loadUserData();
+    loadAIFeatures();
+  }, [loadUserData, loadAIFeatures]);
 
   const handleVoiceTextExtracted = (text: string) => {
     setVoiceText(text);

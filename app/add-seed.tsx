@@ -42,7 +42,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
-import PremiumModal from '@/components/PremiumModal';
 import { saveBarcodeMapping } from '@/utils/barcodeMemory';
 import { AI_FEATURES } from '@/config/ai';
 
