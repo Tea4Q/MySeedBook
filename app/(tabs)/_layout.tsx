@@ -29,9 +29,9 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: colors.tabBarBackground,
+          backgroundColor: colors.header,
         },
-        headerTintColor: colors.tabBarActive,
+        headerTintColor: colors.headerText,
         headerTitleStyle: {
           fontWeight: 'bold',
           fontSize: 18,

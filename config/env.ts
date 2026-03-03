@@ -41,6 +41,19 @@ export const ENV = {
       hotSeason: 80,   // Hot season crops (okra, melons)
     },
   },
+
+  // RevenueCat subscription configuration
+  // Get API keys from: https://app.revenuecat.com → Projects → API Keys
+  revenuecat: {
+    iosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',
+    androidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
+    // Product IDs must match what you create in App Store Connect / Google Play:
+    //   iOS:     com.myseedbook.catalogue.premium.monthly
+    //            com.myseedbook.catalogue.premium.yearly
+    //   Android: myseedbook_premium_monthly
+    //            myseedbook_premium_yearly
+    entitlement: 'premium',
+  },
 };
 
 // Helper functions

@@ -14,10 +14,12 @@ import { Crown, CheckCircle, Settings, ExternalLink, ArrowLeft, TestTube } from 
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
 import PremiumModal from '../components/PremiumModal';
 import { premiumManager } from '../utils/premiumManager';
+import { useGlobalSubscription } from '../lib/globalSubscriptionManager';
 
 export default function PremiumSettingsScreen() {
   const { colors } = useTheme();
   const { isPremium, subscription } = usePremiumFeature();
+  const { planType, renewalDate, planLabel, openManageSubscriptions } = useGlobalSubscription();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isTestPremium, setIsTestPremium] = useState(isPremium);
 
@@ -48,20 +50,7 @@ export default function PremiumSettingsScreen() {
   };
 
   const handleManageSubscription = () => {
-    Alert.alert(
-      'Manage Subscription',
-      'To manage your subscription, please visit your App Store or Google Play account settings.',
-      [
-        {
-          text: 'Open Settings',
-          onPress: () => {
-            // TODO: Open app store subscription management
-            console.log('Opening app store subscription management');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    openManageSubscriptions();
   };
 
   const handleContactSupport = () => {
@@ -106,7 +95,7 @@ export default function PremiumSettingsScreen() {
                   Premium Active
                 </Text>
                 <Text style={[styles.statusSubtitle, { color: colors.primary }]}>
-                  {subscription.tier === 'premium-yearly' ? 'Yearly Plan' : 'Monthly Plan'}
+                  {planLabel || (planType === 'annual' ? 'Yearly Plan' : 'Monthly Plan')}
                 </Text>
               </View>
               <CheckCircle size={24} color={colors.primary} />
@@ -114,7 +103,7 @@ export default function PremiumSettingsScreen() {
             
             <View style={styles.statusDetails}>
               <Text style={[styles.statusDetailText, { color: colors.text + '80' }]}>
-                Active until: {formatDate(subscription.expiresAt)}
+                Active until: {renewalDate ?? formatDate(subscription.expiresAt)}
               </Text>
             </View>
           </View>

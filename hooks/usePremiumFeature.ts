@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { premiumManager } from '../utils/premiumManager';
+import { useGlobalSubscription } from '../lib/globalSubscriptionManager';
 
 interface UsePremiumFeatureResult {
   isPremium: boolean;
@@ -12,57 +13,51 @@ interface UsePremiumFeatureResult {
 }
 
 export function usePremiumFeature(): UsePremiumFeatureResult {
-  const [isPremium, setIsPremium] = useState(false);
+  // Bridge: use RevenueCat isPremium as the source of truth
+  const { isPremium: rcIsPremium } = useGlobalSubscription();
   const [subscription, setSubscription] = useState(premiumManager.getSubscription());
 
   useEffect(() => {
-    // Initialize premium manager and check subscription status
+    // Keep legacy subscription state for callers that read subscription.tier etc.
     const initializePremium = async () => {
       await premiumManager.initialize();
-      const currentSubscription = premiumManager.getSubscription();
-      setSubscription(currentSubscription);
-      setIsPremium(premiumManager.isPremium());
+      setSubscription(premiumManager.getSubscription());
     };
-
     initializePremium();
   }, []);
 
+  // isPremium is now driven by RevenueCat
+  const isPremium = rcIsPremium;
+
   const checkFeature = (feature: keyof import('../utils/premiumManager').PremiumFeatures): boolean => {
+    // Premium via RevenueCat unlocks all features
+    if (isPremium) return true;
     return premiumManager.hasFeature(feature);
   };
 
   const checkLimit = async (action: 'seed' | 'supplier' | 'photo' | 'search') => {
+    // Premium users have unlimited access
+    if (isPremium) {
+      return { allowed: true, limit: Infinity, current: 0 };
+    }
     return await premiumManager.checkLimit(action);
   };
 
   const trackUsage = async (action: 'seed' | 'supplier' | 'photo' | 'search') => {
-    await premiumManager.trackUsage(action);
+    if (!isPremium) {
+      await premiumManager.trackUsage(action);
+    }
   };
 
   const showUpgradePrompt = (feature?: string) => {
     const title = feature ? `Upgrade for ${feature}` : 'Upgrade to Premium';
-    const message = feature 
+    const message = feature
       ? `Unlock ${feature} and all other premium features with a MySeedBook Premium subscription.`
       : 'Unlock all premium features with unlimited access to your garden data.';
 
-    Alert.alert(
-      title,
-      message,
-      [
-        {
-          text: 'Learn More',
-          onPress: () => {
-            // TODO: Open premium modal
-            console.log('Opening premium modal for feature:', feature);
-          },
-          style: 'default'
-        },
-        {
-          text: 'Not Now',
-          style: 'cancel'
-        }
-      ]
-    );
+    Alert.alert(title, message, [
+      { text: 'Not Now', style: 'cancel' },
+    ]);
   };
 
   return {
@@ -71,7 +66,7 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
     checkLimit,
     trackUsage,
     showUpgradePrompt,
-    subscription
+    subscription,
   };
 }
 

@@ -3,6 +3,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemeProvider } from '@/lib/theme';
+import { GlobalSubscriptionProvider } from '@/lib/globalSubscriptionManager';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -16,6 +17,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { session, initialized, isGuest } = useAuth();
+  const userId = session?.user?.id ?? null;
   const router = useRouter(); // Get router instance
   const insets = useSafeAreaInsets();
   const [fontsLoaded, fontError] = useFonts({
@@ -67,7 +69,7 @@ function RootLayoutNav() {
   // Always render the Stack navigator once ready.
   // Include all possible screens that can be navigated to directly.
   return (
-    <>
+    <GlobalSubscriptionProvider userId={userId}>
       {/* Status bar background */}
       <View 
         style={{ 
@@ -88,12 +90,13 @@ function RootLayoutNav() {
         <Stack.Screen name="edit-supplier/[id]" />
         <Stack.Screen name="feedback" />
         <Stack.Screen name="auth" />
+        <Stack.Screen name="global-profile" />
         {/* Add signup if needed */}
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" />
-    </>
+    </GlobalSubscriptionProvider>
   );
 }
 

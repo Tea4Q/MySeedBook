@@ -14,9 +14,9 @@ This guide walks through creating subscription products in Google Play Console. 
 
 ## Prerequisites
 
-- [ ] Google Play Console access
-- [ ] App created in Play Console (com.myseedbook.catalogue)
-- [ ] Merchant account set up (for receiving payments)
+- [x] Google Play Console access
+- [x] App created in Play Console (com.myseedbook.catalogue)
+- [x] Merchant account set up (for receiving payments)
 
 ---
 
