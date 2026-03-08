@@ -21,6 +21,7 @@ import {
   startOfWeek,
   endOfWeek,
   isSameMonth,
+  isToday,
 } from 'date-fns';
 import {
   Calendar,
@@ -526,8 +527,14 @@ export default function CalendarScreen() {
         </View>
 
         <View style={[styles.calendar, { backgroundColor: colors.card }]}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <Text key={day} style={[styles.weekDay, { color: colors.textSecondary }]}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+            <Text
+              key={day}
+              style={[
+                styles.weekDay,
+                { color: index === 0 ? '#e03131' : index === 6 ? '#1971c2' : colors.textSecondary },
+              ]}
+            >
               {day}
             </Text>
           ))}
@@ -555,6 +562,8 @@ export default function CalendarScreen() {
             // Get weather data for this date
             const dateKey = format(date, 'yyyy-MM-dd');
             const dayWeatherData = weatherData[dateKey];
+            const todayDate = isToday(date);
+            const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
 
             return (
               
@@ -609,11 +618,23 @@ export default function CalendarScreen() {
                         setMarkedRange({ start: date, end: null });
                       }
                     }}
-                    style={styles.dateNumberContainer}
+                    style={[
+                      styles.dateNumberContainer,
+                      todayDate && { backgroundColor: colors.primary, borderRadius: 14, width: 28, height: 28 },
+                    ]}
                   >
                     <Text style={[
-                      styles.dayText, 
-                      { color: isCurrentMonth ? colors.text : colors.textSecondary }
+                      styles.dayText,
+                      todayDate && { color: colors.primaryText, fontWeight: 'bold' },
+                      !todayDate && {
+                        color: !isCurrentMonth
+                          ? colors.textSecondary
+                          : dayOfWeek === 0
+                          ? '#e03131'
+                          : dayOfWeek === 6
+                          ? '#1971c2'
+                          : colors.text,
+                      },
                     ]}>
                       {date.getDate()}
                     </Text>
@@ -671,15 +692,15 @@ export default function CalendarScreen() {
                   event.date.getFullYear() === currentDate.getFullYear()
               )
               .map((event) => (
-                <View key={event.id} style={[styles.eventItem, { backgroundColor: colors.surface }]}>
-                  <View
-                    style={[
-                      styles.eventDot,
-                      { backgroundColor: CATEGORY_COLORS[event.category] },
-                    ]}
-                  />
+                <View
+                  key={event.id}
+                  style={[
+                    styles.eventItem,
+                    { backgroundColor: colors.surface, borderLeftColor: CATEGORY_COLORS[event.category] },
+                  ]}
+                >
                   <View style={styles.eventDetails}>
-                    <Text style={[styles.eventCategory, { color: colors.textSecondary }]}>
+                    <Text style={[styles.eventCategory, { color: CATEGORY_COLORS[event.category] }]}>
                       {CATEGORY_LABELS[event.category]}
                     </Text>
                     <Text style={[styles.eventDate, { color: colors.textSecondary }]}>
@@ -924,13 +945,7 @@ export default function CalendarScreen() {
             <ScrollView style={styles.modalScroll}>
               {getEventsForSelectedDate().length > 0 ? (
                 getEventsForSelectedDate().map((event) => (
-                  <View key={event.id} style={[styles.eventItem, { backgroundColor: colors.surface }]}>
-                    <View
-                      style={[
-                        styles.eventDot,
-                        { backgroundColor: CATEGORY_COLORS[event.category] },
-                      ]}
-                    />
+                  <View key={event.id} style={[styles.eventItem, { backgroundColor: colors.surface, borderLeftColor: CATEGORY_COLORS[event.category] }]}>
                     <View style={styles.eventDetails}>
                       <Text style={[styles.eventCategory, { color: colors.textSecondary }]}>
                         {CATEGORY_LABELS[event.category]}
@@ -1114,13 +1129,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
-  },
-  eventDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-    marginTop: 4,
+    borderLeftWidth: 4,
   },
   eventDetails: {
     flex: 1,

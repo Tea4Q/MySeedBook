@@ -109,16 +109,24 @@ class PremiumManager {
     try {
       const stored = await AsyncStorage.getItem('user_subscription');
       if (stored) {
-        this.subscription = JSON.parse(stored);
-        
+        const parsed: UserSubscription = JSON.parse(stored);
+
         // Check if subscription expired
-        if (this.subscription?.expiresAt) {
-          const expireDate = new Date(this.subscription.expiresAt);
+        if (parsed.expiresAt) {
+          const expireDate = new Date(parsed.expiresAt);
           if (expireDate < new Date()) {
-            this.subscription.isActive = false;
-            this.subscription.tier = 'free';
+            parsed.isActive = false;
+            parsed.tier = 'free';
           }
         }
+
+        // Merge defaults so newly-enabled free features are always available
+        const defaults = this.getDefaultSubscription();
+        if (parsed.tier === 'free' || !parsed.isActive) {
+          parsed.features = { ...defaults.features, ...parsed.features };
+        }
+
+        this.subscription = parsed;
       } else {
         this.subscription = this.getDefaultSubscription();
       }
@@ -140,7 +148,7 @@ class PremiumManager {
         advanced_calendar: false,
         weather_integration: false,
         plant_identification: false,
-        barcode_scanner: false,
+        barcode_scanner: true,
         data_export: false,
         priority_support: false,
         // AI Features (Phase 1)
@@ -212,7 +220,13 @@ class PremiumManager {
           plant_identification: true,
           barcode_scanner: true,
           data_export: true,
-          priority_support: true
+          priority_support: true,
+          ai_garden_assistant: true,
+          smart_shopping_assistant: true,
+          voice_notes: true,
+          plant_health_diagnostics: true,
+          smart_planting_calendar: true,
+          harvest_prediction: true
         }
       };
 

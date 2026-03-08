@@ -56,6 +56,9 @@ function RootLayoutNav() {
       // User is not authenticated and not a guest - redirect to auth
       console.log('🔄 Redirecting to auth screen - user not authenticated');
       router.replace('/auth');
+    } else {
+      // User is authenticated - ensure they land on the main tabs
+      router.replace('/(tabs)');
     }
   }, [isAppReady, isAuthenticated, router]);
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import {  useRootNavigation, useRouter } from 'expo-router';
+import {  useRootNavigation } from 'expo-router';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
@@ -61,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isGuest, setIsGuest] = useState(false);
   const [guestUsage, setGuestUsage] = useState<GuestUsage | null>(null);
   const rootNavigation = useRootNavigation();
-  const router = useRouter();
   // Profile state is managed in UI screens, not here
   
 
@@ -113,10 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'SIGNED_IN') {
         setSession(session);
         setUser(session?.user ?? null);
-        // Navigate immediately after successful sign in
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 100);
+        // Navigation handled by _layout.tsx when session state updates
       } else {
         setSession(session);
         setUser(session?.user ?? null);
@@ -126,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [rootNavigation?.isReady, router]);
+  }, [rootNavigation?.isReady]);
       
   // Web-specific initialization to ensure session is set
   useEffect(() => {
@@ -283,10 +279,7 @@ const signOut = async () => {
     setUser(null);
     setSession(null);
     await refreshGuestUsage();
-    // Navigate immediately after successful guest sign in
-    setTimeout(() => {
-      router.replace('/(tabs)');
-    }, 100);
+    // Navigation handled by _layout.tsx when isGuest state updates
   };
 
   const refreshGuestUsage = async () => {

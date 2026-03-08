@@ -18,6 +18,7 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '../AddSupplierForm';
@@ -34,6 +35,7 @@ export function SupplierInput({
   placeholder = 'Type supplier name...',
 }: SupplierInputProps) {
   const { isGuest } = useAuth();
+  const { colors } = useTheme();
   const [inputValue, setInputValue] = useState(selectedSupplier?.supplier_name || '');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
@@ -152,11 +154,11 @@ export function SupplierInput({
     <>
       <View style={styles.container}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
           value={inputValue}
           onChangeText={handleInputChange}
           placeholder={placeholder}
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textSecondary}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           blurOnSubmit={false}
@@ -164,7 +166,7 @@ export function SupplierInput({
 
         {showDropdown && (
           <View 
-            style={styles.dropdown}
+            style={[styles.dropdown, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
             pointerEvents="box-none"
           >
             {isLoading ? (
@@ -183,25 +185,25 @@ export function SupplierInput({
                   {filteredSuppliers.map((supplier) => (
                     <TouchableOpacity
                       key={supplier.id}
-                      style={styles.dropdownItem}
+                      style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
                       onPress={() => handleSelectSupplier(supplier)}
                       activeOpacity={0.7}
                     >
-                      <Building2 size={20} color="#2d7a3a" />
-                      <Text style={styles.supplierName}>{supplier.supplier_name}</Text>
-                      <Check size={16} color="#2d7a3a" />
+                      <Building2 size={20} color={colors.primary} />
+                      <Text style={[styles.supplierName, { color: colors.inputText }]}>{supplier.supplier_name}</Text>
+                      <Check size={16} color={colors.primary} />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
                 
                 {showAddNewOption && (
                   <TouchableOpacity
-                    style={styles.addNewItem}
+                    style={[styles.addNewItem, { backgroundColor: colors.primary }]}
                     onPress={handleAddNewSupplier}
                     activeOpacity={0.8}
                   >
-                    <Plus size={20} color="#ffffff" />
-                    <Text style={styles.addNewText}>
+                    <Plus size={20} color={colors.primaryText} />
+                    <Text style={[styles.addNewText, { color: colors.primaryText }]}>
                       Add &quot;{inputValue}&quot; as new supplier
                     </Text>
                   </TouchableOpacity>
@@ -255,23 +257,18 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderTopWidth: 0,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
@@ -291,13 +288,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
     gap: 8,
   },
   supplierName: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -313,13 +308,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#2d7a3a',
     gap: 8,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
   addNewText: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },

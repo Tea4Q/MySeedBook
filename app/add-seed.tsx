@@ -22,7 +22,6 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   ArrowLeft,
-  Calendar,
   Droplets,
   Sun,
   Ruler,
@@ -35,14 +34,14 @@ import {
 } from 'lucide-react-native';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
+import DatePickerField from '@/components/DatePickerField';
 import { VoiceNotes } from '@/components/VoiceNotes';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
 import PremiumModal from '@/components/PremiumModal';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import 'react-native-get-random-values'; // For uuidv4
-import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import { saveBarcodeMapping } from '@/utils/barcodeMemory';
+import 'react-native-get-random-values'; // For uuidv4
+import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import { AI_FEATURES } from '@/config/ai';
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
@@ -514,8 +513,6 @@ export default function AddOrEditSeedScreen() {
     }
   };
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
   // Helper function to format price with dollar sign
   const formatPriceForDisplay = useCallback((price: number | string): string => {
     const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -726,7 +723,6 @@ export default function AddOrEditSeedScreen() {
       ...prev,
       date_purchased: date,
     }));
-    setShowDatePicker(false);
   };
 
   // --- Barcode Scan Handlers ---
@@ -991,80 +987,12 @@ export default function AddOrEditSeedScreen() {
           <View style={styles.dateSupplierRow}>
             {/* Date Purchased Input */}
             <View style={[styles.inputGroup, styles.dateInput]}>
-              <Text style={[styles.label, { color: colors.text }]}>Purchase Date</Text>
-              <Text style={[styles.helpText, { color: colors.textSecondary }]}>
-                💡 Added to calendar
-              </Text>
-              {/* Web Date Picker */}
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  className="date-input"
-                  style={{
-                    background: colors.inputBackground,
-                    borderRadius: 12,
-                    padding: 16,
-                    fontSize: 16,
-                    color: colors.inputText,
-                    borderWidth: 1,
-                    borderColor: colors.inputBorder,
-                    height: 56,
-                    boxSizing: 'border-box',
-                    width: '100%',
-                  } as any}
-                  value={
-                    seedPackage.date_purchased
-                      ? seedPackage.date_purchased.toISOString().split('T')[0]
-                      : ''
-                  }
-                  onChange={(e: any) => {
-                    const date = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(date.getTime())) handleDateChange(date);
-                  }}
-                  placeholder="Select a date"
-                  title="Select event date"
-                />
-              ) : (
-                <>
-                  <Pressable
-                    style={[
-                      styles.datePickerContainer,
-                      {
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.inputBorder,
-                      }
-                    ]}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text style={[styles.dateText, { color: colors.inputText }]}>
-                      {seedPackage.date_purchased
-                        ? seedPackage.date_purchased.toLocaleDateString(
-                            'en-US',
-                            {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            }
-                          )
-                        : 'Select a date'}
-                    </Text>
-                    <Calendar size={20} color={colors.primary} />
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={seedPackage.date_purchased || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={(event: any, selectedDate?: Date) => {
-                          if (selectedDate) {
-                            handleDateChange(selectedDate);
-                          }
-                          setShowDatePicker(false);
-                        }}
-                      ></DateTimePicker>
-                    )}
-                  </Pressable>
-                </>
-              )}
+              <DatePickerField
+                label="Purchase Date"
+                helpText="💡 Added to calendar"
+                value={seedPackage.date_purchased || null}
+                onChange={handleDateChange}
+              />
             </View>
 
             {/* Supplier Selection */}
@@ -1641,16 +1569,13 @@ const styles = StyleSheet.create({
   datePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   dateText: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
   },
 
   datePicker: {
@@ -1698,7 +1623,6 @@ const styles = StyleSheet.create({
   timingSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   timelineRow: {
@@ -1726,7 +1650,6 @@ const styles = StyleSheet.create({
   plantingSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   sectionTitle: {
@@ -1759,7 +1682,6 @@ const styles = StyleSheet.create({
   soilSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   soilRow: {
@@ -1813,7 +1735,6 @@ const styles = StyleSheet.create({
   quantityPriceRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
   quantityInput: {
     flex: 1,
@@ -1826,7 +1747,6 @@ const styles = StyleSheet.create({
   seasonRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
   seasonInput: {
     flex: 1,
@@ -1836,7 +1756,7 @@ const styles = StyleSheet.create({
   dateSupplierRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    zIndex: 100,
   },
   dateInput: {
     flex: 1,
