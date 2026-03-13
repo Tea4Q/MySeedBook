@@ -23,6 +23,8 @@ export interface Seed {
   quantity_unit?: string;
   supplier_id?: string;
   date_purchased: Date | null | undefined;
+  indoor_sow_date?: Date | null | undefined;
+  transplant_date?: Date | null | undefined;
   seed_price?: number;
   storage_location?: string;
   storage_requirements?: string;

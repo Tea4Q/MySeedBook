@@ -148,9 +148,9 @@ export default function GlobalProfileScreen() {
                   disabled={savingName}
                 >
                   {savingName ? (
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={colors.buttonText} size="small" />
                   ) : (
-                    <Check size={18} color="#fff" />
+                    <Check size={18} color={colors.buttonText} />
                   )}
                 </Pressable>
               </View>

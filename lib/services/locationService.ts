@@ -60,7 +60,9 @@ class LocationService {
         name: name || 'Current Location'
       };
     } catch (error) {
-      console.error('Error getting current location:', error);
+      // Location can be unavailable on emulators/devices with services disabled.
+      // This is a recoverable condition because callers already fall back.
+      console.warn('Current location unavailable, using fallback location settings:', error);
       return null;
     }
   }

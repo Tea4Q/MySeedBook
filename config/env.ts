@@ -42,6 +42,13 @@ export const ENV = {
     },
   },
 
+  // OpenAI Whisper — voice transcription for premium voice input
+  // Get key from: https://platform.openai.com/api-keys
+  // Add EXPO_PUBLIC_OPENAI_API_KEY to your .env.local file
+  openai: {
+    apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '',
+  },
+
   // RevenueCat subscription configuration
   // Get API keys from: https://app.revenuecat.com → Projects → API Keys
   revenuecat: {

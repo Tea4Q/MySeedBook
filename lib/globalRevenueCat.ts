@@ -169,7 +169,18 @@ class GlobalRevenueCat {
    */
   async purchasePackage(pkg: PurchasesPackage): Promise<SubscriptionInfo> {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return this.parseCustomerInfo(customerInfo);
+    const parsed = this.parseCustomerInfo(customerInfo);
+    if (__DEV__) {
+      console.log(
+        '[GlobalRevenueCat] purchasePackage result:',
+        JSON.stringify({
+          isPremium: parsed.isPremium,
+          activeEntitlements: Object.keys(customerInfo.entitlements.active),
+          entitlementId: this.entitlementId,
+        })
+      );
+    }
+    return parsed;
   }
 
   /**
@@ -205,7 +216,7 @@ class GlobalRevenueCat {
     const productId = entitlement.productIdentifier?.toLowerCase() ?? '';
     let planType: PlanType = null;
     if (productId.includes('monthly')) planType = 'monthly';
-    else if (productId.includes('yearly') || productId.includes('annual')) planType = 'annual';
+    else if (productId.includes('annual') || productId.includes('yearly')) planType = 'annual';
 
     const renewalDate =
       entitlement.expirationDate ?? null;

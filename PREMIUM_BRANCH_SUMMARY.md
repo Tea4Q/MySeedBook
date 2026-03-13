@@ -57,7 +57,7 @@ FREE TIER (Enhanced):
 - 10 searches
 - 30 days calendar
 
-PREMIUM TIER ($5.99/month or $49.99/year):
+PREMIUM TIER ($7.99/month or $79.99/year):
 - Unlimited everything
 - Advanced calendar with weather
 - Plant disease identification
@@ -68,8 +68,8 @@ PREMIUM TIER ($5.99/month or $49.99/year):
 ### **3. Revenue Model**
 ```typescript
 Pricing Strategy:
-- Monthly: $5.99 (impulse purchase threshold)
-- Yearly: $49.99 (33% savings, sweet spot for annual commitment)
+- Monthly: $7.99 (impulse purchase threshold)
+- Yearly: $79.99 (33% savings, sweet spot for annual commitment)
 - Expected conversion: 3-5%
 - Revenue projection: $1,200-$10,000/month
 ```

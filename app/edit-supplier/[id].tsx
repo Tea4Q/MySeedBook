@@ -22,9 +22,13 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
+import { useTheme } from '@/lib/theme';
+import VoiceMicButton from '@/components/VoiceMicButton';
+import { parseVoiceCommand } from '@/lib/voice/commandParser';
 
 export default function EditSupplierScreen() {
   const { id } = useLocalSearchParams();
+  const { colors } = useTheme();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState({
     id: id as string,
@@ -38,6 +42,7 @@ export default function EditSupplierScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastVoiceTranscript, setLastVoiceTranscript] = useState<string | null>(null);
 
   useEffect(() => {
     loadSupplier();
@@ -98,27 +103,43 @@ export default function EditSupplierScreen() {
     }
   };
 
+  const handleVoiceTranscript = (text: string) => {
+    setLastVoiceTranscript(text);
+    const cmd = parseVoiceCommand(text);
+    if (cmd.action === 'save-entry') {
+      handleSubmit();
+      return;
+    }
+    // Dictation: fill supplier_name if empty, else append to notes
+    setFormData((prev) => {
+      if (!prev.supplier_name?.trim()) {
+        return { ...prev, supplier_name: text };
+      }
+      return { ...prev, notes: prev.notes ? `${prev.notes} ${text}` : text };
+    });
+  };
+
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#336633" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!supplier) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Supplier not found</Text>
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>Supplier not found</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Floating Back Button */}
-      <Pressable onPress={() => router.back()} style={styles.floatingBackButton}>
-        <ArrowLeft size={24} color="#333333" />
+      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+        <ArrowLeft size={24} color={colors.text} />
       </Pressable>
 
       <KeyboardAwareScrollView 
@@ -130,39 +151,51 @@ export default function EditSupplierScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40' }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         )}
 
         <View style={styles.formSection}>
+          {/* Voice Input Row */}
+          <View style={styles.voiceRow}>
+            <VoiceMicButton onTranscript={handleVoiceTranscript} />
+            {lastVoiceTranscript ? (
+              <Text style={[styles.voiceHint, { color: colors.text }]} numberOfLines={2}>
+                Heard: {lastVoiceTranscript}
+              </Text>
+            ) : null}
+          </View>
+
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Building2 size={20} color="#336633" />
-              <Text style={styles.label}>Supplier Name *</Text>
+              <Building2 size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Supplier Name *</Text>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.supplier_name}
               onChangeText={(text) =>
                 setFormData({ ...formData, supplier_name: text })
               }
               placeholder="Enter supplier name"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <MapPinHouse size={20} color="#336633" />
-              <Text style={styles.label}>Web Address</Text>
+              <MapPinHouse size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Web Address</Text>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.webaddress}
               onChangeText={(text) =>
                 setFormData({ ...formData, webaddress: text })
               }
               placeholder="Enter web address"
+              placeholderTextColor={colors.textSecondary}
               keyboardType="url"
               autoCapitalize="none"
             />
@@ -170,14 +203,15 @@ export default function EditSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Mail size={20} color="#336633" />
-              <Text style={styles.label}>Email Address</Text>
+              <Mail size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               placeholder="Enter email address"
+              placeholderTextColor={colors.textSecondary}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -185,30 +219,32 @@ export default function EditSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Phone size={20} color="#336633" />
-              <Text style={styles.label}>Phone Number</Text>
+              <Phone size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.phone}
               onChangeText={(text) => setFormData({ ...formData, phone: text })}
               placeholder="Enter phone number"
+              placeholderTextColor={colors.textSecondary}
               keyboardType="phone-pad"
             />
           </View>
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <House size={20} color="#336633" />
-              <Text style={styles.label}>Address</Text>
+              <House size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Address</Text>
             </View>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.address}
               onChangeText={(text) =>
                 setFormData({ ...formData, address: text })
               }
               placeholder="Enter physical address"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={3}
             />
@@ -216,14 +252,15 @@ export default function EditSupplierScreen() {
 
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <FileText size={20} color="#336633" />
-              <Text style={styles.label}>Additional Notes</Text>
+              <FileText size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Additional Notes</Text>
             </View>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.notes}
               onChangeText={(text) => setFormData({ ...formData, notes: text })}
               placeholder="Enter any additional notes"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={4}
             />
@@ -233,12 +270,13 @@ export default function EditSupplierScreen() {
         <Pressable
           style={[
             styles.submitButton,
+            { backgroundColor: colors.primary },
             isSubmitting && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
           disabled={isSubmitting}
         >
-          <Text style={styles.submitButtonText}>
+          <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>
             {isSubmitting ? 'Updating Supplier...' : 'Update Supplier'}
           </Text>
         </Pressable>
@@ -250,7 +288,6 @@ export default function EditSupplierScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0',
   },
   loadingContainer: {
     flex: 1,
@@ -297,16 +334,13 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingTop: 60, // Space for floating back button
   },
-  errorContainer: {
-    backgroundColor: '#fef2f2',
+  errorBanner: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#fee2e2',
   },
   errorText: {
-    color: '#dc2626',
     fontSize: 14,
   },
   formSection: {
@@ -323,23 +357,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a472a',
   },
   input: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#336633',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -352,6 +381,21 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  voiceHint: {
+    flex: 1,
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
 });

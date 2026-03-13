@@ -20,6 +20,7 @@ import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
 import { Seed } from '@/types/database'; // Adjust path if needed
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from '@/lib/theme';
+import { SeedCard } from '@/components/SeedCard';
 import {
   PlusCircle,
   Search,
@@ -36,7 +37,6 @@ import {
   Carrot,
   Apple,
   Cherry,
-  Scan,
 } from 'lucide-react-native';
 
 import { Swipeable } from 'react-native-gesture-handler';
@@ -159,13 +159,24 @@ export default function InventoryScreen() {
   // Handle highlighted seed scrolling separately
   useEffect(() => {
     if (highlightedSeedId && seeds.length > 0) {
-      const index = seeds.findIndex((s) => s.id === highlightedSeedId);
-      if (index !== -1 && flatListRef.current) {
-        flatListRef.current.scrollToIndex({ animated: true, index });
-      }
+      // Delay to let the FlatList finish its initial render before scrolling.
+      // Recompute index at execution time to avoid stale-index crashes.
+      const scrollTimer = setTimeout(() => {
+        const currentIndex = seeds.findIndex((s) => s.id === highlightedSeedId);
+        if (!flatListRef.current || currentIndex < 0 || currentIndex >= seeds.length) {
+          return;
+        }
+
+        try {
+          flatListRef.current.scrollToIndex({ animated: true, index: currentIndex });
+        } catch {
+          flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+        }
+      }, 300);
+
+      return () => clearTimeout(scrollTimer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlightedSeedId, seeds.length]);
+  }, [highlightedSeedId, seeds]);
 
   // Auto-clear highlight after 3 seconds
   useEffect(() => {
@@ -221,11 +232,10 @@ export default function InventoryScreen() {
   const handleEdit = (seed: Seed) => {
     closeAllSwipeables();
     setHighlightedSeedId(seed.id); // Set for potential highlight on return
-    
-    // Pass the full seed as JSON for editing
+
     router.push({
       pathname: '/add-seed',
-      params: { seed: JSON.stringify(seed), returnTo: '/(tabs)/' },
+      params: { id: seed.id, returnTo: '/(tabs)/' },
     });
   };
 
@@ -260,8 +270,8 @@ export default function InventoryScreen() {
     setDeletingSeedId(seedId);
     try {
       const deletedAt = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('seeds')
+      const { error: updateError } = await (supabase
+        .from('seeds') as any)
         .update({ deleted_at: deletedAt })
         .eq('id', seedId);
       if (updateError) throw updateError;
@@ -383,61 +393,6 @@ export default function InventoryScreen() {
   }, [router]);
 
   const renderSeedItem = useCallback(({ item: seed }: { item: Seed }) => {
-    const isHighlighted = seed.id === highlightedSeedId;
-    const highlightStyle = isHighlighted ? { backgroundColor: colors.success } : {};
-
-    // Determine the image URI with better error handling
-    function getSeedImageUri(seed: Seed): string {
-      // Helper function to construct proper Supabase URL
-      const constructSupabaseUrl = (path: string): string => {
-        const supabaseUrl = 'https://fodtwysfcqltykejkffn.supabase.co';
-        const bucketName = 'seed-images';
-        
-        // If it's already a full URL, return as-is
-        if (path.startsWith('http')) {
-          return path;
-        }
-        
-        // If it starts with /storage, prepend the domain
-        if (path.startsWith('/storage')) {
-          return `${supabaseUrl}${path}`;
-        }
-        
-        // If it's just a path, construct the full URL
-        return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${path}`;
-      };
-      
-      if (seed.seed_images) {
-        if (Array.isArray(seed.seed_images) && seed.seed_images.length > 0) {
-          const firstImage = seed.seed_images[0];
-          if (firstImage && typeof firstImage === 'object' && firstImage.url && typeof firstImage.url === 'string') {
-            return constructSupabaseUrl(firstImage.url);
-          }
-        } else if (typeof seed.seed_images === 'string' && seed.seed_images.trim()) {
-          // Handle case where seed_images is a string URL
-          return constructSupabaseUrl(seed.seed_images);
-        }
-      }
-      
-      // Return a varied garden-themed placeholder based on seed type
-      const type = (seed.type || '').toLowerCase();
-      if (type.includes('tomato')) {
-        return 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
-      } else if (type.includes('pea')) {
-        return 'https://images.unsplash.com/photo-1587049693270-c7560da11218?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
-      } else if (type.includes('herb')) {
-        return 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
-      } else if (type.includes('flower')) {
-        return 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
-      } else {
-        // Default garden/seeds image
-        return 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
-      }
-    }
-
-    const imageUri = getSeedImageUri(seed);
-
-    // Double press handler using lastPressTimestamps ref in parent
     const handlePress = () => {
       const now = Date.now();
       const lastPress = lastPressTimestamps.current[seed.id] || 0;
@@ -447,155 +402,21 @@ export default function InventoryScreen() {
       lastPressTimestamps.current[seed.id] = now;
     };
 
-    // Main content component that will be conditionally wrapped
-    const seedItemContent = (
-      <Pressable
-        style={[
-          styles.seedItem, 
-          highlightStyle,
-          { 
-            backgroundColor: colors.card,
-            shadowColor: colors.shadowColor,
-            width: responsive.gridColumns > 1 ? responsive.cardWidth : undefined,
-            marginHorizontal: responsive.gridColumns > 1 ? 8 : 10,
-          }
-        ]}
+    const card = (
+      <SeedCard
+        seed={seed}
         onPress={handlePress}
-      >
-        <View style={styles.imageContainer}>
-          <SmartImage
-            uri={imageUri}
-            style={styles.seedImage}
-            resizeMode="cover"
-            fallbackUri="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop&crop=center&auto=format&q=60"
-          />
-        </View>
-        <View style={styles.seedContent}>
-          <View style={styles.seedHeader}>
-            <Text style={[styles.seedName, { color: colors.text }]}>{seed.seed_name}</Text>
-            <View
-              style={[
-                styles.seedTypeContainer,
-                { 
-                  backgroundColor: colors.surface,
-                  flexDirection: 'row', 
-                  alignItems: 'center', 
-                  gap: 6,
-                },
-              ]}
-            >
-              {getSeedTypeIcon(seed.type)}
-              <Text style={[styles.seedType, { color: colors.primary }]}>{seed.type}</Text>
-            </View>
-          </View>
-          <ScrollView 
-            style={[styles.seedDescription, { backgroundColor: colors.surface, borderRadius: 8 }]}
-            contentContainerStyle={styles.seedDescriptionContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-            scrollEventThrottle={16}
-            bounces={true}
-            alwaysBounceVertical={false}
-          >
-            <Text style={[styles.seedDescriptionScrollable, { color: colors.textSecondary }]}>
-              {seed.description || 'No description available. This is a placeholder text to show how the scrollable description area works. You can add detailed information about your seeds here, including growing instructions, harvest times, special care notes, and any other relevant details about the variety. Add more content here to test scrolling functionality. This should be long enough to require scrolling when displayed in the description area of the seed card.'}
-            </Text>
-          </ScrollView>
-        </View>
-        
-        {/* Move seed details and web actions to bottom */}
-        <View style={styles.cardBottom}>
-          <View style={[styles.seedDetails, { backgroundColor: colors.surface }]}>
-            <View style={styles.detailItem}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                <Tally4 style={styles.iconsView} /> Quantity:
-              </Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {seed.quantity} {seed.quantity_unit}
-              </Text>
-            </View>
-            {/* Accessing seed.suppliers safely */}
-            {seed.suppliers && (
-              <View style={styles.detailItem}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  <Truck style={styles.iconsView} /> Supplier:
-                </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {seed.suppliers.supplier_name}
-                </Text>
-              </View>
-            )}
-            {/*Fallback for when suppliers is not loaded as an object or is null */}
-            {!seed.suppliers && seed.supplier_id && (
-              <View style={styles.detailItem}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  <Truck style={styles.iconsView} />
-                  Supplier ID:
-                </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  (Details not loaded) {seed.supplier_id}
-                </Text>
-              </View>
-            )}
-            <View style={styles.seasonContainer}>
-              <View style={[styles.seasonTag, styles.plantTag, { backgroundColor: colors.success }]}>
-                <Text style={[styles.seasonText, { color: colors.text }]}>
-                  Plant: {seed.planting_season}
-                </Text>
-              </View>
-              <View style={[styles.seasonTag, styles.harvestTag, { backgroundColor: colors.warning }]}>
-                <Text style={[styles.seasonText, { color: colors.text }]}>
-                  Harvest: {seed.harvest_season}
-                </Text>
-              </View>
-            </View>
-          </View>
-          
-          {/* Show action buttons on web only, hint about double-click */}
-          {Platform.OS === 'web' && (
-            <View style={[
-              styles.webActionButtons,
-              { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-              }
-            ]}>
-              <Text style={[styles.webHint, { color: colors.textSecondary }]}>Double-click for calendar • Buttons below for edit/delete</Text>
-              <View style={styles.webButtonRow}>
-                <Pressable
-                  style={[styles.webActionButton, styles.editButton, { backgroundColor: colors.warning }]}
-                  onPress={() => handleEdit(seed)}
-                >
-                  <Edit3 size={16} color="#fff" />
-                  <Text style={[styles.webButtonText, { color: '#fff' }]}>Edit</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.webActionButton, styles.deleteButton, { backgroundColor: colors.error }]}
-                  onPress={() => confirmDelete(seed.id)}
-                  disabled={deletingSeedId === seed.id}
-                >
-                  {deletingSeedId === seed.id ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Trash2 size={16} color="#fff" />
-                  )}
-                  <Text style={[styles.webButtonText, { color: '#fff' }]}>Delete</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
-        
-        {/* Show chevron only on mobile (where swipe is available) and not on tablets */}
-        {Platform.OS !== 'web' && !responsive.isTablet && (
-          <ChevronRight size={24} color={colors.textSecondary} style={styles.chevronIcon} />
-        )}
-      </Pressable>
+        onEdit={() => handleEdit(seed)}
+        onDelete={() => confirmDelete(seed.id)}
+        isHighlighted={seed.id === highlightedSeedId}
+        isDeleting={deletingSeedId === seed.id}
+        cardWidth={responsive.gridColumns > 1 ? responsive.cardWidth : undefined}
+        isTablet={responsive.isTablet}
+      />
     );
 
-    // Conditionally wrap with Swipeable only on mobile platforms
     if (Platform.OS === 'web') {
-      return seedItemContent;
+      return card;
     }
 
     return (
@@ -607,7 +428,6 @@ export default function InventoryScreen() {
           renderRightActions(progress, dragX, seed)
         }
         onSwipeableWillOpen={() => {
-          // Close other swipeables when one opens
           Object.entries(swipeableRefs.current).forEach(([key, ref]) => {
             if (key !== seed.id && ref) {
               ref.close();
@@ -615,10 +435,10 @@ export default function InventoryScreen() {
           });
         }}
       >
-        {seedItemContent}
+        {card}
       </Swipeable>
     );
-  }, [highlightedSeedId, colors, deletingSeedId, responsive.gridColumns, responsive.cardWidth, responsive.isTablet]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [highlightedSeedId, deletingSeedId, responsive.gridColumns, responsive.cardWidth, responsive.isTablet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && seeds.length === 0 && !searchTerm) {
     // Show full screen loader only on very first load when no seeds (mock or real) are set yet
@@ -636,16 +456,6 @@ export default function InventoryScreen() {
       {/* Guest Status Banner */}
       <GuestStatusBanner />
       
-      {/* Floating Barcode Scanner Button - Mobile Only */}
-      {(Platform.OS === 'ios' || Platform.OS === 'android') && (
-        <Pressable 
-          onPress={() => setShowBarcodeScanner(true)} 
-          style={[styles.floatingScanButton, { backgroundColor: colors.primary }]}
-        >
-          <Scan size={24} color={colors.warning} />
-        </Pressable>
-      )}
-
       {/* Floating Add Button */}
       <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
         <PlusCircle size={24} color={colors.warning} />
@@ -713,6 +523,14 @@ export default function InventoryScreen() {
           key={`${responsive.gridColumns}-${responsive.isLandscape}-${responsive.screenWidth}`} // Force re-render when layout changes
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            // Fallback: scroll to approximate offset then retry
+            const safeIndex = Math.max(0, Math.min(index, seeds.length - 1));
+            flatListRef.current?.scrollToOffset({
+              offset: safeIndex * averageItemLength,
+              animated: true,
+            });
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -751,19 +569,6 @@ const styles = StyleSheet.create({
     right: 24,
     zIndex: 1000,
     padding: 16,
-    borderRadius: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  floatingScanButton: {
-    position: 'absolute',
-    bottom: 100, // Position above the add button
-    right: 24,
-    zIndex: 1000,
-    padding: 14,
     borderRadius: 28,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

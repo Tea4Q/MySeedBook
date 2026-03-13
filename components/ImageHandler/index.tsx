@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  Platform,
   Pressable,
   ActivityIndicator,
   TextInput,
@@ -14,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
+import { useTheme } from '@/lib/theme';
 
 // Define the Imageinfo interface
 interface Imageinfo {
@@ -71,6 +73,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   onImagesChange,
   bucketName,
 }) => {
+  const { colors } = useTheme();
   const [images, setImages] = useState<Imageinfo[]>(initialImages);
   const [webImageUrlInput, setWebImageUrlInput] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -143,16 +146,25 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         // Organize files in user-specific folders for better security
         const filePath = `${user.id}/${fileName}`;
 
-        // For React Native, we need to read the file from the URI
-        // Create a FormData approach or use the file URI directly
-        const file = new File(localUri);
-        
+        // On web, expo-file-system's File class is not supported — use fetch/blob instead
+        let fileToUpload: any;
+        let contentType = `image/${extensionToUse}`;
+        if (Platform.OS === 'web') {
+          const fetchResult = await fetch(localUri);
+          fileToUpload = await fetchResult.blob();
+          if (fileToUpload.type?.startsWith('image/')) {
+            contentType = fileToUpload.type;
+          }
+        } else {
+          fileToUpload = new File(localUri);
+        }
+
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucketName) // Use bucketName prop
-          .upload(filePath, file, {
+          .from(bucketName)
+          .upload(filePath, fileToUpload, {
             cacheControl: '3600',
             upsert: false,
-            contentType: `image/${extensionToUse}`,
+            contentType,
           });
         if (uploadError) throw uploadError;
 
@@ -205,9 +217,17 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
 
   const handleAddWebImageUrl = useCallback(async () => {
     const trimmedUrl = webImageUrlInput.trim();
+    console.log('[ImageHandler] Add URL pressed, value:', trimmedUrl || '(empty)');
     
     if (!trimmedUrl) {
       Alert.alert('Invalid URL', 'Please enter a valid web URL for the image.');
+      return;
+    }
+
+    // Local device URIs (file://, content://) — route through the upload flow
+    if (trimmedUrl.startsWith('file://') || trimmedUrl.startsWith('content://')) {
+      await handleLocalImageSelected(trimmedUrl);
+      setWebImageUrlInput('');
       return;
     }
 
@@ -350,25 +370,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       );
     } catch (error: any) {
       console.error('Error uploading image from URL:', error);
-      // Fallback: Use original URL if upload fails
+      // Fallback: use the original URL directly rather than a broken placeholder
       setImages((prevImages) =>
         prevImages.map((img) =>
           img.id === imageId
             ? {
                 ...img,
-                url: 'https://placehold.co/600x400?text=Test+Image', // Dummy image URL for testing
+                url: trimmedUrl,
+                type: 'url' as const,
                 isLoading: false,
-                error: error.message || 'Upload failed',
+                localUri: undefined,
+                error: undefined,
               }
             : img
         )
       );
-      Alert.alert(
-        'Upload Error',
-        `Failed to upload image from URL: ${error.message || 'Unknown error'}`
-      );
+      setWebImageUrlInput('');
     }
-    setWebImageUrlInput(''); // Clear the input after adding
   }, [bucketName, webImageUrlInput]);
 
   const handleRemoveImage = useCallback(
@@ -530,8 +548,8 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                       },
                     ]}
                   >
-                    <ActivityIndicator size="large" color="#2d7a3a" />
-                    <Text style={{ marginTop: 8, color: '#2d7a3a' }}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={{ marginTop: 8, color: colors.primary }}>
                       Uploading...
                     </Text>
                   </View>
@@ -599,7 +617,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
               onPress={() => handleRemoveImage(image.id)}
               style={styles.removeImageButton}
             >
-              <Trash2 size={20} color="#2d7a3a" />
+              <Trash2 size={20} color={colors.primary} />
             </Pressable>
           </View>
         );
@@ -607,13 +625,13 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       {/* Show notification if there are more than 3 images */}
       {images.length > 3 && (
         <View style={{ 
-          backgroundColor: '#f3f4f6', 
+          backgroundColor: colors.surface, 
           padding: 8, 
           borderRadius: 8, 
           marginBottom: 12,
           alignItems: 'center' 
         }}>
-          <Text style={{ color: '#6b7280', fontSize: 14 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
             {images.length - 3} more image(s) not shown. First 3 displayed for performance.
           </Text>
         </View>
@@ -622,23 +640,27 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       {/* Add Image from Web URL */}
       <View style={styles.addUrlSection}>
         <TextInput
-          style={styles.urlInput}
+          style={[styles.urlInput, { 
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.inputBorder,
+            color: colors.inputText,
+          }]}
           placeholder="Paste image URL (e.g., https://...)"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
           value={webImageUrlInput}
           onChangeText={setWebImageUrlInput}
           keyboardType="url"
         />
-        <Pressable style={styles.urlButton} onPress={handleAddWebImageUrl}>
-          <Globe size={24} color="#2d7a3a" />
-          <Text style={styles.urlButtonText}>Add URL</Text>
+        <Pressable style={[styles.urlButton, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]} onPress={handleAddWebImageUrl}>
+          <Globe size={24} color={colors.primary} />
+          <Text style={[styles.urlButtonText, { color: colors.primary }]}>Add URL</Text>
         </Pressable>
       </View>
       {/* Capture/Pick Local Image */}
       <View style={styles.imageButtonContainer}>
-        <Pressable style={styles.imageButton} onPress={handleImagePicker}>
-          <Camera size={24} color="#2d7a3a" />
-          <Text style={styles.imageButtonText}>Capture Image</Text>
+        <Pressable style={[styles.imageButton, { borderColor: colors.primary }]} onPress={handleImagePicker}>
+          <Camera size={24} color={colors.primary} />
+          <Text style={[styles.imageButtonText, { color: colors.primary }]}>Capture Image</Text>
         </Pressable>
       </View>
     </View>
@@ -692,14 +714,11 @@ const styles = StyleSheet.create({
   },
   urlInput: {
     flex: 1,
-    backgroundColor: '#ffffff',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     marginRight: 8,
     minWidth: 0, // allow shrinking
   },
@@ -710,14 +729,11 @@ const styles = StyleSheet.create({
     minWidth: 90,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#e6f4ea',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2d7a3a',
   },
   urlButtonText: {
     fontSize: 16,
-    color: '#2d7a3a',
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -737,15 +753,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2d7a3a',
     gap: 8,
   },
   imageButtonText: {
     fontSize: 16,
-    color: '#2d7a3a',
     fontWeight: '600',
   },
   imageCaptureContainer: {

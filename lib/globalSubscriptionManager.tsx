@@ -183,7 +183,12 @@ export function GlobalSubscriptionProvider({
       try {
         const updated = await globalRevenueCat.purchasePackage(pkg);
         setInfo(updated);
-        return updated.isPremium;
+        // purchasePackage only returns (non-throw) when RevenueCat confirmed the
+        // receipt (POST /v1/receipts 200). Entitlements may not be reflected in
+        // the immediately-returned CustomerInfo in test/simulator environments,
+        // so we treat any non-cancelled, non-error completion as success.
+        // refresh() called by the modal after this will sync the real state.
+        return true;
       } catch (err: any) {
         if (err?.userCancelled) return false;
         Alert.alert('Purchase Failed', err?.message ?? 'Please try again.');

@@ -8,7 +8,7 @@ import {
   Alert,
   Switch
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme } from '@/lib/theme';
 import { router } from 'expo-router';
 import { Crown, CheckCircle, Settings, ExternalLink, ArrowLeft, TestTube } from 'lucide-react-native';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';

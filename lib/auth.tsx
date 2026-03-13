@@ -1,10 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import {  useRootNavigation, useRouter } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, LogBox } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { guestTracker, GuestUsage } from '../utils/guestTracker';
+
+// Suppress the Expo LogBox toast for stale/expired refresh tokens — this is
+// an expected condition after a cache clear or app reinstall and is handled
+// gracefully by the auth initialisation logic below.
+LogBox.ignoreLogs([
+  'AuthApiError: Invalid Refresh Token',
+  'Refresh Token Not Found',
+  'AuthRetryableFetchError',
+]);
 // import { isLoading } from 'expo-font';
 // import { set } from 'date-fns';
 // import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
@@ -86,7 +95,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (error) {
           console.warn('Auth initialization error:', error);
-          // Don't throw, just set to unauthenticated state
+          // If the stored refresh token is invalid/expired, clear it so the user
+          // can sign in cleanly instead of seeing a repeated error.
+          const isInvalidToken =
+            error.message?.toLowerCase().includes('refresh token') ||
+            error.message?.toLowerCase().includes('invalid token') ||
+            error.status === 400 ||
+            error.status === 401;
+          if (isInvalidToken) {
+            await supabase.auth.signOut();
+          }
+          setSession(null);
+          setUser(null);
+          setInitialized(true);
+          return;
         }
         
         setSession(session);
@@ -95,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Fatal auth initialization error:', error);
         // Even on fatal error, mark as initialized to prevent infinite loading
+        // Attempt to clear any stale tokens
+        try { await supabase.auth.signOut(); } catch { /* ignore */ }
         setSession(null);
         setUser(null);
         setInitialized(true);
@@ -110,6 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
+      } else if (event === 'TOKEN_REFRESH_FAILED' as any) {
+        // Stale/invalid refresh token — clear state and send to login
+        setSession(null);
+        setUser(null);
+        supabase.auth.signOut().catch(() => {});
       } else if (event === 'SIGNED_IN') {
         setSession(session);
         setUser(session?.user ?? null);

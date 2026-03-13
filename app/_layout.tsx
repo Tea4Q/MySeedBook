@@ -23,6 +23,9 @@ function RootLayoutNav() {
   const [fontsLoaded, fontError] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
+    'Poppins-SemiBold': require('@/assets/fonts/Poppins/Poppins-SemiBold.ttf'),
+    'Poppins-Medium': require('@/assets/fonts/Poppins/Poppins-Medium.ttf'),
+    'Poppins-Regular': require('@/assets/fonts/Poppins/Poppins-Regular.ttf'),
   });
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)

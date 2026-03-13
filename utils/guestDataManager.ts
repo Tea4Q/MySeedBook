@@ -64,6 +64,11 @@ export class GuestDataManager {
     return [...convertedSampleSuppliers, ...demoSuppliers];
   }
 
+  async getSeedById(id: string): Promise<Seed | null> {
+    const seeds = await this.getAllSeeds();
+    return seeds.find(s => s.id === id) ?? null;
+  }
+
   async addDemoSeed(seed: Partial<Seed>): Promise<Seed> {
     const newSeed: Seed = {
       id: `demo-seed-${Date.now()}`,

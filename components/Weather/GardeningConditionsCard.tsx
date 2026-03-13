@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { GardeningConditions } from '../../types/weather';
+import { useTheme, ThemeColors } from '@/lib/theme';
 
 interface GardeningConditionsCardProps {
   conditions: GardeningConditions;
@@ -12,6 +13,9 @@ export const GardeningConditionsCard: React.FC<GardeningConditionsCardProps> = (
   conditions, 
   onRecommendationPress 
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const getSuitabilityColor = (suitability: string): string => {
     switch (suitability) {
       case 'excellent': return '#27AE60';
@@ -237,127 +241,129 @@ export const GardeningConditionsCard: React.FC<GardeningConditionsCardProps> = (
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+function getStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 20,
+      margin: 16,
+      shadowColor: colors.shadowColor,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  suitabilityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  suitabilityIcon: {
-    marginRight: 12,
-  },
-  suitabilityLabel: {
-    fontSize: 16,
-    color: '#2C3E50',
-    marginBottom: 2,
-  },
-  suitabilityValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textTransform: 'capitalize',
-  },
-  conditionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  conditionItem: {
-    width: '48%',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  conditionLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  conditionValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  warningsSection: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#FDF2F2',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#E74C3C',
-  },
-  recommendationsSection: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#FFFBF0',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#F39C12',
-  },
-  bestTimesSection: {
-    padding: 12,
-    backgroundColor: '#F0F8FF',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3498DB',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginLeft: 8,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#C0392B',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  recommendationItem: {
-    marginBottom: 4,
-  },
-  recommendationText: {
-    fontSize: 14,
-    color: '#D68910',
-    lineHeight: 20,
-  },
-  bestTimeItem: {
-    marginBottom: 8,
-  },
-  bestTimeActivity: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    textTransform: 'capitalize',
-  },
-  bestTimeText: {
-    fontSize: 14,
-    color: '#2980B9',
-    marginTop: 2,
-    lineHeight: 18,
-  },
-});
+    header: {
+      marginBottom: 20,
+    },
+    suitabilityContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    suitabilityIcon: {
+      marginRight: 12,
+    },
+    suitabilityLabel: {
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: 2,
+    },
+    suitabilityValue: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      textTransform: 'capitalize',
+    },
+    conditionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      marginBottom: 20,
+    },
+    conditionItem: {
+      width: '48%',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    conditionLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    conditionValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      textTransform: 'capitalize',
+    },
+    warningsSection: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: '#FDF2F2',
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: '#E74C3C',
+    },
+    recommendationsSection: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: '#FFFBF0',
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: '#F39C12',
+    },
+    bestTimesSection: {
+      padding: 12,
+      backgroundColor: '#F0F8FF',
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: '#3498DB',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginLeft: 8,
+    },
+    warningText: {
+      fontSize: 14,
+      color: colors.error,
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    recommendationItem: {
+      marginBottom: 4,
+    },
+    recommendationText: {
+      fontSize: 14,
+      color: colors.warning,
+      lineHeight: 20,
+    },
+    bestTimeItem: {
+      marginBottom: 8,
+    },
+    bestTimeActivity: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      textTransform: 'capitalize',
+    },
+    bestTimeText: {
+      fontSize: 14,
+      color: '#2980B9',
+      marginTop: 2,
+      lineHeight: 18,
+    },
+  });
+}

@@ -27,6 +27,24 @@ const ExpoSecureStoreAdapter = {
         
         return reconstructed;
       }
+
+      // Detect obviously stale/malformed tokens and clear them before Supabase
+      // tries to auto-refresh, which would throw an AuthApiError toast.
+      if (key.includes('auth-token') || key.includes('supabase.auth.token')) {
+        try {
+          const parsed = JSON.parse(mainItem);
+          const expiresAt: number | undefined =
+            parsed?.expires_at ?? parsed?.expiresAt;
+          if (expiresAt && expiresAt * 1000 < Date.now() - 60 * 60 * 1000) {
+            // Token expired more than 1 hour ago — clear it to prevent a
+            // failed auto-refresh that surfaces as a LogBox error.
+            await SecureStore.deleteItemAsync(key);
+            return null;
+          }
+        } catch {
+          // Not JSON or missing fields — leave it for Supabase to handle
+        }
+      }
       
       return mainItem;
     } catch (error) {

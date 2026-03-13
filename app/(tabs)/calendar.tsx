@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Component } from 'react';
 import {
   Platform,
   View,
@@ -38,8 +38,30 @@ import { CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIco
 import { WeatherDetailModal } from '../../components/Weather/WeatherDetailModal';
 import { calendarWeatherService } from '../../lib/services/calendarWeatherService';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
+import { VoiceMicButton } from '../../components/VoiceMicButton';
+import { parseVoiceCommand } from '../../lib/voice/commandParser';
 
-type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination';
+// Safety wrapper: if LottieView (used by weather icons) is unavailable on this
+// device/build it throws during render. This local boundary catches that and
+// falls back to an empty placeholder so the rest of the calendar stays alive.
+class WeatherIconBoundary extends Component<
+  { children: React.ReactNode },
+  { crashed: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { crashed: false };
+  }
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+  render() {
+    if (this.state.crashed) return <View style={{ width: 44, height: 44 }} />;
+    return this.props.children;
+  }
+}
+
+type EventCategory = 'sow' | 'purchase' | 'harvest' | 'germination' | 'transplant';
 
 interface PlantingEvent {
   id: string;
@@ -55,6 +77,7 @@ const CATEGORY_COLORS: Record<EventCategory, string> = {
   purchase: '#1971c2',
   harvest: '#e67700',
   germination: '#be4bdb',
+  transplant: '#0c8599',
 };
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
@@ -62,6 +85,7 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   purchase: 'Purchase Date',
   harvest: 'Harvest Date',
   germination: 'Germination Date',
+  transplant: 'Transplant Date',
 };
 
 interface DateCalculation {
@@ -135,11 +159,31 @@ export default function CalendarScreen() {
   });
   const [daysToGerminate, setDaysToGerminate] = useState('7');
   const [daysToHarvest, setDaysToHarvest] = useState('80');
+  const [lastVoiceTranscript, setLastVoiceTranscript] = useState<string | null>(null);
+  const [seedInventory, setSeedInventory] = useState<{ id: string; seed_name: string; days_to_germinate?: string | number; days_to_harvest?: string | number }[]>([]);
+  const [showSeedDropdown, setShowSeedDropdown] = useState(false);
 
-  // Fetch event when component loads
-  useEffect(() => {
-    fetchEvents();
-  }, []);
+  // Initial load uses fetchEventsForMonth via the [currentDate] effect below.
+  // fetchEvents() (all-months) is called after adding an event so cross-month
+  // events (e.g. germination) are immediately visible.
+
+  const handleVoiceTranscript = (text: string) => {
+    setLastVoiceTranscript(text);
+    const cmd = parseVoiceCommand(text);
+    if (cmd.action === 'save-entry') {
+      handleAddEvent();
+      return;
+    }
+    if (cmd.action === 'set-schedule' && cmd.indoorSowDate) {
+      setNewEvent((prev) => ({ ...prev, date: cmd.indoorSowDate! }));
+      return;
+    }
+    // Dictation: fill seedName if empty, else append to notes
+    setNewEvent((prev) => ({
+      ...prev,
+      ...(prev.seedName ? { notes: prev.notes ? `${prev.notes} ${text}` : text } : { seedName: text }),
+    }));
+  };
 
   // Fetch weather data for the month
   const fetchWeatherForMonth = useCallback(async (date: Date) => {
@@ -226,8 +270,9 @@ export default function CalendarScreen() {
     }
   };
 
-  // Optionally, fetch events for the current month for best performance
+  // Fetch events for the current month
   const fetchEventsForMonth = async (date: Date) => {
+    setLoading(true);
     const startDate = startOfMonth(date).toISOString();
     const endDate = endOfMonth(date).toISOString();
     try {
@@ -265,14 +310,16 @@ export default function CalendarScreen() {
     } catch (error) {
       console.error('Error fetching events for month:', error);
       alert('Failed to load events for the month. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch seed growth data (days to germinate/harvest) by seedId
   const fetchSeedGrowthData = async (seedId: string) => {
     try {
-      const { data: seedData, error } = await supabase
-        .from('seeds')
+      const { data: seedData, error } = await (supabase
+        .from('seeds') as any)
         .select('days_to_germinate, days_to_harvest')
         .eq('id', seedId)
         .maybeSingle();
@@ -298,6 +345,20 @@ export default function CalendarScreen() {
     }
   };
 
+  const fetchSeedInventory = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await (supabase
+        .from('seeds') as any)
+        .select('id, seed_name, days_to_germinate, days_to_harvest')
+        .is('deleted_at', null)
+        .eq('user_id', user.id)
+        .order('seed_name');
+      setSeedInventory(data || []);
+    } catch { /* silent — don't disrupt modal open */ }
+  }, []);
+
   // Centralized function to open Add Event modal with pre-filled data
   const openAddEventModal = useCallback(({ seedId, seedName, date }: { seedId?: string; seedName?: string; date?: Date }) => {
     setNewEvent({
@@ -306,15 +367,16 @@ export default function CalendarScreen() {
       seedId: seedId || '',
       seedName: seedName || '',
     });
+    setShowSeedDropdown(false);
     setIsAddEventModalVisible(true);
-    // Optionally fetch seed growth data if seedId is provided
+    fetchSeedInventory();
     if (seedId) {
       fetchSeedGrowthData(seedId);
     } else {
       setDaysToGerminate('7');
       setDaysToHarvest('80');
     }
-  }, []);
+  }, [fetchSeedInventory]);
 
   // Open add event modal if coming from double press in inventory
   useEffect(() => {
@@ -363,8 +425,8 @@ export default function CalendarScreen() {
       // Note: seedId is optional - allow general garden events without specific seeds
 
       // Insert the main event
-      const { error: mainEventError } = await supabase
-        .from('calendar_events')
+      const { error: mainEventError } = await (supabase
+        .from('calendar_events') as any)
         .insert({
           seed_id: newEvent.seedId || null, // Allow null for general events
           seed_name: newEvent.seedName,
@@ -383,15 +445,11 @@ export default function CalendarScreen() {
 
       // If it's a sow event, calculate germination and harvest dates and insert them as well
       if (newEvent.category === 'sow') {
-        const { germinationDate, harvestDate } = calculateDates(
-          new Date(newEvent.date),
-          daysToGerminate,
-          daysToHarvest
-        );
-
+        const germinationDate = addDays(new Date(newEvent.date), parseDays(String(daysToGerminate)));
+        
         // Insert germination event
-        const { error: germError } = await supabase
-          .from('calendar_events')
+        const { error: germError } = await (supabase
+          .from('calendar_events') as any)
           .insert({
             seed_id: newEvent.seedId,
             seed_name: newEvent.seedName,
@@ -405,26 +463,28 @@ export default function CalendarScreen() {
           alert('Error adding germination event.');
           return;
         }
-
-        // Insert harvest event
-        const { error: harvestError } = await supabase
-          .from('calendar_events')
-          .insert({
-            seed_id: newEvent.seedId,
-            seed_name: newEvent.seedName,
-            event_date: harvestDate.toISOString(),
-            category: 'harvest',
-            notes: `Estimated harvest date for ${newEvent.seedName}`,
-            user_id: user.id, // Add user_id for RLS
-          });
-        if (harvestError) {
-          console.error('Error inserting harvest event:', harvestError);
-          alert('Error adding harvest event.');
-          return;
+      }
+      //If it's a transplant event, calculate harvest date and insert it as well
+      if (newEvent.category === 'transplant') {
+          const harvestDate = addDays(new Date(newEvent.date), parseDays(String(daysToHarvest)));
+          const { error: harvestError } = await (supabase
+            .from('calendar_events') as any)
+            .insert({
+              seed_id: newEvent.seedId,
+              seed_name: newEvent.seedName,
+              event_date: harvestDate.toISOString(),
+              category: 'harvest',
+              notes: `Expected harvest date for ${newEvent.seedName} (transplanted)`,
+              user_id: user.id, // Add user_id for RLS
+            });
+          if (harvestError) {
+            console.error('Error inserting harvest event:', harvestError);
+            alert('Error adding harvest event.');
+            return; 
         }
       }
 
-      await fetchEventsForMonth(currentDate); // Refresh the events list
+      await fetchEvents(); // Load all months so cross-month germination events appear
       setIsAddEventModalVisible(false); // Close the modal
     } catch (error) {
       console.error('Error adding event:', error);
@@ -570,28 +630,29 @@ export default function CalendarScreen() {
                 ]}
               >
                 <View style={styles.dayContent}>
-                  {/* Weather Icon - Centered at top */}
-                  {checkFeature('weather_integration') && dayWeatherData && isCurrentMonth ? (
-                    <View style={styles.weatherIconContainer}>
-                      <Pressable
-                        onPress={() => {
-                      // Single tap on weather icon opens weather modal
-                      setSelectedDateWeather(dayWeatherData);
-                      setSelectedDate(date);
-                      setIsWeatherModalVisible(true);
-                        }}
-                        onPressIn={() => {}}
-                        onPressOut={() => {}}
-                      >
-                        <CalendarWeatherIcon 
-                          weatherCode={dayWeatherData.condition?.icon || dayWeatherData.condition?.main || dayWeatherData.weather?.[0]?.id || 'unknown'}
-                          size="large"
-                        />
-                      </Pressable>
-                    </View>
-                  ) : (
-                    <View style={styles.weatherIconPlaceholder} />
-                  )}
+                  {/* Weather Icon - only renders space when premium is active */}
+                  {checkFeature('weather_integration') && isCurrentMonth ? (
+                    dayWeatherData ? (
+                      <View style={styles.weatherIconContainer}>
+                        <Pressable
+                          onPress={() => {
+                            setSelectedDateWeather(dayWeatherData);
+                            setSelectedDate(date);
+                            setIsWeatherModalVisible(true);
+                          }}
+                        >
+                          <WeatherIconBoundary>
+                            <CalendarWeatherIcon
+                              weatherCode={dayWeatherData.condition?.icon || dayWeatherData.condition?.main || dayWeatherData.weather?.[0]?.id || 'unknown'}
+                              size="large"
+                            />
+                          </WeatherIconBoundary>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <View style={styles.weatherIconPlaceholder} />
+                    )
+                  ) : null}
                   
                   {/* Date Number - Double tap for adding events */}
                   <Pressable
@@ -723,23 +784,68 @@ export default function CalendarScreen() {
 
             { /* Show Event List */}
             <ScrollView style={styles.modalScroll}>
+              {/* Voice Input Row */}
+              <View style={styles.voiceRow}>
+                <VoiceMicButton onTranscript={handleVoiceTranscript} size="sm" />
+                {lastVoiceTranscript ? (
+                  <Text style={styles.voiceHint} numberOfLines={2}>
+                    Heard: {lastVoiceTranscript}
+                  </Text>
+                ) : null}
+              </View>
+
               {/* Add Event Form */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Seed Name</Text>
                 <TextInput
-                  style={[styles.input, { 
-                    backgroundColor: colors.inputBackground, 
+                  style={[styles.input, {
+                    backgroundColor: colors.inputBackground,
                     color: colors.inputText,
-                    borderColor: colors.inputBorder 
+                    borderColor: newEvent.seedId ? colors.primary : colors.inputBorder,
                   }]}
                   value={newEvent.seedName ?? ''}
-                  onChangeText={(text) =>
-                    setNewEvent({ ...newEvent, seedName: text })
-                  }
-                  placeholder="Enter seed name"
+                  onChangeText={(text) => {
+                    setNewEvent({ ...newEvent, seedName: text, seedId: '' });
+                    setShowSeedDropdown(text.trim().length > 0);
+                  }}
+                  onFocus={() => setShowSeedDropdown(true)}
+                  placeholder="Search seed inventory..."
                   placeholderTextColor={colors.textSecondary}
-                  editable={true}
                 />
+                {showSeedDropdown && (
+                  <View style={[styles.seedDropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {seedInventory
+                      .filter(s =>
+                        !(newEvent.seedName ?? '').trim() ||
+                        s.seed_name.toLowerCase().includes((newEvent.seedName ?? '').toLowerCase())
+                      )
+                      .slice(0, 8)
+                      .map(s => (
+                        <Pressable
+                          key={s.id}
+                          style={[styles.seedDropdownItem, { borderBottomColor: colors.border }]}
+                          onPress={() => {
+                            setNewEvent(prev => ({ ...prev, seedName: s.seed_name, seedId: s.id }));
+                            setShowSeedDropdown(false);
+                            fetchSeedGrowthData(s.id);
+                          }}
+                        >
+                          <Text style={{ color: colors.text }}>{s.seed_name}</Text>
+                        </Pressable>
+                      ))}
+                    {seedInventory.filter(s =>
+                      !(newEvent.seedName ?? '').trim() ||
+                      s.seed_name.toLowerCase().includes((newEvent.seedName ?? '').toLowerCase())
+                    ).length === 0 && (
+                      <View style={[styles.seedDropdownItem, { borderBottomColor: colors.border }]}>
+                        <Text style={{ color: colors.textSecondary, fontStyle: 'italic' }}>No seeds found — type to add custom name</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+                {newEvent.seedId ? (
+                  <Text style={{ color: colors.primary, fontSize: 12, marginTop: 4 }}>✓ Linked to inventory seed</Text>
+                ) : null}
               </View>
 
               {/* Event Type  Event Date Row */}
@@ -835,7 +941,7 @@ export default function CalendarScreen() {
 
               {/* Days to Germination and Harvest */}
 
-              {newEvent.category === 'sow' && (
+              {(newEvent.category === 'sow' || newEvent.category === 'transplant') && (
                 <View style={[styles.calculationContainer, { backgroundColor: colors.surface }]}>
                   <View style={styles.inputGroup}>
                     <Text style={[styles.label, { color: colors.text }]}>Days to Germination</Text>
@@ -1264,6 +1370,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 16,
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  voiceHint: {
+    flex: 1,
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#6b7280',
+  },
+  seedDropdown: {
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    maxHeight: 220,
+    overflow: 'hidden',
+    zIndex: 100,
+  },
+  seedDropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
   },
 });
 
