@@ -1,6 +1,7 @@
 import {
   useRouter,
   useLocalSearchParams,
+  useFocusEffect,
 } from 'expo-router';
 import React, {
   useState,
@@ -17,6 +18,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
@@ -68,6 +70,27 @@ const parseSeedDays = (days: string | number | undefined): number => {
   return isNaN(n) ? 0 : n;
 };
 
+const stripNullCharacters = (value: string): string => value.replace(/\u0000/g, '');
+
+const sanitizeForPostgres = <T,>(value: T): T => {
+  if (typeof value === 'string') {
+    return stripNullCharacters(value) as T;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeForPostgres(item)) as T;
+  }
+
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const sanitizedEntries = Object.entries(value as Record<string, unknown>).map(
+      ([key, entryValue]) => [key, sanitizeForPostgres(entryValue)]
+    );
+    return Object.fromEntries(sanitizedEntries) as T;
+  }
+
+  return value;
+};
+
 
 type SeedType = {
   label: string;
@@ -99,6 +122,7 @@ interface Imageinfo {
 // Update your Seed interface for the form state if it's different from DB
 
 export default function AddOrEditSeedScreen() {
+  const router = useRouter();
   const { colors } = useTheme(); // Add theme colors
   const { user, isGuest } = useAuth(); // Add auth context
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -125,6 +149,22 @@ export default function AddOrEditSeedScreen() {
   }>();
 
   const isEditing = !!params.id;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') {
+        return () => {};
+      }
+
+      const backSubscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        // Prevent accidental exits from emulator right-click and hardware back.
+        // Navigation should happen only through explicit UI actions (back button/tab).
+        return true;
+      });
+
+      return () => backSubscription.remove();
+    }, [])
+  );
 
 // Handle scanned barcode data
 useEffect(() => {
@@ -317,7 +357,6 @@ useEffect(() => {
     setScannedBarcodeData(null); // Clear scanned barcode data
   };
 
-  const router = useRouter();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
@@ -384,11 +423,13 @@ useEffect(() => {
         : null,
     };
 
+    const sanitizedPayload = sanitizeForPostgres(payload);
+
     // Remove client-side only fields or fields not directly in 'seeds' table
-    delete payload.suppliers; // Remove joined supplier data - not a column in seeds table
+    delete sanitizedPayload.suppliers; // Remove joined supplier data - not a column in seeds table
 
     if (!isEditing) {
-      delete payload.id; // Remove ID for new seed creation
+      delete sanitizedPayload.id; // Remove ID for new seed creation
     }
 
     try {
@@ -401,7 +442,7 @@ useEffect(() => {
       
       if (!user) {
         // Guest user - simulate successful save without hitting Supabase
-        console.log('Guest mode: Simulating seed save', payload);
+        console.log('Guest mode: Simulating seed save', sanitizedPayload);
         savedSeedId = `guest-seed-${Date.now()}`;
         responseError = null;
       } else {
@@ -410,14 +451,14 @@ useEffect(() => {
           // Update existing seed
           const { error } = await (supabase
             .from('seeds') as any)
-            .update(payload)
+            .update(sanitizedPayload)
             .eq('id', seedPackage.id);
           responseError = error;
           savedSeedId = seedPackage.id;
         } else {
           // Add a new seed
           const { data: newSeedData, error } = await (supabase.from('seeds') as any).insert({
-            ...payload,
+            ...sanitizedPayload,
             user_id: user?.id, // Add user_id for new seeds
           }).select('id').single();
           responseError = error;
@@ -437,13 +478,15 @@ useEffect(() => {
         notes: string;
         user_id: string;
       }) => {
+        const cleanEventPayload = sanitizeForPostgres(eventPayload);
+
         const { data: existingRows, error: lookupError } = await (supabase
           .from('calendar_events') as any)
           .select('id')
-          .eq('user_id', eventPayload.user_id)
-          .eq('seed_id', eventPayload.seed_id)
-          .eq('category', eventPayload.category)
-          .eq('notes', eventPayload.notes);
+          .eq('user_id', cleanEventPayload.user_id)
+          .eq('seed_id', cleanEventPayload.seed_id)
+          .eq('category', cleanEventPayload.category)
+          .eq('notes', cleanEventPayload.notes);
 
         if (lookupError) {
           throw lookupError;
@@ -454,9 +497,9 @@ useEffect(() => {
           const keepId = existing[0].id;
           const { error: updateError } = await (supabase
             .from('calendar_events') as any)
-            .update(eventPayload)
+            .update(cleanEventPayload)
             .eq('id', keepId)
-            .eq('user_id', eventPayload.user_id);
+            .eq('user_id', cleanEventPayload.user_id);
 
           if (updateError) {
             throw updateError;
@@ -469,7 +512,7 @@ useEffect(() => {
               .from('calendar_events') as any)
               .delete()
               .in('id', duplicateIds)
-              .eq('user_id', eventPayload.user_id);
+              .eq('user_id', cleanEventPayload.user_id);
 
             if (deleteDupesError) {
               throw deleteDupesError;
@@ -481,7 +524,7 @@ useEffect(() => {
 
         const { error } = await (supabase
           .from('calendar_events') as any)
-          .insert(eventPayload);
+          .insert(cleanEventPayload);
 
         if (error) {
           throw error;
@@ -612,6 +655,8 @@ useEffect(() => {
           errorMessage = 'Invalid supplier selection. Please select a valid supplier and try again.';
           // Log the problematic data for debugging
           console.error('UUID validation error. Supplier ID:', seedPackage.supplier_id);
+        } else if (error.code === '22P05' || error.message.includes('unsupported Unicode escape sequence')) {
+          errorMessage = 'One of the text fields contains an unsupported control character. Please edit the text and try again.';
         } else if (error.message.includes('violates foreign key constraint')) {
           errorMessage = 'The selected supplier no longer exists. Please select a different supplier.';
         } else if (error.message.includes('violates not-null constraint')) {
