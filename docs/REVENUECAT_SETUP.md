@@ -21,8 +21,8 @@ This document covers the complete RevenueCat integration in this project: dashbo
 1. Sign in at [app.revenuecat.com](https://app.revenuecat.com).
 2. **New Project** → name it **MySeedBook**.
 3. Add an **App** for each platform:
-   - **Google Play** — package: `com.tea4q.myseedbook`
-   - **App Store Connect** — bundle ID: `com.tea4q.myseedbook`
+  - **Google Play** — package: `com.myseedbook.catalogue`
+  - **App Store Connect** — bundle ID: `com.myseedbook.catalogue`
 
 ### 2.2 API Keys
 
@@ -37,25 +37,33 @@ Copy the **Public SDK keys** — never use the secret keys in the app.
 
 ### 2.3 Products
 
-Create the same product IDs in the App Store / Google Play developer consoles first, then import them into RevenueCat:
+Create the products in the App Store / Google Play developer consoles first, then import those exact store product IDs into RevenueCat.
+
+For the current Google Play setup, use these product IDs:
 
 | Product ID | Type | Price |
 |---|---|---|
-| `monthly` | Auto-renewable subscription | Your price |
-| `annual` | Auto-renewable subscription | Your price |
+| `myseedbook_premium_monthly` | Auto-renewable subscription | Your price |
+| `myseedbook_premium_yearly` | Auto-renewable subscription | Your price |
+
+For App Store Connect, the current iOS product IDs are `com.myseedbook.catalogue.premium.monthly` and `com.myseedbook.catalogue.premium.yearly`. If you maintain multiple RevenueCat projects, each project must reference the real store product IDs for the app connected to that project.
 
 ### 2.4 Entitlement
 
 Create an entitlement named exactly **`premium`** (this is the ID used in `globalRevenueCat.ts`).
 
-Attach both products to this entitlement.
+Attach both imported store products to this entitlement.
 
 ### 2.5 Offering & Packages
 
 1. Create an **Offering** named `default` (this becomes the `current` offering).
 2. Inside the offering, create packages:
-   - `$rc_monthly` (or a custom ID) → attach `monthly`
-   - `$rc_annual` (or a custom ID) → attach `annual`
+  - `$rc_monthly` (or a custom ID) → attach the monthly store product
+  - `$rc_annual` (or a custom ID) → attach the annual / yearly store product
+
+For the current Google Play setup, that means:
+- `$rc_monthly` → `myseedbook_premium_monthly`
+- `$rc_annual` → `myseedbook_premium_yearly`
 
 > The `GlobalSubscriptionModal` reads `offerings.current.availablePackages` — as long as your default offering has packages, they appear in the paywall automatically.
 
@@ -66,7 +74,7 @@ Attach both products to this entitlement.
 ### 3.1 Apple Developer Portal
 
 1. Sign in at [developer.apple.com](https://developer.apple.com) → **Certificates, Identifiers & Profiles**.
-2. Select your App ID (`com.tea4q.myseedbook`) → **Edit**.
+2. Select your App ID (`com.myseedbook.catalogue`) → **Edit**.
 3. Enable the **In-App Purchase** capability and save.
 4. Regenerate any provisioning profiles that use this App ID so they pick up the new capability.
 
@@ -78,8 +86,8 @@ Attach both products to this entitlement.
 
    | Product ID | Duration | Reference Name |
    |---|---|---|
-   | `monthly` | 1 Month | MySeedBook Monthly |
-   | `annual` | 1 Year | MySeedBook Annual |
+  | `com.myseedbook.catalogue.premium.monthly` | 1 Month | MySeedBook Monthly |
+  | `com.myseedbook.catalogue.premium.yearly` | 1 Year | MySeedBook Annual |
 
 4. For each product:
    - Set a **price tier** in all required territories.
@@ -97,7 +105,7 @@ Make sure `app.json` specifies the correct bundle ID:
 {
   "expo": {
     "ios": {
-      "bundleIdentifier": "com.tea4q.myseedbook"
+      "bundleIdentifier": "com.myseedbook.catalogue"
     }
   }
 }
@@ -125,13 +133,13 @@ To test purchases in the iOS Simulator without a device:
 
    | Product ID | Billing period |
    |---|---|
-   | `monthly` | Monthly |
-   | `annual` | Annual |
+  | `myseedbook_premium_monthly` | Monthly |
+  | `myseedbook_premium_yearly` | Annual |
 
 3. For each subscription:
    - Add a **base plan** with a price and billing period.
    - Optionally add a **free-trial offer** or introductory pricing.
-   - Set a **grace period** (recommended: 3 days for monthly, 7 days for annual).
+  - Set a **grace period** (recommended: 3 days for monthly, 7 days for yearly / annual).
    - **Activate** the subscription — inactive products cannot be purchased.
 
 ### 4.2 Service Account (required for RevenueCat server validation)
@@ -156,7 +164,7 @@ Verify that `app.json` specifies the correct package name:
 {
   "expo": {
     "android": {
-      "package": "com.tea4q.myseedbook"
+      "package": "com.myseedbook.catalogue"
     }
   }
 }
@@ -229,6 +237,8 @@ Wraps `react-native-purchases` with safe, platform-aware methods:
 **Plan type detection** is based on the product identifier:
 - Contains `monthly` → `planType: 'monthly'`
 - Contains `yearly` or `annual` → `planType: 'annual'`
+
+This works with the current Google Play IDs because `myseedbook_premium_monthly` contains `monthly` and `myseedbook_premium_yearly` contains `yearly`.
 
 > If your product IDs don't contain these strings, update `parseCustomerInfo()` in `globalRevenueCat.ts`.
 
@@ -340,5 +350,5 @@ During development on web (where RevenueCat is unavailable), you can temporarily
 1. Create the product in the App Store / Google Play console.
 2. Import it into RevenueCat and attach it to the `premium` entitlement.
 3. Add it to the `default` offering as a new package.
-4. Update `parseCustomerInfo()` in `globalRevenueCat.ts` if the product ID doesn't contain `monthly` or `annual`.
+4. Update `parseCustomerInfo()` in `globalRevenueCat.ts` if the product ID doesn't contain `monthly`, `yearly`, or `annual`.
 5. No UI changes needed — `GlobalSubscriptionModal` renders all packages from the offering dynamically.

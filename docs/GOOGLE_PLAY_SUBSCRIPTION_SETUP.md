@@ -8,7 +8,7 @@
 
 ## Overview
 
-This guide walks through creating subscription products in Google Play Console. These products must be created **before** implementing billing in the app.
+This guide walks through creating subscription products in Google Play Console for a RevenueCat-based billing setup. These products must be created before configuring them in RevenueCat and testing purchases in the app.
 
 ---
 
@@ -61,14 +61,14 @@ This guide walks through creating subscription products in Google Play Console. 
 |-------|-------|
 | **Product ID** | `myseedbook_premium_monthly` |
 | **Name** | MySeedBook Premium Monthly |
-| **Description** | Unlimited seeds, weather forecasts, barcode scanning, and priority support. Cancel anytime. |
+| **Description** | Unlimited seeds, weather forecasts, voice input, and priority support. Cancel anytime. |
 
 **Subscription Details**:
 
 | Field | Value |
 |-------|-------|
 | **Billing period** | 1 month (recurring) |
-| **Base price** | $4.99 USD |
+| **Base price** | $7.99 USD |
 | **Free trial** | 7 days (recommended) |
 | **Grace period** | 3 days (for failed payments) |
 
@@ -105,14 +105,14 @@ This guide walks through creating subscription products in Google Play Console. 
 |-------|-------|
 | **Product ID** | `myseedbook_premium_yearly` |
 | **Name** | MySeedBook Premium Yearly |
-| **Description** | Get 12 months for the price of 8! Unlimited seeds, weather forecasts, barcode scanning, and priority support. Best value. |
+| **Description** | Get 12 months for the price of 10! Unlimited seeds, weather forecasts, and priority support. Best value. |
 
 **Subscription Details**:
 
 | Field | Value |
 |-------|-------|
 | **Billing period** | 1 year (recurring) |
-| **Base price** | $39.99 USD (33% savings vs monthly) |
+| **Base price** | $79.99 USD (16% savings vs monthly) |
 | **Free trial** | 7 days (optional, recommended) |
 | **Grace period** | 3 days |
 
@@ -173,10 +173,10 @@ qa.tester@example.com
 
 ### Review Pricing
 
-| Subscription | Monthly Price | Yearly Price | Annual Savings |
+| Subscription | Monthly Price | Yearly Price | Yearly Savings |
 |--------------|---------------|--------------|----------------|
-| Monthly | $4.99 | $59.88 | - |
-| Yearly | - | $39.99 | $19.89 (33%) |
+| Monthly | $7.99 | $95.88 | - |
+| Yearly | - | $79.99 | $15.89 (~17%) |
 
 ### Test Product IDs Match Code
 
@@ -184,11 +184,12 @@ qa.tester@example.com
 - `myseedbook_premium_monthly` ✅
 - `myseedbook_premium_yearly` ✅
 
-**In Code** (`premiumManager.ts`):
-```typescript
-android: 'myseedbook_premium_monthly' ✅
-android: 'myseedbook_premium_yearly' ✅
-```
+**In RevenueCat**:
+- Entitlement: `premium` ✅
+- Offering: `default` with `$rc_monthly` mapped to `myseedbook_premium_monthly` and `$rc_annual` mapped to `myseedbook_premium_yearly` ✅
+
+**In App**:
+- `lib/globalRevenueCat.ts` plan parsing supports `monthly`, `annual`, and `yearly` strings ✅
 
 **Must match exactly!**
 
@@ -201,7 +202,7 @@ android: 'myseedbook_premium_yearly' ✅
 **First Month Discount**:
 - Trial: Free for 7 days
 - Then: $1.99 for first month
-- Then: $4.99/month regular price
+- Then: $7.99/month regular price
 
 **How to Add**:
 1. Edit subscription → **Offers**
@@ -232,31 +233,31 @@ android: 'myseedbook_premium_yearly' ✅
 
 ## Pricing Recommendations
 
-### Monthly Subscription ($4.99)
+### Monthly Subscription ($7.99)
 
-**Why $4.99**:
-- ✅ Industry standard for mobile productivity apps
-- ✅ Psychological pricing (under $5)
-- ✅ Affordable for hobbyist gardeners
-- ✅ Premium enough to indicate value
+**Why $7.99**:
+- ✅ Aligns with current launch pricing in this guide
+- ✅ Reflects premium feature depth and support costs
+- ✅ Still competitive for niche productivity apps
+- ✅ Keeps yearly plan value proposition clear
 
 **Comparable Apps**:
 - Gardening apps: $3.99 - $9.99/month
 - Productivity apps: $4.99 - $14.99/month
-- Inventory apps: $2.99 - $7.99/month
+- Inventory apps: $2.99 - $9.99/month
 
-### Yearly Subscription ($39.99)
+### Yearly Subscription ($79.99)
 
-**Why $39.99**:
-- ✅ 33% savings vs monthly ($19.89 saved)
-- ✅ Under $40 psychological threshold
-- ✅ Encourages annual commitment
-- ✅ Better revenue per user
+**Why $79.99**:
+- ✅ Meaningful savings vs monthly billing
+- ✅ Better long-term retention via yearly commitment
+- ✅ Improved revenue predictability
+- ✅ Simpler two-tier plan structure for launch
 
-**Annual Revenue**:
-- Monthly x 12: $59.88
-- Yearly: $39.99
-- Discount: $19.89 (33% off)
+**Yearly Revenue**:
+- Monthly x 12: $95.88
+- Yearly: $79.99
+- Discount: $15.89 (~17% off)
 
 ### Alternative Pricing Tiers (Consider Later)
 
@@ -304,9 +305,9 @@ android: 'myseedbook_premium_yearly' ✅
 - Reduced: 15% (after $1M revenue or subscriptions after year 1)
 
 **Example Revenue**:
-- User pays: $4.99
-- Google takes: $1.50 (30%)
-- You receive: $3.49
+- User pays: $7.99
+- Google takes: $2.40 (30%)
+- You receive: $5.59
 
 ---
 
@@ -317,7 +318,7 @@ android: 'myseedbook_premium_yearly' ✅
 **Monthly Subscription**:
 ```
 MySeedBook Premium Monthly
-$4.99/month
+$7.99/month
 
 • Unlimited seed inventory
 • 7-day weather forecasts
@@ -333,10 +334,10 @@ $4.99/month
 **Yearly Subscription**:
 ```
 MySeedBook Premium Yearly
-$39.99/year (Save 33%!)
+$79.99/year (Save ~17%!)
 
 Everything in Monthly, plus:
-• Save $19.89 per year
+• Save $15.89 per year
 • Pay once, garden all year
 • Best value for serious gardeners
 
@@ -354,7 +355,7 @@ Everything in Monthly, plus:
 | Photos per seed | Up to 5 | Unlimited ✓ |
 | Calendar | Basic | Advanced ✓ |
 | Support | Community | Priority ✓ |
-| Price | Free | $4.99/mo or $39.99/yr |
+| Price | Free | $7.99/mo or $79.99/yr |
 
 ---
 
@@ -363,24 +364,27 @@ Everything in Monthly, plus:
 After setup, verify:
 
 - [ ] Both subscription products visible in Play Console
-- [ ] Product IDs match code exactly
-- [ ] Prices set correctly ($4.99, $39.99)
+- [ ] Product IDs match RevenueCat setup exactly (`myseedbook_premium_monthly`, `myseedbook_premium_yearly`)
+- [ ] Prices set correctly ($7.99, $79.99)
 - [ ] Free trials enabled (7 days)
 - [ ] Grace period set (3 days)
 - [ ] Products activated
 - [ ] License testers added
 - [ ] Test response set to RESPOND_NORMALLY
 - [ ] Merchant account linked (or pending)
+- [ ] RevenueCat entitlement `premium` has both products attached
+- [ ] RevenueCat `default` offering includes `$rc_monthly` and `$rc_annual` mapped to the correct store products
 
 ---
 
 ## Next Steps
 
 1. ✅ Complete subscription setup in Play Console
-2. ⏭️ Install `react-native-iap` in app
-3. ⏭️ Implement purchase flow in `premiumManager.ts`
-4. ⏭️ Test with license tester accounts
-5. ⏭️ Submit v1.3.1 with billing enabled
+2. ⏭️ Import products into RevenueCat dashboard
+3. ⏭️ Attach both products to entitlement `premium`
+4. ⏭️ Add packages to offering `default`
+5. ⏭️ Test purchase and restore flows using GlobalSubscriptionModal
+6. ⏭️ Validate premium entitlement updates in app and RevenueCat customer view
 
 ---
 
@@ -415,9 +419,8 @@ After setup, verify:
 - Add license testers (5 minutes)
 
 **After App Approval** (Week 2):
-- Install billing library (30 minutes)
-- Implement purchase flow (4-6 hours)
-- Test thoroughly (2-3 hours)
+- Configure RevenueCat offerings and entitlement mappings (30-60 minutes)
+- Test purchase, restore, renewal, and cancellation flows (2-3 hours)
 
 **Week 3**:
 - Submit v1.3.1 update
@@ -442,6 +445,7 @@ After setup, verify:
 
 ## Related Documentation
 
-- [Premium Features Implementation](../utils/premiumManager.ts)
-- [Billing Integration Code](BILLING_INTEGRATION_GUIDE.md) - Coming next
+- [RevenueCat Setup Guide](REVENUECAT_SETUP.md)
+- [Global RevenueCat Wrapper](../lib/globalRevenueCat.ts)
+- [Global Subscription Context](../lib/globalSubscriptionManager.tsx)
 - [Production Checklist](../PRODUCTION_CHECKLIST.md)
