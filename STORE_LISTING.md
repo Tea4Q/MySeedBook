@@ -92,8 +92,9 @@ Help preserve heirloom varieties, track seed performance, and contribute to sust
 
 **💰 PRICING**
 • Free version with essential features
-• Premium Monthly: $5.99/month
-• Premium Yearly: $49.99/year (Save 33%!)
+• Essential: $7.99/month or $63.99/year
+• Voice & AI Entry: $9.99/month or $79.99/year
+• Advanced AI: Coming soon
 • 7-day free trial available
 • Cancel anytime
 

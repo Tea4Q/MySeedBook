@@ -20,8 +20,8 @@ The MySeedBook Catalogue app now includes a comprehensive weather integration fe
 
 ### Premium Feature
 Weather integration is a **premium-only** feature requiring an active subscription:
-- Monthly: $5.99/month
-- Yearly: $49.99/year (Save 33%)
+- Essential: $7.99/month or $63.99/year
+- Voice & AI Entry: $9.99/month or $79.99/year
 
 ## Technical Implementation
 
@@ -245,14 +245,14 @@ Press 'i' or scan QR code
 ### IAP Setup Required
 **iOS (App Store Connect)**:
 ```
-Product ID: com.myseedbook.catalogue.premium.monthly
-Product ID: com.myseedbook.catalogue.premium.yearly
+Product ID: com.myseedbook.catalogue.essential.monthly
+Product ID: com.myseedbook.catalogue.essential.yearly
 ```
 
 **Android (Google Play Console)**:
 ```
-Product ID: myseedbook_premium_monthly
-Product ID: myseedbook_premium_yearly
+Product ID: myseedbook_essential_monthly
+Product ID: myseedbook_essential_yearly
 ```
 
 ### Environment Configuration
@@ -293,7 +293,7 @@ Monitor these errors:
 ### Version 1.3.0 (November 2025)
 - ✅ Added 5-day weather forecast
 - ✅ Integrated Meteocons animated icons
-- ✅ Implemented premium subscription system
+- ✅ Implemented subscription system with Essential and Voice tiers
 - ✅ Added location-based weather
 - ✅ Created premium upgrade modal
 - ✅ Fixed web platform compatibility

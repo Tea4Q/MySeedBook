@@ -351,7 +351,7 @@ export function SupplierSelect({
                             >
                               <Plus size={20} color="#ffffff" />
                               <Text style={styles.addNewButtonText}>
-                                Add "{searchQuery}" as New Supplier
+                                {`Add "${searchQuery}" as New Supplier`}
                               </Text>
                             </Pressable>
                           )}

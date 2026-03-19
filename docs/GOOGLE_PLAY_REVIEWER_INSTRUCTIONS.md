@@ -78,7 +78,7 @@ The following features require a premium subscription and will show an upgrade p
 
 ### How Premium Prompts Work
 - When tapping a premium feature, an upgrade modal appears
-- Modal shows pricing ($5.99/month or $49.99/year)
+- Modal shows Essential pricing ($7.99/month or $63.99/year) and Voice & AI pricing ($9.99/month or $79.99/year)
 - This is expected behavior for free users
 - **Testing Note**: Premium features cannot be activated without actual purchase
 

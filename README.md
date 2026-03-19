@@ -29,12 +29,11 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 - **Smooth Scrolling**: Enhanced description areas with proper scroll handling
 - **Platform-Aware**: Interface adapts to each platform's conventions
 
-### 💎 Premium Features
-- **Barcode Scanner**: Scan seed package barcodes for instant inventory entry (iOS/Android)
-- **Weather Integration**: Real-time weather data with 5-day forecasts
-- **Advanced Calendar**: Enhanced planning tools with weather insights
-- **Unlimited Storage**: No limits on seeds, suppliers, or photos
-- **Priority Support**: Direct feedback and premium customer service
+### 💎 Subscription Plans
+- **Free**: Limited inventory for trying the app
+- **Essential**: $7.99/month or $63.99/year for unlimited seeds, weather integration, and cloud sync across devices
+- **Voice & AI Entry**: $9.99/month or $79.99/year for everything in Essential plus voice notes and AI-powered voice entry
+- **Advanced AI**: Coming soon
 
 ## 🚀 Get Started
 
@@ -81,6 +80,7 @@ In the terminal output, you'll find options to open the app in:
 - **[Development Notes](docs/DEVELOPMENT_NOTES.md)**: Technical improvements and ideas
 - **[Theme System](docs/THEME_SYSTEM.md)**: Color schemes and theming
 - **[Build Configuration](docs/EAS_BUILD_FIXES.md)**: Production build setup
+- **[RevenueCat Setup](docs/REVENUECAT_SETUP.md)**: Subscription setup for Apple, Google Play, and RevenueCat
 
 ### Project Status
 - **[Project Status](PROJECT_STATUS.md)**: Current implementation status

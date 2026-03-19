@@ -24,23 +24,27 @@ import React, {
 } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
-import { globalRevenueCat, SubscriptionInfo } from './globalRevenueCat';
+import { globalRevenueCat, SubscriptionInfo, SubscriptionTier } from './globalRevenueCat';
 import { supabase } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GlobalSubscriptionContextValue {
-  /** True if user has an active premium entitlement */
+  /** True if user has an active essential or voice subscription */
   isPremium: boolean;
-  /** 'monthly' | 'annual' | null */
+  /** True if user has an active voice tier subscription */
+  isVoice: boolean;
+  /** Subscription tier: 'free' | 'essential' | 'voice' */
+  tier: SubscriptionTier;
+  /** 'monthly' | 'yearly' | null */
   planType: SubscriptionInfo['planType'];
   /** ISO date string of next renewal, or null */
   renewalDate: string | null;
-  /** Friendly display label, e.g. "Monthly Plan" */
+  /** Friendly display label, e.g. "Essential Monthly" */
   planLabel: string;
   /** True while fetching subscription state */
   isLoading: boolean;
-  /** Current RevenueCat offerings.  Null until loaded. */
+  /** Current RevenueCat offerings. Null until loaded. */
   offerings: PurchasesOfferings | null;
   /** Whether the user is within the refund eligibility window */
   isEligibleForRefund: boolean;
@@ -50,7 +54,7 @@ export interface GlobalSubscriptionContextValue {
   resubscribeAllowedFrom: string | null;
   /** Purchase a RevenueCat package */
   purchase: (pkg: PurchasesPackage) => Promise<boolean>;
-  /** Restore purchases (required by App Store) */
+  /** Restore purchases (required by App Store & Google Play) */
   restore: () => Promise<boolean>;
   /** Refresh subscription state from RevenueCat */
   refresh: () => Promise<void>;
@@ -64,6 +68,8 @@ export interface GlobalSubscriptionContextValue {
 
 const defaultValue: GlobalSubscriptionContextValue = {
   isPremium: false,
+  isVoice: false,
+  tier: 'free',
   planType: null,
   renewalDate: null,
   planLabel: 'Free',
@@ -97,7 +103,9 @@ export function GlobalSubscriptionProvider({
   userId,
 }: GlobalSubscriptionProviderProps) {
   const [info, setInfo] = useState<SubscriptionInfo>({
+    tier: 'free',
     isPremium: false,
+    isVoice: false,
     planType: null,
     renewalDate: null,
     raw: null,
@@ -224,10 +232,10 @@ export function GlobalSubscriptionProvider({
     // Calculate purchase date from renewal date minus one billing cycle
     const renewalMs = new Date(info.renewalDate).getTime();
     const nowMs = Date.now();
-    const cycleDays = info.planType === 'annual' ? 365 : 30;
+    const cycleDays = info.planType === 'yearly' ? 365 : 30;
     const cycleSincePurchaseMs = renewalMs - cycleDays * 24 * 60 * 60 * 1000;
     const daysSincePurchase = (nowMs - cycleSincePurchaseMs) / (1000 * 60 * 60 * 24);
-    const refundWindowDays = info.planType === 'annual' ? 15 : 7;
+    const refundWindowDays = info.planType === 'yearly' ? 15 : 7;
 
     if (daysSincePurchase > refundWindowDays) {
       Alert.alert(
@@ -254,19 +262,19 @@ export function GlobalSubscriptionProvider({
 
   const planLabel = (() => {
     if (!info.isPremium) return 'Free';
-    if (info.planType === 'annual') return 'Annual Plan';
-    if (info.planType === 'monthly') return 'Monthly Plan';
-    return 'Premium';
+    const billing = info.planType === 'yearly' ? 'Yearly' : 'Monthly';
+    if (info.tier === 'voice') return `Voice & AI ${billing}`;
+    return `Essential ${billing}`;
   })();
 
   const isEligibleForRefund = (() => {
     if (!info.isPremium || !info.renewalDate) return false;
     const renewalMs = new Date(info.renewalDate).getTime();
     const nowMs = Date.now();
-    const cycleDays = info.planType === 'annual' ? 365 : 30;
+    const cycleDays = info.planType === 'yearly' ? 365 : 30;
     const purchaseMs = renewalMs - cycleDays * 24 * 60 * 60 * 1000;
     const daysSincePurchase = (nowMs - purchaseMs) / (1000 * 60 * 60 * 24);
-    const window = info.planType === 'annual' ? 15 : 7;
+    const window = info.planType === 'yearly' ? 15 : 7;
     return daysSincePurchase <= window;
   })();
 
@@ -274,6 +282,8 @@ export function GlobalSubscriptionProvider({
     <GlobalSubscriptionContext.Provider
       value={{
         isPremium: info.isPremium,
+        isVoice: info.isVoice,
+        tier: info.tier,
         planType: info.planType,
         renewalDate: info.renewalDate,
         planLabel,

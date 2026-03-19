@@ -166,7 +166,7 @@ export default function SettingsScreen() {
               onPress={() => setShowUpgradeModal(true)}
             >
               <Crown size={16} color="#fff" />
-              <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeBtnText}>View Garden Plans</Text>
             </Pressable>
           )}
 

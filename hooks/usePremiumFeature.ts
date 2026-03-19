@@ -14,7 +14,7 @@ interface UsePremiumFeatureResult {
 
 export function usePremiumFeature(): UsePremiumFeatureResult {
   // Bridge: use RevenueCat isPremium as the source of truth
-  const { isPremium: rcIsPremium } = useGlobalSubscription();
+  const { isPremium: rcIsPremium, tier } = useGlobalSubscription();
   const [subscription, setSubscription] = useState(premiumManager.getSubscription());
 
   useEffect(() => {
@@ -50,10 +50,10 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
   };
 
   const showUpgradePrompt = (feature?: string) => {
-    const title = feature ? `Upgrade for ${feature}` : 'Upgrade to Premium';
+    const title = feature ? `Upgrade for ${feature}` : 'Choose a Garden Plan';
     const message = feature
-      ? `Unlock ${feature} and all other premium features with a MySeedBook Premium subscription.`
-      : 'Unlock all premium features with unlimited access to your garden data.';
+      ? `Unlock ${feature} with MySeedBook Essential at $7.99, or move up to Voice & AI at $9.99 for voice notes and AI-powered entry.`
+      : 'Start with Essential at $7.99 for unlimited seeds, weather, and cloud sync. Upgrade to Voice & AI at $9.99 when you want voice notes and AI entry.';
 
     Alert.alert(title, message, [
       { text: 'Not Now', style: 'cancel' },
@@ -66,7 +66,15 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
     checkLimit,
     trackUsage,
     showUpgradePrompt,
-    subscription,
+    subscription: {
+      ...subscription,
+      tier:
+        tier === 'voice'
+          ? 'voice-monthly'
+          : tier === 'essential'
+            ? 'essential-monthly'
+            : subscription.tier,
+    },
   };
 }
 
@@ -129,7 +137,7 @@ export function useUsageLimit(action: 'seed' | 'supplier' | 'photo' | 'search') 
 
       Alert.alert(
         `Free Limit Reached`,
-        `You've reached your free limit of ${usage.limit} ${actionNames[action]}. Upgrade to Premium for unlimited access!`,
+        `You've reached your free limit of ${usage.limit} ${actionNames[action]}. Upgrade to Essential for unlimited access, weather, and cloud sync.`,
         [
           {
             text: 'Upgrade Now',

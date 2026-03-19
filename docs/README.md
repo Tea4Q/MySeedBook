@@ -82,7 +82,7 @@ This repo includes `.github/workflows/propagate-fix.yml` to cherry-pick a fix co
 
 ### ✅ November 2025 - Weather Integration & Premium Features:
 1. **Weather Integration** - 5-day forecast with animated icons (Meteocons)
-2. **Premium Subscription System** - Monthly ($5.99) and Yearly ($49.99) tiers
+2. **Subscription System** - Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99) tiers
 3. **Feedback System** - User feedback with Supabase backend
 4. **Dependency Fixes** - Resolved bundling issues with pretty-format and Lottie
 5. **Web Platform Support** - Fixed Alert compatibility for web

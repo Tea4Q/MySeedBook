@@ -1,0 +1,14 @@
+MySeedBook Terms of Service
+Effective date: March 18, 2026
+
+MySeedBook Catalogue provides gardening inventory, planning, weather, sync, and subscription-based features.
+
+Subscriptions:
+- Essential: $7.99/month or $63.99/year
+- Voice & AI Entry: $9.99/month or $79.99/year
+- Advanced AI features are currently coming soon unless explicitly released
+
+Subscriptions renew automatically unless canceled through Apple App Store or Google Play before the renewal date.
+Payments are processed by Apple or Google Play.
+Users remain responsible for their accounts and for complying with applicable laws when using the app.
+The service is provided as-is and may change over time.

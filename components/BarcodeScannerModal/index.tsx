@@ -259,7 +259,7 @@ export default function BarcodeScannerModal({
             >
               <Sparkles size={20} color={colors.primaryText} />
               <Text style={[styles.upgradeButtonText, { color: colors.primaryText }]}>
-                Upgrade to Premium
+                View Garden Plans
               </Text>
             </Pressable>
 

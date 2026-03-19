@@ -1,3 +1,10 @@
+# March 2026
+
+- Updated subscription structure to standalone Essential and Voice & AI Entry tiers
+- Updated RevenueCat product IDs and entitlement model for Essential and Voice plans
+- Reworked the upgrade screen with branded sprout imagery, monthly/yearly pricing, privacy and legal links, restore purchases access, and Advanced AI coming soon messaging
+- Added website-ready Terms of Service and Delete/Restore Purchases policy files under `docs/legal`
+
 # MySeedBook Catalogue - Development Changelog
 
 ## Version 1.3.2 - November 10, 2025

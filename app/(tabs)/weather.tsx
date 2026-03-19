@@ -16,6 +16,7 @@ import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
 import { gardeningInsightsService } from '../../lib/services/gardeningInsightsService';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import PremiumModal from '../../components/PremiumModal';
 import { useTheme } from '@/lib/theme';
 import {
@@ -26,6 +27,7 @@ import {
 
 export default function WeatherScreen() {
   const { checkFeature } = usePremiumFeature();
+  const { isLoading: rcLoading } = useGlobalSubscription();
   const { colors } = useTheme();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -82,16 +84,22 @@ export default function WeatherScreen() {
     }
   };
 
-  // Initial load - Check premium access and load weather data
+  // Initial load - wait for RevenueCat to finish bootstrapping before checking
+  // premium status, otherwise the gate fires on every first render (rc starts false)
   useEffect(() => {
+    if (rcLoading) return; // RC still initializing — keep the spinner visible
+
     if (!checkFeature('weather_integration')) {
       setShowPremiumModal(true);
-      setLoading(false); // Stop loading if no premium access
+      setLoading(false);
       return;
     }
+
+    // RC confirmed premium — clear any stale gate and load weather
+    setShowPremiumModal(false);
     loadWeatherData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [rcLoading]); // re-runs once when RC resolves (false→true→false)
 
   // Handle refresh
   const onRefresh = () => {
@@ -169,7 +177,7 @@ export default function WeatherScreen() {
           </View>
         </View>
         <TouchableOpacity style={[styles.upgradeButton, { backgroundColor: colors.primary }]} onPress={handlePremiumUpgrade}>
-          <Text style={[styles.upgradeButtonText, { color: colors.buttonText }]}>Upgrade to Premium</Text>
+          <Text style={[styles.upgradeButtonText, { color: colors.buttonText }]}>View Garden Plans</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
           <Text style={[styles.backButtonText, { color: colors.primary }]}>Back to Garden</Text>

@@ -10,7 +10,7 @@
 
 ### Recent Completion: Weather Integration & Premium Features (November 2025)
 - ✅ **Weather Integration** - 5-day forecast with animated Meteocons icons
-- ✅ **Premium Subscription System** - Monthly ($5.99) and Yearly ($49.99) tiers
+- ✅ **Subscription System** - Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99) tiers
 - ✅ **Barcode Scanner** (Premium) - Scan seed packages for quick inventory (iOS/Android)
 - ✅ **Premium Settings UI** - Test premium features toggle for development
 - ✅ **Feedback System** - User feedback collection with Supabase backend
@@ -37,8 +37,8 @@
   - Animated Lottie weather icons (Meteocons)
   - See `docs/WEATHER_INTEGRATION.md` for complete documentation
 
-- ✅ **Premium subscription system**
-  - Two-tier pricing: Monthly ($5.99) and Yearly ($49.99 - save 33%)
+- ✅ **Subscription system**
+  - Two paid standalone tiers: Essential and Voice & AI Entry
   - Premium feature gating for weather access and barcode scanner
   - Simulated IAP for development (ready for App Store/Play Store IAP)
   - Web-compatible purchase flow with platform-specific alerts
@@ -242,8 +242,8 @@
 
 ### Immediate Actions (Production Deployment)
 1. **Configure Real IAP**: Set up App Store Connect and Google Play Console products
-   - iOS: `com.myseedbook.catalogue.premium.monthly` and `.yearly`
-   - Android: `myseedbook_premium_monthly` and `myseedbook_premium_yearly`
+  - iOS Essential: `com.myseedbook.catalogue.essential.monthly` and `.yearly`
+  - Android Essential: `myseedbook_essential_monthly` and `myseedbook_essential_yearly`
 2. **iOS Testing**: Test weather integration and premium features on physical iOS devices
 3. **Production API Keys**: Set up production OpenWeather API key with appropriate rate limits
 4. **Store Assets**: Update app store listings with weather feature screenshots and descriptions
@@ -259,7 +259,7 @@
 
 ### Current Status (November 2025)
 - ✅ **Weather integration complete** - 5-day forecast with animated icons
-- ✅ **Premium subscription system functional** - Simulated IAP working on web/Android
+- ✅ **Subscription system functional** - RevenueCat Essential and Voice tier support implemented
 - ✅ **Feedback system operational** - User feedback collection with Supabase
 - ✅ **Web platform fully functional** - Bundle generation and runtime working
 - ✅ **Android platform tested** - Emulator testing successful
@@ -286,7 +286,7 @@
 
 The app is now in a **production-ready state** (weather-integration branch) with:
 - ✅ Complete weather integration with premium gating
-- ✅ Premium subscription system (simulated IAP)
+- ✅ Subscription system with multi-tier pricing
 - ✅ User feedback collection system
 - ✅ Resolved dependency conflicts and bundling issues
 - ✅ Web and Android platform testing complete
@@ -295,7 +295,7 @@ The app is now in a **production-ready state** (weather-integration branch) with
 
 ### Version 1.3.0 Features
 - **Weather Integration**: 5-day forecast with animated Meteocons
-- **Premium Tiers**: Monthly ($5.99) and Yearly ($49.99)
+- **Paid Tiers**: Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99)
 - **Feedback System**: In-app user feedback collection
 - **Guest Mode**: Continue without account creation
 - **Location Services**: Weather based on device or manual location

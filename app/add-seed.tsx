@@ -41,8 +41,7 @@ import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
 import { saveBarcodeMapping } from '@/utils/barcodeMemory';
-import { VoiceMicButton } from '@/components/VoiceMicButton';
-import { parseVoiceCommand } from '@/lib/voice/commandParser';
+// VoiceMicButton and parseVoiceCommand reserved for Voice & AI build
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
@@ -137,7 +136,7 @@ export default function AddOrEditSeedScreen() {
   const [scannedBarcodeData, setScannedBarcodeData] = useState<{ barcode: string; barcodeType: string } | null>(null);
 
   // Voice input state
-  const [lastVoiceTranscript, setLastVoiceTranscript] = useState<string | null>(null);
+  // lastVoiceTranscript reserved for Voice & AI build
 
   const params = useLocalSearchParams<{
     returnTo: string;
@@ -299,27 +298,7 @@ useEffect(() => {
     setSeedPackage((prev) => ({ ...prev, seed_images: newImages }));
   }, []);
 
-  const handleVoiceTranscript = (text: string) => {
-    setLastVoiceTranscript(text);
-    const cmd = parseVoiceCommand(text);
-    if (cmd.action === 'save-entry') {
-      handleSubmit();
-    } else if (cmd.action === 'set-schedule') {
-      setSeedPackage((prev) => ({
-        ...prev,
-        ...(cmd.indoorSowDate ? { indoor_sow_date: cmd.indoorSowDate } : {}),
-        ...(cmd.transplantDate ? { transplant_date: cmd.transplantDate } : {}),
-      }));
-    } else {
-      // Dictation: fill seed_name if empty, otherwise append to notes
-      setSeedPackage((prev) => {
-        if (!prev.seed_name?.trim()) {
-          return { ...prev, seed_name: text };
-        }
-        return { ...prev, notes: prev.notes ? `${prev.notes} ${text}` : text };
-      });
-    }
-  };
+  // handleVoiceTranscript — reserved for Voice & AI build
 
   const clearForm = () => {
     setSeedPackage({
@@ -984,15 +963,7 @@ useEffect(() => {
         </View>
         {/* Form Section */}
         <View style={styles.formSection}>
-          {/* Voice Input Row */}
-          <View style={styles.voiceRow}>
-            <VoiceMicButton onTranscript={handleVoiceTranscript} />
-            {lastVoiceTranscript ? (
-              <Text style={[styles.voiceHint, { color: colors.textSecondary }]} numberOfLines={2}>
-                Heard: {lastVoiceTranscript}
-              </Text>
-            ) : null}
-          </View>
+          {/* Voice Input Row — enabled in Voice & AI build */}
 
           {/* Seed Name */}
           <View style={styles.inputGroup}>

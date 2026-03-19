@@ -55,11 +55,19 @@ export const ENV = {
     iosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',
     androidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
     // Product IDs must match what you create in App Store Connect / Google Play:
-    //   iOS:     com.myseedbook.catalogue.premium.monthly
-    //            com.myseedbook.catalogue.premium.yearly
-    //   Android: myseedbook_premium_monthly
-    //            myseedbook_premium_yearly
-    entitlement: 'premium',
+    //   iOS Essential: com.myseedbook.catalogue.essential.monthly
+    //                  com.myseedbook.catalogue.essential.yearly
+    //   iOS Voice:     com.myseedbook.catalogue.voice.monthly
+    //                  com.myseedbook.catalogue.voice.yearly
+    //   Android Essential: myseedbook_essential_monthly
+    //                      myseedbook_essential_yearly
+    //   Android Voice:     myseedbook_voice_monthly
+    //                      myseedbook_voice_yearly
+    // RevenueCat entitlements:
+    //   essential
+    //   voice
+    essentialEntitlement: 'essential',
+    voiceEntitlement: 'voice',
   },
 };
 
