@@ -76,27 +76,27 @@ export const ENTITLEMENT_VOICE = 'voice';
  * then attach to the matching entitlements in the RevenueCat dashboard.
  *
  * iOS App Store Connect products:
- *   com.myseedbook.catalogue.essential.monthly  — $7.99/month
- *   com.myseedbook.catalogue.essential.yearly   — $63.99/year  (saves 33%)
+ *   com.myseedbook.catalogue.essential.month    — $7.99/month
+ *   com.myseedbook.catalogue.essential.year     — $63.99/year  (saves 33%)
  *   com.myseedbook.catalogue.voice.monthly      — $9.99/month  (upgrade, replaces Essential)
  *   com.myseedbook.catalogue.voice.yearly       — $79.99/year  (upgrade, replaces Essential, saves 33%)
  *
  * Google Play Console subscription IDs:
- *   myseedbook_essential_monthly  — $7.99/month
- *   myseedbook_essential_yearly   — $63.99/year  (saves 33%)
+ *   myseedbook_essential_month    — $7.99/month
+ *   myseedbook_essential_year     — $63.99/year  (saves 33%)
  *   myseedbook_voice_monthly      — $9.99/month  (upgrade, replaces Essential)
  *   myseedbook_voice_yearly       — $79.99/year  (upgrade, replaces Essential, saves 33%)
  */
 export const PRODUCT_IDS = {
   ios: {
-    essentialMonthly: 'com.myseedbook.catalogue.essential.monthly',
-    essentialYearly:  'com.myseedbook.catalogue.essential.yearly',
+    essentialMonthly: 'com.myseedbook.catalogue.essential.month',
+    essentialYearly:  'com.myseedbook.catalogue.essential.year',
     voiceMonthly:     'com.myseedbook.catalogue.voice.monthly',
     voiceYearly:      'com.myseedbook.catalogue.voice.yearly',
   },
   android: {
-    essentialMonthly: 'myseedbook_essential_monthly',
-    essentialYearly:  'myseedbook_essential_yearly',
+    essentialMonthly: 'myseedbook_essential_month',
+    essentialYearly:  'myseedbook_essential_year',
     voiceMonthly:     'myseedbook_voice_monthly',
     voiceYearly:      'myseedbook_voice_yearly',
   },
@@ -263,8 +263,16 @@ class GlobalRevenueCat {
     const activeEnt = (voiceEnt ?? essentialEnt)!;
     const productId = activeEnt.productIdentifier?.toLowerCase() ?? '';
     let planType: PlanType = null;
-    if (productId.includes('monthly')) planType = 'monthly';
-    else if (productId.includes('yearly') || productId.includes('annual')) planType = 'yearly';
+    if (productId.includes('monthly') || productId.includes('.month') || productId.includes('_month')) {
+      planType = 'monthly';
+    } else if (
+      productId.includes('yearly') ||
+      productId.includes('annual') ||
+      productId.includes('.year') ||
+      productId.includes('_year')
+    ) {
+      planType = 'yearly';
+    }
 
     return {
       tier,

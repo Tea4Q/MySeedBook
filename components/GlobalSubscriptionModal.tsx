@@ -1,9 +1,13 @@
 /**
  * GlobalSubscriptionModal.tsx
- * Multi-tier paywall:
- *  - Essential: $7.99/month or $63.99/year
- *  - Voice & AI Entry: $9.99/month or $79.99/year (standalone upgrade tier)
- *  - Advanced AI: Coming soon
+ * Multi-tier paywall (v1.3.0 — Apple submission build):
+ *  - Essential: $7.99/month or $63.99/year  (purchasable)
+ *  - Voice & AI Entry: Coming in v1.3.1     (non-purchasable, shown as Coming Soon)
+ *  - Advanced AI: Coming soon               (non-purchasable)
+ *
+ * NOTE: Voice & AI tier is intentionally shown as "Coming in v1.3.1" here.
+ * To re-enable it, convert the voice <View> card back to a <Pressable> card
+ * and restore the selectedTier state guard (see v1.3.1 branch).
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -148,9 +152,8 @@ export default function GlobalSubscriptionModal({
   }, [visible, isLoading, retrying, packages.length]);
 
   useEffect(() => {
-    if (tier === 'voice') {
-      setSelectedTier('voice');
-    } else if (tier === 'essential') {
+    // Only essential is selectable in this build; voice tier is Coming in v1.3.1
+    if (tier === 'essential') {
       setSelectedTier('essential');
     }
   }, [tier]);
@@ -350,31 +353,27 @@ export default function GlobalSubscriptionModal({
               ))}
             </Pressable>
 
-            <Pressable
-              style={[
-                styles.tierCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-                selectedTier === 'voice' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => setSelectedTier('voice')}
-            >
+            {/* Voice & AI tier — Coming in v1.3.1. Non-interactive, matches Advanced AI card pattern. */}
+            <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: `${colors.border}AA` }]}>
               <View style={styles.tierHeader}>
-                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.primary}22` }]}> 
-                  <Mic size={18} color={colors.primary} />
+                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.warning}22` }]}>
+                  <Mic size={18} color={colors.warning} />
                 </View>
                 <View style={styles.tierHeadTextWrap}>
                   <Text style={[styles.tierTitle, { color: colors.text }]}>{TIER_META.voice.title}</Text>
                   <Text style={[styles.tierSub, { color: textSecondary }]}>{TIER_META.voice.subtitle}</Text>
                 </View>
-                <Text style={[styles.tierPrice, { color: colors.text }]}>{tierPrice('voice', selectedBilling)}</Text>
+                <View style={[styles.comingSoonBadge, { backgroundColor: `${colors.warning}22`, borderColor: colors.warning }]}>
+                  <Text style={[styles.comingSoonText, { color: colors.warning }]}>Coming in v1.3.1</Text>
+                </View>
               </View>
               {TIER_META.voice.features.map((f) => (
                 <View key={f} style={styles.featureRow}>
-                  <Check size={16} color={colors.primary} />
+                  <Cloud size={16} color={colors.warning} />
                   <Text style={[styles.featureText, { color: textSecondary }]}>{f}</Text>
                 </View>
               ))}
-            </Pressable>
+            </View>
 
             <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: `${colors.border}AA` }]}>
               <View style={styles.tierHeader}>
@@ -409,8 +408,8 @@ export default function GlobalSubscriptionModal({
             {loadingPackageId && loadingPackageId !== 'restore' ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : (
-              <Text style={[styles.ctaText, { color: colors.primaryText }]}> 
-                {isResubscribeBlocked ? 'Not Available Yet' : `Continue with ${selectedTier === 'voice' ? 'Voice & AI' : 'Essential'}`}
+              <Text style={[styles.ctaText, { color: colors.primaryText }]}>
+                {isResubscribeBlocked ? 'Not Available Yet' : 'Continue with Essential'}
               </Text>
             )}
           </Pressable>
@@ -439,8 +438,8 @@ export default function GlobalSubscriptionModal({
 
           <View style={styles.voiceCostNoteWrap}>
             <Volume2 size={14} color={textSecondary} />
-            <Text style={[styles.legal, { color: textSecondary }]}> 
-              Voice tier pricing reflects AI transcription service costs and includes all Essential features.
+            <Text style={[styles.legal, { color: textSecondary }]}>
+              Voice & AI entry features are coming in v1.3.1. Subscribe to Essential now and upgrade when it launches.
             </Text>
           </View>
         </ScrollView>

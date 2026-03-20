@@ -283,7 +283,7 @@ export default function PremiumSettingsScreen() {
           <View style={styles.comparisonRow}>
             <Text style={[styles.comparisonFeature, { color: colors.text }]}>Voice Notes</Text>
             <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>No</Text>
-            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Voice & AI</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.textSecondary ?? colors.text + '80' }]}>v1.3.1</Text>
           </View>
         </View>
       </ScrollView>

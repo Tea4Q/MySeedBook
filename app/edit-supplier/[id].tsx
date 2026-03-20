@@ -23,8 +23,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { useTheme } from '@/lib/theme';
-import VoiceMicButton from '@/components/VoiceMicButton';
-import { parseVoiceCommand } from '@/lib/voice/commandParser';
+// VoiceMicButton and parseVoiceCommand are reserved for the v1.3.1 Voice & AI build
 
 export default function EditSupplierScreen() {
   const { id } = useLocalSearchParams();
@@ -42,8 +41,6 @@ export default function EditSupplierScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastVoiceTranscript, setLastVoiceTranscript] = useState<string | null>(null);
-
   useEffect(() => {
     loadSupplier();
   }, [id]);
@@ -103,22 +100,6 @@ export default function EditSupplierScreen() {
     }
   };
 
-  const handleVoiceTranscript = (text: string) => {
-    setLastVoiceTranscript(text);
-    const cmd = parseVoiceCommand(text);
-    if (cmd.action === 'save-entry') {
-      handleSubmit();
-      return;
-    }
-    // Dictation: fill supplier_name if empty, else append to notes
-    setFormData((prev) => {
-      if (!prev.supplier_name?.trim()) {
-        return { ...prev, supplier_name: text };
-      }
-      return { ...prev, notes: prev.notes ? `${prev.notes} ${text}` : text };
-    });
-  };
-
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -157,16 +138,6 @@ export default function EditSupplierScreen() {
         )}
 
         <View style={styles.formSection}>
-          {/* Voice Input Row */}
-          <View style={styles.voiceRow}>
-            <VoiceMicButton onTranscript={handleVoiceTranscript} />
-            {lastVoiceTranscript ? (
-              <Text style={[styles.voiceHint, { color: colors.text }]} numberOfLines={2}>
-                Heard: {lastVoiceTranscript}
-              </Text>
-            ) : null}
-          </View>
-
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
               <Building2 size={20} color={colors.primary} />
@@ -381,17 +352,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  voiceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 4,
-  },
-  voiceHint: {
-    flex: 1,
-    fontSize: 12,
-    fontStyle: 'italic',
   },
   errorContainer: {
     flex: 1,

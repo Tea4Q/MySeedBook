@@ -38,8 +38,7 @@ import { CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIco
 import { WeatherDetailModal } from '../../components/Weather/WeatherDetailModal';
 import { calendarWeatherService } from '../../lib/services/calendarWeatherService';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
-import { VoiceMicButton } from '../../components/VoiceMicButton';
-import { parseVoiceCommand } from '../../lib/voice/commandParser';
+// VoiceMicButton and parseVoiceCommand are reserved for the v1.3.1 Voice & AI build
 
 // Safety wrapper: if LottieView (used by weather icons) is unavailable on this
 // device/build it throws during render. This local boundary catches that and
@@ -159,31 +158,12 @@ export default function CalendarScreen() {
   });
   const [daysToGerminate, setDaysToGerminate] = useState('7');
   const [daysToHarvest, setDaysToHarvest] = useState('80');
-  const [lastVoiceTranscript, setLastVoiceTranscript] = useState<string | null>(null);
   const [seedInventory, setSeedInventory] = useState<{ id: string; seed_name: string; days_to_germinate?: string | number; days_to_harvest?: string | number }[]>([]);
   const [showSeedDropdown, setShowSeedDropdown] = useState(false);
 
   // Initial load uses fetchEventsForMonth via the [currentDate] effect below.
   // fetchEvents() (all-months) is called after adding an event so cross-month
   // events (e.g. germination) are immediately visible.
-
-  const handleVoiceTranscript = (text: string) => {
-    setLastVoiceTranscript(text);
-    const cmd = parseVoiceCommand(text);
-    if (cmd.action === 'save-entry') {
-      handleAddEvent();
-      return;
-    }
-    if (cmd.action === 'set-schedule' && cmd.indoorSowDate) {
-      setNewEvent((prev) => ({ ...prev, date: cmd.indoorSowDate! }));
-      return;
-    }
-    // Dictation: fill seedName if empty, else append to notes
-    setNewEvent((prev) => ({
-      ...prev,
-      ...(prev.seedName ? { notes: prev.notes ? `${prev.notes} ${text}` : text } : { seedName: text }),
-    }));
-  };
 
   // Fetch weather data for the month
   const fetchWeatherForMonth = useCallback(async (date: Date) => {
@@ -784,16 +764,6 @@ export default function CalendarScreen() {
 
             { /* Show Event List */}
             <ScrollView style={styles.modalScroll}>
-              {/* Voice Input Row */}
-              <View style={styles.voiceRow}>
-                <VoiceMicButton onTranscript={handleVoiceTranscript} size="sm" />
-                {lastVoiceTranscript ? (
-                  <Text style={styles.voiceHint} numberOfLines={2}>
-                    Heard: {lastVoiceTranscript}
-                  </Text>
-                ) : null}
-              </View>
-
               {/* Add Event Form */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Seed Name</Text>
@@ -1370,18 +1340,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 16,
-  },
-  voiceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  voiceHint: {
-    flex: 1,
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: '#6b7280',
   },
   seedDropdown: {
     borderRadius: 8,

@@ -52,8 +52,8 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
   const showUpgradePrompt = (feature?: string) => {
     const title = feature ? `Upgrade for ${feature}` : 'Choose a Garden Plan';
     const message = feature
-      ? `Unlock ${feature} with MySeedBook Essential at $7.99, or move up to Voice & AI at $9.99 for voice notes and AI-powered entry.`
-      : 'Start with Essential at $7.99 for unlimited seeds, weather, and cloud sync. Upgrade to Voice & AI at $9.99 when you want voice notes and AI entry.';
+      ? `Unlock ${feature} with MySeedBook Essential at $7.99 — unlimited seeds, weather integration, and cloud sync.`
+      : 'MySeedBook Essential unlocks unlimited seeds, weather integration, and cloud sync at $7.99/month.';
 
     Alert.alert(title, message, [
       { text: 'Not Now', style: 'cancel' },
