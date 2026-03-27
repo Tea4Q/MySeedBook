@@ -18,7 +18,7 @@
 
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { supabase } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,8 +107,19 @@ class GlobalProfileManager {
   // ─── Avatar: take photo ────────────────────────────────────────────────────
 
   async takePhoto(): Promise<string | null> {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
+      if (!canAskAgain) {
+        Alert.alert(
+          'Permission Required',
+          'Camera access is blocked. Please allow camera access in Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return null;
+      }
       Alert.alert(
         'Permission Required',
         'Please allow camera access in Settings.'

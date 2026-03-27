@@ -33,23 +33,23 @@ export interface UserSubscription {
 // Product IDs for App Store and Google Play
 export const SUBSCRIPTION_PRODUCTS = {
   essentialMonthly: Platform.select({
-    ios: 'com.myseedbook.essential.month',
-    android: 'com_myseedbook_essential_month',
+    ios: 'com.myseedbook.catalogue.essential.monthly',
+    android: 'myseedbook_essential_month',
     default: 'essential_monthly_web',
   })!,
   essentialYearly: Platform.select({
-    ios: 'com.myseedbook.essential.year',
-    android: 'com_myseedbook_essential_year',
+    ios: 'com.myseedbook.catalogue.essential.yearly',
+    android: 'myseedbook_essential_year',
     default: 'essential_yearly_web',
   })!,
   voiceMonthly: Platform.select({
-    ios: 'com.myseedbook.voice.monthly',
-    android: 'com_myseedbook_voice_monthly',
+    ios: 'com.myseedbook.catalogue.voice.monthly',
+    android: 'myseedbook_voice_monthly',
     default: 'voice_monthly_web',
   })!,
   voiceYearly: Platform.select({
-    ios: 'com.myseedbook.voice.yearly',
-    android: 'com_myseedbook_voice_yearly',
+    ios: 'com.myseedbook.catalogue.voice.yearly',
+    android: 'myseedbook_voice_yearly',
     default: 'voice_yearly_web',
   })!,
 };

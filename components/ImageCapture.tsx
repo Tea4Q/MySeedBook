@@ -7,6 +7,8 @@ import {
   Image,
   Platform,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -56,8 +58,20 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       setError(null);
 
       if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
+          if (!canAskAgain) {
+            setError('Camera access is blocked. Enable it in Settings.');
+            Alert.alert(
+              'Camera Access Blocked',
+              'Please enable camera permission in Settings to continue.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+            return;
+          }
           setError('Camera permission is required');
           return;
         }
@@ -72,6 +86,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
       if (!result.canceled && result.assets[0]) {
         setSelectedImage(result.assets[0].uri);
+      } else if (!result.canceled) {
+        setError('Camera did not return an image. Please try again.');
       }
     } catch (err) {
       setError('Failed to capture photo');

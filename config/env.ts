@@ -59,8 +59,8 @@ export const ENV = {
     //                  com.myseedbook.catalogue.essential.yearly
     //   iOS Voice:     com.myseedbook.catalogue.voice.monthly
     //                  com.myseedbook.catalogue.voice.yearly
-    //   Android Essential: myseedbook_essential_monthly
-    //                      myseedbook_essential_yearly
+    //   Android Essential: myseedbook_essential_month
+    //                      myseedbook_essential_year
     //   Android Voice:     myseedbook_voice_monthly
     //                      myseedbook_voice_yearly
     // RevenueCat entitlements:

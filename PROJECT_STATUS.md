@@ -1,12 +1,32 @@
 # Project Status Summary
 
-## 🚀 PRODUCTION READY - WEATHER INTEGRATION BRANCH
+## 🚀 PRODUCTION READY - PRE-AI RELEASE BRANCH
 
-**Status**: Application completed weather integration with premium features and ready for production deployment
+**Status**: Application is hardened for pre-AI release validation and production deployment
 
-**Current Version**: 1.3.0  
-**Branch**: weather-integration  
-**Last Updated**: November 8, 2025
+**Current Version**: 1.3.0 (pre-AI submission branch)  
+**Branch**: release/v1.3.0-pre-ai  
+**Last Updated**: March 26, 2026
+
+### Recent Completion: Pre-AI Submission Hardening & Web UX Stability (March 2026)
+- ✅ **Pre-AI release gating**
+  - Voice and AI purchase messaging hidden for this branch
+  - Premium messaging updated to indicate Voice and AI are coming in v1.3.1
+  - Reviewer-facing upgrade paths focused on stable Essential-tier features
+
+- ✅ **Web image ingestion upgrade**
+  - Added file picker support in image flow
+  - Added clipboard paste image support
+  - Added drag-and-drop support directly on image input area
+  - Added full-page drag overlay to improve drop affordance
+  - Added/validated support for JPG, PNG, GIF, WebP, and AVIF
+
+- ✅ **Navigation and modal reliability fixes**
+  - Fixed calendar add-event modal reopen behavior on tab switches/remounts by clearing one-shot params
+
+- ✅ **Unsaved changes protections + draft restore**
+  - Added guard prompts and draft autosave/restore to Add Seed
+  - Added matching guard prompts and per-supplier draft autosave/restore to Edit Supplier
 
 ### Recent Completion: Weather Integration & Premium Features (November 2025)
 - ✅ **Weather Integration** - 5-day forecast with animated Meteocons icons
@@ -241,81 +261,64 @@
 ## 🚀 Next Steps Available
 
 ### Immediate Actions (Production Deployment)
-1. **Configure Real IAP**: Set up App Store Connect and Google Play Console products
-  - iOS Essential: `com.myseedbook.catalogue.essential.monthly` and `.yearly`
-  - Android Essential: `myseedbook_essential_monthly` and `myseedbook_essential_yearly`
-2. **iOS Testing**: Test weather integration and premium features on physical iOS devices
-3. **Production API Keys**: Set up production OpenWeather API key with appropriate rate limits
-4. **Store Assets**: Update app store listings with weather feature screenshots and descriptions
+1. **Generate fresh production builds** from `release/v1.3.0-pre-ai` (Android + iOS)
+2. **Run focused smoke tests** on Add Seed, Edit Supplier, Calendar add-event flow, and web image upload methods
+3. **Validate store metadata** to ensure voice/AI is not advertised as currently available in this release
+4. **Finalize submission package** with updated screenshots and release notes for pre-AI scope
 
 ### Future Enhancements
-1. **Weather Notifications**: Push notifications for weather alerts
-2. **Advanced Weather**: Hourly forecast, precipitation probability, UV index
-3. **Analytics**: Track premium conversion rates and feature usage
-4. **Additional Premium Features**: Plant identification, advanced calendar features
-5. **Subscription Management**: In-app subscription cancellation and management
+1. **Voice and AI rollout** in v1.3.1+ branch after v1.3.0 merge
+2. **App-wide form hardening** by extending draft-restore/unsaved-change guards to additional forms
+3. **Type hardening pass** to resolve pre-existing unrelated Supabase typing issues
+4. **Additional premium capabilities** (advanced weather and workflow tooling)
 
 ## 🎯 Success Metrics
 
-### Current Status (November 2025)
-- ✅ **Weather integration complete** - 5-day forecast with animated icons
-- ✅ **Subscription system functional** - RevenueCat Essential and Voice tier support implemented
-- ✅ **Feedback system operational** - User feedback collection with Supabase
-- ✅ **Web platform fully functional** - Bundle generation and runtime working
-- ✅ **Android platform tested** - Emulator testing successful
-- ✅ **Dependency issues resolved** - All bundling errors fixed
-- ⚠️ **iOS testing pending** - Not yet tested on physical devices
-- ⚠️ **Real IAP pending** - Needs App Store/Play Store product configuration
+### Current Status (March 2026)
+- ✅ **Pre-AI reviewer-safe scope applied** on `release/v1.3.0-pre-ai`
+- ✅ **Web image ingestion expanded** (picker, paste, drop, overlay, modern formats)
+- ✅ **Calendar modal reopen regression fixed** for tab/remount behavior
+- ✅ **Add Seed and Edit Supplier form reliability hardened** with leave guards and draft restore
+- ⚠️ **Final production build + physical device pass pending** for submission gate
 
 ### Technical Metrics
-- ✅ **Authentication system fully functional** - Sign-in/sign-up working, network errors resolved
-- ✅ **Guest data system complete** - Professional offline demo experience
-- ✅ **UI/UX polished** - Banner conflicts resolved, debug logs cleaned up
-- ✅ **Code quality high** - TypeScript errors fixed, unused code removed
-- ✅ **15/15 expo-doctor checks passing** (minor FontAwesome warnings only)
-- ✅ **0 dependency vulnerabilities**
-- ✅ **1,230 packages installed successfully** (after cleanup)
-- ✅ **Development server running without errors**
-- ✅ **Web bundle: 3260 modules** - ~17 seconds
-- ✅ **Android bundle: 3633 modules** - ~43 seconds
-- ✅ **Splash screen system fully implemented**
-- ✅ **EAS Build configuration validated**
-- ✅ **Production deployment ready** (pending IAP configuration)
+- ✅ **Targeted checks on modified files passed** after implementation
+- ✅ **Dev server starts successfully** with `npx expo start`
+- ⚠️ **Project-wide TypeScript still includes unrelated pre-existing Supabase typing issues**
+- ✅ **Those broader typing issues were intentionally deprioritized for this release stream**
 
 ## 📱 MySeedBook Catalogue App Status
 
-The app is now in a **production-ready state** (weather-integration branch) with:
-- ✅ Complete weather integration with premium gating
-- ✅ Subscription system with multi-tier pricing
-- ✅ User feedback collection system
-- ✅ Resolved dependency conflicts and bundling issues
-- ✅ Web and Android platform testing complete
-- ✅ Clean development environment
-- ✅ Comprehensive documentation
+The app is in a **production-ready pre-AI state** (`release/v1.3.0-pre-ai`) with:
+- ✅ Stable core feature set for store review
+- ✅ Voice/AI purchase messaging removed from active release UX
+- ✅ Improved web image upload ergonomics and format support
+- ✅ Improved form persistence and leave-safety for critical edit/create flows
+- ✅ Updated global documentation aligned to current release scope
 
 ### Version 1.3.0 Features
 - **Weather Integration**: 5-day forecast with animated Meteocons
-- **Paid Tiers**: Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99)
+- **Paid Tier (active in this branch)**: Essential ($7.99 / $63.99)
+- **Voice & AI**: Planned for v1.3.1+ rollout branch
 - **Feedback System**: In-app user feedback collection
 - **Guest Mode**: Continue without account creation
 - **Location Services**: Weather based on device or manual location
 
 ### Ready For
-- ✅ Web deployment (fully tested)
-- ✅ Android deployment (tested on emulator)
-- ⚠️ iOS deployment (needs device testing)
-- ⚠️ App Store submission (needs IAP product configuration)
-- ⚠️ Google Play submission (needs IAP product configuration)
+- ✅ Web deployment
+- ✅ Android and iOS build preparation
+- ⚠️ Final physical-device validation pass
+- ⚠️ Final store metadata/screenshot confirmation for pre-AI scope
 
 ### Pending Actions
-1. Configure real IAP products in App Store Connect and Google Play Console
-2. Test on physical iOS devices
-3. Set up production OpenWeather API key with rate limiting
-4. Update app store listings with weather feature marketing
+1. Build fresh release binaries from `release/v1.3.0-pre-ai`
+2. Complete final physical-device smoke tests
+3. Confirm store listing language/screenshots match pre-AI feature availability
+4. Submit to stores
 
 ---
 
-**Branch**: weather-integration  
+**Branch**: release/v1.3.0-pre-ai  
 **Version**: 1.3.0  
-**Last Updated**: November 8, 2025  
-**Status**: Production Ready (pending IAP configuration)
+**Last Updated**: March 26, 2026  
+**Status**: Production Ready (pending final build validation and submission checks)

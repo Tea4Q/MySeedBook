@@ -124,8 +124,9 @@ export function GlobalSubscriptionProvider({
       try {
         await globalRevenueCat.initialize(userId);
         await refreshInternal();
-        const off = await globalRevenueCat.getOfferings();
-        setOfferings(off);
+        // Offerings are fetched on-demand by the subscription modal.
+        // This avoids startup noise when dashboard offerings are not configured yet.
+        setOfferings(null);
 
         // Check Supabase resubscribe block
         if (userId) {

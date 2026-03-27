@@ -31,7 +31,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { supabase } from '@../../lib/supabase';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIcon';
@@ -360,13 +360,25 @@ export default function CalendarScreen() {
 
   // Open add event modal if coming from double press in inventory
   useEffect(() => {
+    let shouldClearParams = false;
+
     if (params.openAddEvent === 'true') {
       openAddEventModal({ seedId: params.seedId as string, seedName: params.seedName as string });
+      shouldClearParams = true;
     } else if (params.seedId && params.seedName) {
       setIsModalVisible(true); // If you still want to show the event list modal
       openAddEventModal({ seedId: params.seedId as string, seedName: params.seedName as string });
+      shouldClearParams = true;
     }
-    // else do nothing (default state)
+
+    // Clear one-shot navigation params so tab changes or remounts don't reopen modals.
+    if (shouldClearParams) {
+      router.setParams({
+        openAddEvent: undefined,
+        seedId: undefined,
+        seedName: undefined,
+      });
+    }
   }, [params.openAddEvent, params.seedId, params.seedName, openAddEventModal]);
 
   const days = eachDayOfInterval({

@@ -16,6 +16,8 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 - **Visual Organization**: Color-coded seed types with intuitive icons
 - **Search & Filter**: Quick discovery of seeds in your collection
 - **Barcode Scanner** (Premium): Scan seed package barcodes for quick inventory entry
+- **Flexible Web Image Input**: Add images by file picker, clipboard paste, or drag-and-drop
+- **Broad Image Format Support**: JPG, PNG, GIF, WebP, and AVIF on web flows
 
 ### 📅 Garden Planning
 - **Planting Calendar**: Schedule and track planting activities
@@ -32,8 +34,7 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 ### 💎 Subscription Plans
 - **Free**: Limited inventory for trying the app
 - **Essential**: $7.99/month or $63.99/year for unlimited seeds, weather integration, and cloud sync across devices
-- **Voice & AI Entry**: $9.99/month or $79.99/year for everything in Essential plus voice notes and AI-powered voice entry
-- **Advanced AI**: Coming soon
+- **Voice & AI**: Planned for a future release (v1.3.1+) and intentionally hidden in the pre-AI release branch
 
 ## 🚀 Get Started
 

@@ -2,6 +2,7 @@ import {
   useRouter,
   useLocalSearchParams,
   useFocusEffect,
+  useNavigation,
 } from 'expo-router';
 import React, {
   useState,
@@ -33,6 +34,7 @@ import {
   FlaskRound as Flask,
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -115,6 +117,8 @@ interface Imageinfo {
   error?: string; // For 'supabase' type if upload fails
 }
 
+const ADD_SEED_DRAFT_STORAGE_KEY = 'add_seed_form_draft_v1';
+
 // State for form data
 // Using useState to manage form state
 
@@ -122,6 +126,7 @@ interface Imageinfo {
 
 export default function AddOrEditSeedScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { colors } = useTheme(); // Add theme colors
   const { user, isGuest } = useAuth(); // Add auth context
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -293,6 +298,75 @@ useEffect(() => {
     } as Seed
   );
 
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+
+  const deserializeDraftSeed = useCallback((raw: any): Seed => {
+    const toDateOrUndefined = (value: any) => {
+      if (!value) return undefined;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    };
+
+    const restoredImages: Imageinfo[] = Array.isArray(raw?.seed_images)
+      ? raw.seed_images.map((img: any) => ({
+          id: img?.id || uuidv4(),
+          type: img?.type === 'supabase' ? 'supabase' : 'url',
+          url: img?.url || '',
+          localUri: img?.localUri,
+          isLoading: false,
+          error: undefined,
+        }))
+      : [];
+
+    return {
+      ...raw,
+      seed_images: restoredImages,
+      date_purchased: toDateOrUndefined(raw?.date_purchased),
+      indoor_sow_date: toDateOrUndefined(raw?.indoor_sow_date),
+      transplant_date: toDateOrUndefined(raw?.transplant_date),
+    } as Seed;
+  }, []);
+
+  useEffect(() => {
+    // Do not restore drafts when editing an existing seed.
+    if (isEditing) {
+      setHasRestoredDraft(true);
+      return;
+    }
+
+    let isMounted = true;
+
+    const restoreDraft = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ADD_SEED_DRAFT_STORAGE_KEY);
+        if (!raw || !isMounted) {
+          setHasRestoredDraft(true);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        const restoredSeed = deserializeDraftSeed(parsed?.seedPackage || parsed);
+
+        if (isMounted) {
+          setSeedPackage(restoredSeed);
+          if (restoredSeed.seed_price) {
+            const numericPrice = Number(restoredSeed.seed_price);
+            setPriceInput(Number.isFinite(numericPrice) && numericPrice > 0 ? `$${numericPrice.toFixed(2)}` : '');
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to restore Add Seed draft:', error);
+      } finally {
+        if (isMounted) setHasRestoredDraft(true);
+      }
+    };
+
+    restoreDraft();
+    return () => {
+      isMounted = false;
+    };
+  }, [deserializeDraftSeed, isEditing]);
+
   const handleImagesChange = useCallback((newImages: Imageinfo[]) => {
    
     setSeedPackage((prev) => ({ ...prev, seed_images: newImages }));
@@ -334,14 +408,65 @@ useEffect(() => {
     setSelectedSupplier(null);
     setPriceInput(''); // Reset price input display
     setScannedBarcodeData(null); // Clear scanned barcode data
+    AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
+      // Non-fatal cleanup failure
+    });
   };
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
+  const allowExitRef = useRef(false);
 
   // Track one-way navigation after save to avoid accidental duplicate redirects.
   const hasNavigatedAfterSaveRef = useRef(false);
+
+  const hasMeaningfulChanges = useCallback(() => {
+    const hasImages = Array.isArray(seedPackage.seed_images) && seedPackage.seed_images.length > 0;
+    return Boolean(
+      seedPackage.seed_name?.trim() ||
+      seedPackage.type?.trim() ||
+      seedPackage.description?.trim() ||
+      Number(seedPackage.quantity) > 0 ||
+      Number(seedPackage.seed_price) > 0 ||
+      seedPackage.supplier_id ||
+      seedPackage.date_purchased ||
+      seedPackage.indoor_sow_date ||
+      seedPackage.transplant_date ||
+      seedPackage.days_to_germinate ||
+      seedPackage.days_to_harvest ||
+      seedPackage.notes?.trim() ||
+      hasImages ||
+      selectedSupplier
+    );
+  }, [seedPackage, selectedSupplier]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+      if (allowExitRef.current || !hasMeaningfulChanges()) {
+        return;
+      }
+
+      event.preventDefault();
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved seed details. Stay here to keep editing, or discard and leave.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: () => {
+              allowExitRef.current = true;
+              navigation.dispatch(event.data.action);
+            },
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [hasMeaningfulChanges, navigation]);
 
   // --- Submit Handler ---
   const handleSubmit = async () => {
@@ -622,6 +747,10 @@ useEffect(() => {
       
       if (!hasNavigatedAfterSaveRef.current) {
         hasNavigatedAfterSaveRef.current = true;
+        allowExitRef.current = true;
+        await AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
+          // Ignore cleanup failures.
+        });
         router.replace((params.returnTo || '/(tabs)') as any);
       }
     } catch (error: any) {
@@ -668,6 +797,35 @@ useEffect(() => {
   const [priceInput, setPriceInput] = useState<string>(
     formatPriceForDisplay(seedPackage.seed_price ?? 0)
   );
+
+  useEffect(() => {
+    // Persist in-progress form so browser/app tab switches do not lose work.
+    if (isEditing || !hasRestoredDraft || isLoadingEdit) return;
+
+    const timer = setTimeout(() => {
+      const serializableSeed = {
+        ...seedPackage,
+        date_purchased: seedPackage.date_purchased
+          ? seedPackage.date_purchased.toISOString()
+          : null,
+        indoor_sow_date: seedPackage.indoor_sow_date
+          ? seedPackage.indoor_sow_date.toISOString()
+          : null,
+        transplant_date: seedPackage.transplant_date
+          ? seedPackage.transplant_date.toISOString()
+          : null,
+      };
+
+      AsyncStorage.setItem(
+        ADD_SEED_DRAFT_STORAGE_KEY,
+        JSON.stringify({ seedPackage: serializableSeed })
+      ).catch((error) => {
+        console.warn('Failed to persist Add Seed draft:', error);
+      });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [seedPackage, isEditing, hasRestoredDraft, isLoadingEdit]);
   // --- Supplier Fetching Logic ---
 
   useEffect(() => {
@@ -921,7 +1079,10 @@ useEffect(() => {
       <GuestStatusBanner />
       
       {/* Back Button - Floating Style */}
-      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
+      <Pressable onPress={() => {
+        allowExitRef.current = true;
+        router.back();
+      }} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
         <ArrowLeft size={24} color={colors.text} />
       </Pressable>
       
@@ -1135,7 +1296,6 @@ useEffect(() => {
               {/* Web Date Picker */}
               {Platform.OS === 'web' ? (
                 <>
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
                   <input
                     type="date"
                     className="date-input"
@@ -1202,7 +1362,6 @@ useEffect(() => {
                 </Text>
                 {Platform.OS === 'web' ? (
                   <>
-                    {/* eslint-disable-next-line react/forbid-dom-props */}
                     <input
                       type="date"
                       className="date-input"
@@ -1269,7 +1428,6 @@ useEffect(() => {
                 </Text>
                 {Platform.OS === 'web' ? (
                   <>
-                    {/* eslint-disable-next-line react/forbid-dom-props */}
                     <input
                       type="date"
                       className="date-input"

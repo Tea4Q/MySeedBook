@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'; // Added useEffect
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   StyleSheet,
+  Modal,
 } from 'react-native';
 import { Camera, Globe, Trash2 } from 'lucide-react-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,6 +23,7 @@ interface Imageinfo {
   id: string;
   type: 'supabase' | 'url';
   url: string;
+  previewUrl?: string;
   localUri?: string;
   isLoading?: boolean;
   error?: string;
@@ -77,6 +79,10 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   const [images, setImages] = useState<Imageinfo[]>(initialImages);
   const [webImageUrlInput, setWebImageUrlInput] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragDepthRef = useRef(0);
 
   // Only sync with initialImages on first render to avoid overriding local state
   useEffect(() => {
@@ -133,7 +139,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
 
         // Determine file extension first
         const fileExt = localUri.split('.').pop()?.toLowerCase() || 'jpg';
-        const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
         const extensionToUse = validExtensions.includes(fileExt)
           ? fileExt
           : 'jpg';
@@ -159,7 +165,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           fileToUpload = new File(localUri);
         }
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from(bucketName)
           .upload(filePath, fileToUpload, {
             cacheControl: '3600',
@@ -167,6 +173,11 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
             contentType,
           });
         if (uploadError) throw uploadError;
+
+        // Signed URLs remain viewable even if bucket public read is restricted.
+        const { data: signedUrlData } = await supabase.storage
+          .from(bucketName)
+          .createSignedUrl(filePath, 60 * 60);
 
         const { data: publicUrlData } = supabase.storage
           .from(bucketName) // Use bucketName prop
@@ -177,12 +188,14 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
 
         // Set the image as uploaded with the URL
         // Skip validation for now since Supabase URLs may not be immediately accessible
+        const remoteUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
         setImages((prevImages) => {
           const updatedImages = prevImages.map((img) =>
             img.id === imageId
               ? {
                   ...img,
-                  url: publicUrlData.publicUrl,
+                  url: remoteUrl,
+                  previewUrl: signedUrlData?.signedUrl,
                   isLoading: false, // Always set to false after upload
                   localUri: localUri, // Keep localUri as fallback
                   error: undefined, // Clear any previous errors
@@ -325,7 +338,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       const blob = await response.blob();
       const contentType = response.headers.get('content-type') || 'image/jpeg';
       const fileExt = contentType.split('/').pop()?.toLowerCase() || 'jpg';
-      const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
       const extensionToUse = validExtensions.includes(fileExt)
         ? fileExt
         : 'jpg';
@@ -387,7 +400,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       );
       setWebImageUrlInput('');
     }
-  }, [bucketName, webImageUrlInput]);
+  }, [bucketName, webImageUrlInput, handleLocalImageSelected]);
 
   const handleRemoveImage = useCallback(
     async (imageIdToRemove: string) => {
@@ -474,6 +487,200 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       Alert.alert('Error', 'Failed to pick an image.');
     }
   }, [handleLocalImageSelected, bucketName]);
+
+  const handleWebFileSelected = useCallback(
+    (file: globalThis.File) => {
+      const allowedTypes = new Set([
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/avif',
+      ]);
+
+      const extension = file.name.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif']);
+
+      if (!allowedTypes.has(file.type) && !allowedExtensions.has(extension)) {
+        Alert.alert(
+          'Unsupported Image Format',
+          'Supported formats: JPG, PNG, GIF, WEBP, AVIF.'
+        );
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        if (result) {
+          handleLocalImageSelected(result);
+        }
+      };
+      reader.onerror = () => {
+        Alert.alert('File Read Error', 'Could not read the selected image file.');
+      };
+      reader.readAsDataURL(file);
+    },
+    [handleLocalImageSelected]
+  );
+
+  const triggerWebFilePicker = useCallback(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      handleImagePicker();
+      return;
+    }
+
+    if (!fileInputRef.current) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/gif,image/webp,image/avif,.jpg,.jpeg,.png,.gif,.webp,.avif';
+      input.style.display = 'none';
+      input.onchange = (event) => {
+        const target = event.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (file) {
+          handleWebFileSelected(file);
+        }
+        target.value = '';
+      };
+      document.body.appendChild(input);
+      fileInputRef.current = input;
+    }
+
+    fileInputRef.current.click();
+  }, [handleImagePicker, handleWebFileSelected]);
+
+  const handleWebDrop = useCallback(
+    (event: any) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOver(false);
+      setIsGlobalDragOver(false);
+      dragDepthRef.current = 0;
+
+      const fileList = event?.dataTransfer?.files;
+      const file = fileList && fileList.length > 0 ? fileList[0] : null;
+      if (file) {
+        handleWebFileSelected(file);
+      }
+    },
+    [handleWebFileSelected]
+  );
+
+  const handleWebDragOver = useCallback((event: any) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isDragOver) setIsDragOver(true);
+  }, [isDragOver]);
+
+  const handleWebDragLeave = useCallback((event: any) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const hasImageFiles = useCallback((dt: DataTransfer | null | undefined): boolean => {
+    if (!dt) return false;
+    if (dt.items && dt.items.length > 0) {
+      for (let i = 0; i < dt.items.length; i += 1) {
+        if (dt.items[i].type?.startsWith('image/')) return true;
+      }
+    }
+    if (dt.files && dt.files.length > 0) return true;
+    return false;
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const onPaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items || items.length === 0) return;
+
+      for (let i = 0; i < items.length; i += 1) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            event.preventDefault();
+            handleWebFileSelected(file);
+            return;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => {
+      window.removeEventListener('paste', onPaste);
+    };
+  }, [handleWebFileSelected]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const onDragEnter = (event: DragEvent) => {
+      if (!hasImageFiles(event.dataTransfer)) return;
+      event.preventDefault();
+      dragDepthRef.current += 1;
+      setIsGlobalDragOver(true);
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      if (!hasImageFiles(event.dataTransfer)) return;
+      event.preventDefault();
+      if (!isGlobalDragOver) setIsGlobalDragOver(true);
+    };
+
+    const onDragLeave = (event: DragEvent) => {
+      if (!hasImageFiles(event.dataTransfer)) return;
+      event.preventDefault();
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) {
+        setIsGlobalDragOver(false);
+      }
+    };
+
+    const onDrop = (event: DragEvent) => {
+      if (!hasImageFiles(event.dataTransfer)) return;
+      if (event.defaultPrevented) {
+        setIsGlobalDragOver(false);
+        dragDepthRef.current = 0;
+        return;
+      }
+
+      event.preventDefault();
+      setIsGlobalDragOver(false);
+      dragDepthRef.current = 0;
+
+      const file = event.dataTransfer?.files?.[0];
+      if (file) {
+        handleWebFileSelected(file);
+      }
+    };
+
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', onDragEnter);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [handleWebFileSelected, hasImageFiles, isGlobalDragOver]);
+
+  useEffect(() => {
+    return () => {
+      if (fileInputRef.current && typeof document !== 'undefined') {
+        fileInputRef.current.remove();
+        fileInputRef.current = null;
+      }
+    };
+  }, []);
   // --- Notify Parent Component of Changes ---
   useEffect(() => {
     // Only notify parent when images actually change
@@ -483,11 +690,35 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   // --- Render ---
   return (
     <View>
+      {Platform.OS === 'web' && (
+        <Modal transparent visible={isGlobalDragOver} animationType="fade">
+          <View style={styles.globalDropOverlay}>
+            <View style={[styles.globalDropCard, { borderColor: colors.primary }]}> 
+              <Text style={[styles.globalDropTitle, { color: colors.primary }]}>Drop to upload</Text>
+              <Text style={[styles.globalDropSubtitle, { color: colors.textSecondary }]}>Release anywhere to add your image</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
       {/* Display Images - Limit to first 3 images to prevent excessive scrolling */}
+      <View
+        style={[
+          styles.dropZone,
+          { borderColor: isDragOver ? colors.primary : colors.inputBorder },
+          isDragOver && { backgroundColor: colors.primary + '12' },
+        ]}
+        {...(Platform.OS === 'web'
+          ? ({
+              onDrop: handleWebDrop,
+              onDragOver: handleWebDragOver,
+              onDragLeave: handleWebDragLeave,
+            } as any)
+          : {})}
+      >
       <View style={images.length > 1 ? styles.multipleImagesContainer : styles.singleImageContainer}>
         {images.slice(0, 3).map((image) => {
-          // Try Supabase URL first, fallback to localUri if available
-          const imageUri = image.url || image.localUri;
+          // Prefer signed URL previews for storage compatibility, then public URL.
+          const imageUri = image.previewUrl || image.url || image.localUri;
           return (
           <View key={image.id} style={styles.imageContainer}>
             {imageUri ? (
@@ -507,29 +738,35 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                     // Make images smaller when there are multiple
                     images.length > 1 && styles.previewImageSmall
                   ]}
-                  onError={(error) => {
-                    // If Supabase URL fails and we have a localUri, try to fallback
-                    if (image.url && image.localUri && imageUri === image.url) {
-                      setImages((prevImages) =>
-                        prevImages.map((img) =>
-                          img.id === image.id
-                            ? { 
-                                ...img, 
-                                // Keep the Supabase URL for saving to database, just mark it as having display issues
-                                error: 'Using local preview (Supabase URL blocked in development)' 
-                              }
-                            : img
-                        )
-                      );
-                    } else {
-                      setImages((prevImages) =>
-                        prevImages.map((img) =>
-                          img.id === image.id
-                            ? { ...img, error: 'Failed to load image' }
-                            : img
-                        )
-                      );
+                  onError={() => {
+                    // Verify remote URL before surfacing an error; some devices fail first render while URL is still propagating.
+                    if (image.url && image.localUri) {
+                      (async () => {
+                        const remoteReachable = await validateImageUrl(image.url);
+                        setImages((prevImages) =>
+                          prevImages.map((img) =>
+                            img.id === image.id
+                              ? {
+                                  ...img,
+                                  previewUrl: undefined,
+                                  error: remoteReachable
+                                    ? undefined
+                                    : 'Uploaded successfully. Using local preview while remote image becomes available.',
+                                }
+                              : img
+                          )
+                        );
+                      })();
+                      return;
                     }
+
+                    setImages((prevImages) =>
+                      prevImages.map((img) =>
+                        img.id === image.id
+                          ? { ...img, error: 'Failed to load image' }
+                          : img
+                      )
+                    );
                   }}
                   onLoad={() => {
                     // No state updates needed on successful load - this prevents unnecessary re-renders
@@ -637,6 +874,12 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         </View>
       )}
       </View>
+      {Platform.OS === 'web' && (
+        <Text style={[styles.dropZoneHint, { color: colors.textSecondary }]}>
+          Drag and drop an image file here
+        </Text>
+      )}
+      </View>
       {/* Add Image from Web URL */}
       <View style={styles.addUrlSection}>
         <TextInput
@@ -656,11 +899,19 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           <Text style={[styles.urlButtonText, { color: colors.primary }]}>Add URL</Text>
         </Pressable>
       </View>
+      {Platform.OS === 'web' && (
+        <Text style={[styles.webHint, { color: colors.textSecondary }]}>Tip: paste an image with Ctrl+V, or upload from Windows Explorer.</Text>
+      )}
       {/* Capture/Pick Local Image */}
       <View style={styles.imageButtonContainer}>
-        <Pressable style={[styles.imageButton, { borderColor: colors.primary }]} onPress={handleImagePicker}>
+        <Pressable
+          style={[styles.imageButton, { borderColor: colors.primary }]}
+          onPress={Platform.OS === 'web' ? triggerWebFilePicker : handleImagePicker}
+        >
           <Camera size={24} color={colors.primary} />
-          <Text style={[styles.imageButtonText, { color: colors.primary }]}>Capture Image</Text>
+          <Text style={[styles.imageButtonText, { color: colors.primary }]}>
+            {Platform.OS === 'web' ? 'Upload Image' : 'Capture Image'}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -685,6 +936,18 @@ const styles = StyleSheet.create({
     maxHeight: 150, // Reduced from 250 to make images smaller
     flex: 1, // Allow flexible sizing in row layout
     minWidth: '45%', // Ensure minimum width when in horizontal layout
+  },
+  dropZone: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  dropZoneHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 4,
   },
   imageloadingIndicator: {
     position: 'absolute',
@@ -711,6 +974,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 16,
     marginBottom: 10,
+  },
+  webHint: {
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 10,
+    paddingHorizontal: 16,
   },
   urlInput: {
     flex: 1,
@@ -773,6 +1042,31 @@ const styles = StyleSheet.create({
   },
   previewImageSmall: {
     height: 80, // Even smaller for multiple images
+  },
+  globalDropOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  globalDropCard: {
+    minWidth: 260,
+    maxWidth: 420,
+    borderRadius: 16,
+    borderWidth: 2,
+    backgroundColor: '#ffffff',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  globalDropTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  globalDropSubtitle: {
+    fontSize: 14,
+    marginTop: 6,
   },
 });
 

@@ -10,8 +10,8 @@
 
 ### Essential
 
-- `myseedbook_essential_monthly` → $7.99/month
-- `myseedbook_essential_yearly` → $63.99/year
+- `myseedbook_essential_month` → $7.99/month
+- `myseedbook_essential_year` → $63.99/year
 
 ### Voice & AI Entry
 

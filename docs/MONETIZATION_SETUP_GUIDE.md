@@ -45,8 +45,8 @@ The voice tier is justified because AI transcription has ongoing usage costs. Fo
 
 ### Android
 
-- `myseedbook_essential_monthly`
-- `myseedbook_essential_yearly`
+- `myseedbook_essential_month`
+- `myseedbook_essential_year`
 - `myseedbook_voice_monthly`
 - `myseedbook_voice_yearly`
 

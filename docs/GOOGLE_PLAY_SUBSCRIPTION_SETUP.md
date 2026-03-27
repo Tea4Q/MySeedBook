@@ -8,8 +8,8 @@
 
 Create four subscriptions in Play Console:
 
-- `myseedbook_essential_monthly`
-- `myseedbook_essential_yearly`
+- `myseedbook_essential_month`
+- `myseedbook_essential_year`
 - `myseedbook_voice_monthly`
 - `myseedbook_voice_yearly`
 
@@ -27,8 +27,8 @@ Create four subscriptions in Play Console:
 
 ## RevenueCat Mapping
 
-- `myseedbook_essential_monthly` → entitlement `essential`
-- `myseedbook_essential_yearly` → entitlement `essential`
+- `myseedbook_essential_month` → entitlement `essential`
+- `myseedbook_essential_year` → entitlement `essential`
 - `myseedbook_voice_monthly` → entitlement `voice`
 - `myseedbook_voice_yearly` → entitlement `voice`
 

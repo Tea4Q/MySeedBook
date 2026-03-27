@@ -107,6 +107,7 @@ export const PRODUCT_IDS = {
 class GlobalRevenueCat {
   private static instance: GlobalRevenueCat;
   private initialized = false;
+  private offeringsMisconfigured = false;
   private essentialEntitlementId = ENTITLEMENT_ESSENTIAL;
   private voiceEntitlementId = ENTITLEMENT_VOICE;
 
@@ -164,6 +165,7 @@ class GlobalRevenueCat {
     }
 
     this.initialized = true;
+    this.offeringsMisconfigured = false;
     console.log('[GlobalRevenueCat] Initialized (essential + voice tiers)');
   }
 
@@ -196,10 +198,20 @@ class GlobalRevenueCat {
 
   /** Fetch all available offerings from RevenueCat dashboard. */
   async getOfferings(): Promise<PurchasesOfferings | null> {
-    if (!this.initialized) return null;
+    if (!this.initialized || this.offeringsMisconfigured) return null;
     try {
       return await Purchases.getOfferings();
-    } catch (err) {
+    } catch (err: any) {
+      const message = String(err?.message ?? err ?? '').toLowerCase();
+      const isConfigError =
+        message.includes('there are no play store products registered') ||
+        message.includes('why-are-offerings-empty') ||
+        message.includes('configurationerror');
+
+      if (isConfigError) {
+        this.offeringsMisconfigured = true;
+        console.warn('[GlobalRevenueCat] Offerings unavailable due to dashboard/store mapping configuration. Skipping further offerings fetch attempts until next initialize().');
+      }
       console.warn('[GlobalRevenueCat] getOfferings error:', err);
       return null;
     }

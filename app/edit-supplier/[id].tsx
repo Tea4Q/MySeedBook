@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import {
   ArrowLeft,
   Building2,
@@ -23,10 +23,15 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { useTheme } from '@/lib/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // VoiceMicButton and parseVoiceCommand are reserved for the v1.3.1 Voice & AI build
+
+const getEditSupplierDraftKey = (supplierId: string) =>
+  `edit_supplier_draft_v1_${supplierId}`;
 
 export default function EditSupplierScreen() {
   const { id } = useLocalSearchParams();
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState({
@@ -41,9 +46,75 @@ export default function EditSupplierScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const allowExitRef = React.useRef(false);
+  const initialSnapshotRef = React.useRef<string>('');
+
+  const snapshotForm = (value: typeof formData) => JSON.stringify(value);
+
+  const hasUnsavedChanges = () => {
+    if (!initialSnapshotRef.current) return false;
+    return snapshotForm(formData) !== initialSnapshotRef.current;
+  };
+
   useEffect(() => {
     loadSupplier();
   }, [id]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+      if (allowExitRef.current || !hasUnsavedChanges()) {
+        return;
+      }
+
+      event.preventDefault();
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved supplier changes. Stay here to keep editing, or discard and leave.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: async () => {
+              allowExitRef.current = true;
+              await AsyncStorage.removeItem(getEditSupplierDraftKey(String(id))).catch(() => {
+                // Ignore cleanup failures.
+              });
+              navigation.dispatch(event.data.action);
+            },
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [id, navigation, formData]);
+
+  useEffect(() => {
+    if (isLoading || !id || !initialSnapshotRef.current) return;
+
+    const currentSnapshot = snapshotForm(formData);
+    const draftKey = getEditSupplierDraftKey(String(id));
+
+    const persist = async () => {
+      if (currentSnapshot === initialSnapshotRef.current) {
+        await AsyncStorage.removeItem(draftKey).catch(() => {
+          // Ignore cleanup failures.
+        });
+        return;
+      }
+
+      await AsyncStorage.setItem(draftKey, JSON.stringify(formData)).catch(() => {
+        // Ignore persistence failures.
+      });
+    };
+
+    const timer = setTimeout(() => {
+      persist();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [formData, id, isLoading]);
 
   const loadSupplier = async () => {
     try {
@@ -55,8 +126,7 @@ export default function EditSupplierScreen() {
 
       if (supabaseError) throw supabaseError;
       if (data) {
-        setSupplier(data);
-        setFormData({
+        const baseFormData = {
           id: data.id,
           supplier_name: data.supplier_name,
           webaddress: data.webaddress || '',
@@ -64,7 +134,26 @@ export default function EditSupplierScreen() {
           phone: data.phone || '',
           address: data.address || '',
           notes: data.notes || '',
-        });
+        };
+
+        initialSnapshotRef.current = snapshotForm(baseFormData);
+        setSupplier(data);
+
+        const rawDraft = await AsyncStorage.getItem(getEditSupplierDraftKey(String(id)));
+        if (rawDraft) {
+          try {
+            const parsedDraft = JSON.parse(rawDraft);
+            setFormData({
+              ...baseFormData,
+              ...parsedDraft,
+              id: baseFormData.id,
+            });
+          } catch {
+            setFormData(baseFormData);
+          }
+        } else {
+          setFormData(baseFormData);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load supplier');
@@ -89,6 +178,11 @@ export default function EditSupplierScreen() {
         .eq('id', id);
 
       if (supabaseError) throw supabaseError;
+
+      allowExitRef.current = true;
+      await AsyncStorage.removeItem(getEditSupplierDraftKey(String(id))).catch(() => {
+        // Ignore cleanup failures.
+      });
 
       router.back();
     } catch (err) {
@@ -119,7 +213,13 @@ export default function EditSupplierScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Floating Back Button */}
-      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+      <Pressable
+        onPress={() => {
+          allowExitRef.current = true;
+          router.back();
+        }}
+        style={[styles.floatingBackButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+      >
         <ArrowLeft size={24} color={colors.text} />
       </Pressable>
 

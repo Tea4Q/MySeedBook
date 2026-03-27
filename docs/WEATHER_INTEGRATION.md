@@ -251,8 +251,8 @@ Product ID: com.myseedbook.catalogue.essential.yearly
 
 **Android (Google Play Console)**:
 ```
-Product ID: myseedbook_essential_monthly
-Product ID: myseedbook_essential_yearly
+Product ID: myseedbook_essential_month
+Product ID: myseedbook_essential_year
 ```
 
 ### Environment Configuration

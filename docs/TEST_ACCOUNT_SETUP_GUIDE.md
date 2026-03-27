@@ -17,8 +17,8 @@ Google Play requires login credentials to review apps with authentication. This 
 2. Navigate to **Authentication** → **Users**
 3. Click **Add user** → **Create new user**
 4. Enter the following details:
-   - **Email**: `reviewer@myseedbook.test`
-   - **Password**: `ReviewTest2025!`
+   - **Email**: `ReviewTester@gmail.com`
+   - **Password**: `Tester032026`
    - **Auto Confirm User**: ✅ Yes (important!)
 5. Click **Create user**
 
@@ -27,8 +27,8 @@ Google Play requires login credentials to review apps with authentication. This 
 1. Open your app (development or production)
 2. Go to the sign-up screen
 3. Create account with:
-   - Email: `reviewer@myseedbook.test`
-   - Password: `ReviewTest2025!`
+   - Email: `reviewtester@gmail.com`
+   - Password: `Test032026`
 4. Verify the email (check your email or auto-confirm in Supabase)
 
 ---
@@ -103,8 +103,8 @@ VALUES
 
 ```
 LOGIN CREDENTIALS:
-Email: reviewer@myseedbook.test
-Password: ReviewTest2025!
+Email: ReviewTester@gmail.com
+Password: Tester032026
 
 INSTRUCTIONS:
 1. Launch the app
@@ -237,8 +237,8 @@ NOTE: Guest mode demonstrates full functionality without requiring account creat
 
 ## Quick Reference
 
-**Test Account Email**: `reviewer@myseedbook.test`  
-**Test Account Password**: `ReviewTest2025!`  
+**Test Account Email**: `ReviewTester@gmail.com`  
+**Test Account Password**: `Tester032026`  
 **Supabase Project**: [Your project URL]  
 **Google Play Console**: Policy → App access  
 **Alternative Access**: Guest Mode (tap "Continue as Guest")

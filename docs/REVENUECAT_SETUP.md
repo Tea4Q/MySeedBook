@@ -32,8 +32,8 @@ Create these entitlements exactly:
 
 ### Android
 
-- `myseedbook_essential_monthly`
-- `myseedbook_essential_yearly`
+- `myseedbook_essential_month`
+- `myseedbook_essential_year`
 - `myseedbook_voice_monthly`
 - `myseedbook_voice_yearly`
 

@@ -1,94 +1,52 @@
 # Production Deployment Checklist
 
-## ✅ Security & Authentication
+## Release Context
+- Branch: `release/v1.3.0-pre-ai`
+- Target: Production deployment with pre-AI reviewer-safe feature scope
+- Date: March 26, 2026
 
-- [x] Removed all authentication bypass flags (`byPassAuthForTesting`, `byPassWebAuth`)
-- [x] Removed development TODO files
-- [x] Cleaned up debug console logging
-- [x] Verify Supabase RLS policies are properly configured
-- [x] Confirm authentication flows work on all platforms
-- [x] Test password reset functionality
-- [x] Validate user profile creation and updates
-- [x] Network error handling implemented and tested
+## ✅ Security & Stability Baseline
+- [x] Auth bypass flags removed
+- [x] Critical debug/development artifacts removed
+- [x] Core auth flows verified previously
+- [x] Calendar modal reopen regression fixed (one-shot route params cleared)
+- [x] Add Seed unsaved-change guard + draft restore implemented
+- [x] Edit Supplier unsaved-change guard + draft restore implemented
 
-## ✅ Code Quality
+## ✅ Web Upload Readiness
+- [x] File picker image upload path
+- [x] Clipboard paste image path
+- [x] Drag-and-drop image path
+- [x] Full-page drag overlay behavior
+- [x] Supported formats: JPG, PNG, GIF, WebP, AVIF
 
-- [x] ESLint checks passing (with warnings acceptable for production)
-- [x] TypeScript compilation successful
-- [x] Removed debug console.log statements (kept error logging)
-- [x] Cleaned up unused imports and variables
-- [x] Performance testing completed
-- [x] Memory leak testing on mobile devices - Guest data system optimized
+## ✅ Product Scope Readiness
+- [x] Pre-AI messaging posture applied
+- [x] Voice/AI upgrade messaging hidden/demoted for this branch
+- [x] Documentation updated to reflect v1.3.0-pre-ai constraints
 
-## ✅ Configuration & Environment
+## 🔄 Required Before Submission
 
-- [x] **VERIFIED**: Supabase environment configuration production-ready
-- [x] Verify `app.json` configuration for production
-- [x] Check `eas.json` build profiles
-- [x] Confirm environment variables are properly set
-- [x] Validate deep linking configuration
-- [x] Test offline functionality - Guest mode provides full offline experience
+### Build & Packaging
+- [ ] Build Android AAB (`production` profile)
+- [ ] Build iOS release (`production` profile)
+- [ ] Archive build IDs and release notes
 
-## ✅ Platform Testing
+### Device Validation
+- [ ] Android physical device smoke test
+- [ ] iOS physical device smoke test
+- [ ] Web regression pass for image and form workflows
 
-- [x] iOS testing on physical device - Authentication and UI verified
-- [x] Android testing on physical device (confirmed tablet/phone orientation working)
-- [x] Web platform testing - All features functional
-- [x] Cross-platform image upload functionality
-- [x] Calendar RLS policies working across platforms
+### Release Content & Store Setup
+- [ ] Confirm listing copy matches pre-AI scope
+- [ ] Confirm screenshots reflect current UX
+- [ ] Confirm legal links and policy text are up to date
+- [ ] Verify App Store / Play Console metadata consistency
 
-## 🎨 User Experience
+### Monitoring & Operations
+- [ ] Ensure error/crash monitoring is enabled for production
+- [ ] Ensure support channel and rollback path are documented
 
-- [x] Responsive design working (tablet/phone layouts)
-- [x] Image handling for seed suppliers (RareSeeds, Burpee)
-- [x] Calendar events displaying correctly
-- [ ] Loading states and error messages user-friendly
-- [x] Navigation flows intuitive
-- [ ] Performance on lower-end devices acceptable
-
-## 📊 Data & Storage
-
-- [x] Calendar events RLS policies configured
-- [x] Image storage bucket permissions configured
-- [x] Database migrations applied
-- [ ] Backup strategy in place
-- [ ] Data retention policies defined
-
-## 🚀 Deployment
-
-- [ ] Expo/EAS build profiles configured
-- [ ] App store metadata prepared
-- [ ] Privacy policy and terms of service updated
-- [ ] App icons and splash screens finalized
-- [ ] Store screenshots and descriptions ready
-
-## 📈 Monitoring & Analytics
-
-- [ ] Error tracking configured (Sentry/Bugsnag)
-- [ ] Performance monitoring setup
-- [ ] User analytics implementation
-- [ ] Crash reporting enabled
-
-## 🔧 Post-Deployment
-
-- [ ] Smoke tests on production
-- [ ] User acceptance testing
-- [ ] Performance monitoring active
-- [ ] Support documentation updated
-- [ ] Team notified of deployment
-
-## ⚠️ Known Issues
-
-- Some ESLint warnings remain (unused variables, missing dependencies) - acceptable for production
-- Calendar component has some unused error parameters - cosmetic issue only
-- ImageHandler component has minor dependency warnings - functionality works correctly
-
-## 🎯 Current Status
-
-**Ready for Production Testing**: The app has completed security cleanup and core functionality validation. All critical authentication bypasses have been removed, debug logging cleaned up, and major features (responsive design, calendar, image handling) are working.
-
-**Next Steps**: 
-1. Configure production Supabase environment
-2. Final platform testing on physical devices
-3. Set up monitoring and analytics
-4. Deploy to staging environment for final validation
+## Known Non-Blocking Items
+- Project-wide TypeScript has pre-existing unrelated Supabase typing errors.
+- These were intentionally deprioritized for this release stream and should be handled in a follow-up hardening pass.

@@ -42,8 +42,8 @@ If you prefer to test with a registered account:
 
 ### Test Account Credentials
 
-**Email**: `reviewer@myseedbook.test`  
-**Password**: `ReviewTest2025!`
+**Email**: `ReviewTester@gmail.com`  
+**Password**: `Test032026`
 
 ### How to Sign In
 1. Launch the app
