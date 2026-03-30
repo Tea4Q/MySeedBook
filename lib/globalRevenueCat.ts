@@ -154,7 +154,23 @@ class GlobalRevenueCat {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
 
-    Purchases.configure({ apiKey });
+    try {
+      Purchases.configure({ apiKey });
+    } catch (err: any) {
+      const message = String(err?.message ?? err ?? '').toLowerCase();
+      const isExpoGoStoreError =
+        message.includes('native store is not available when running inside expo go') ||
+        message.includes('invalid api key');
+
+      if (isExpoGoStoreError) {
+        console.warn(
+          '[GlobalRevenueCat] RevenueCat is disabled in Expo Go with native store keys. Use a development build, or use RevenueCat Test Store keys for Expo Go testing.'
+        );
+        return;
+      }
+
+      throw err;
+    }
 
     if (userId) {
       try {

@@ -50,6 +50,7 @@ export default function AuthScreen() {
   );
 
   const { signIn, signUp, signInAsGuest } = useAuth();
+  const ContainerComponent = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 
   useEffect(() => {
     // Initial screen animations
@@ -228,10 +229,14 @@ export default function AuthScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <ContainerComponent
       style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      {...(Platform.OS === 'ios'
+        ? {
+            behavior: 'padding' as const,
+            keyboardVerticalOffset: 0,
+          }
+        : {})}
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
@@ -272,6 +277,7 @@ export default function AuthScreen() {
       </View>
 
       <ScrollView 
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -534,13 +540,18 @@ export default function AuthScreen() {
           </BlurView>
         </Animated.View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </ContainerComponent>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0f2f0f',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   backgroundGradient: {
     position: 'absolute',

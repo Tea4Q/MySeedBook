@@ -150,7 +150,7 @@ export default function WeatherScreen() {
   };
 
   // Show premium upgrade screen if user doesn't have weather integration
-  if (showPremiumModal && !showUpgradeModal) {
+  if (showPremiumModal) {
     return (
       <View style={[styles.premiumContainer, { backgroundColor: colors.background }]}>
         <FontAwesome5 name="cloud-sun" size={80} color={colors.primary} style={styles.premiumIcon} />

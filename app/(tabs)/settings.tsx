@@ -39,6 +39,12 @@ export default function SettingsScreen() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   const appVersion = Constants.expoConfig?.version ?? '1.3.0';
+  const devBundleMarker = React.useMemo(() => {
+    if (!__DEV__) return null;
+
+    // Timestamp updates on each fresh dev bundle load, useful for web vs device parity checks.
+    return new Date().toISOString();
+  }, []);
 
   const loadProfile = useCallback(async () => {
     if (!user?.id) return;
@@ -291,6 +297,11 @@ export default function SettingsScreen() {
           <Text style={[styles.versionText, { color: textSecondary }]}>
             Version {appVersion}
           </Text>
+          {devBundleMarker && (
+            <Text style={[styles.devMarkerText, { color: textSecondary }]}> 
+              Dev Bundle: {devBundleMarker}
+            </Text>
+          )}
         </View>
 
         {/* Sign Out */}
@@ -488,5 +499,9 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 14,
+  },
+  devMarkerText: {
+    fontSize: 11,
+    marginTop: 6,
   },
 });

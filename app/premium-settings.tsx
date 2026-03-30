@@ -236,7 +236,7 @@ export default function PremiumSettingsScreen() {
             Choose Your Garden Plan
           </Text>
           <Text style={[styles.upgradeDescription, { color: colors.text + '80' }]}>
-            Essential starts at $7.99. Upgrade to Voice & AI at $9.99 when you are ready.
+            Essential starts at $7.99. 
           </Text>
           
           <Pressable
