@@ -18,7 +18,7 @@ import {
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
 import { Seed } from '@/types/database'; // Adjust path if needed
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, useNavigation } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import { SeedCard } from '@/components/SeedCard';
 import {
@@ -46,12 +46,16 @@ import GuestStatusBanner from '@/components/GuestStatusBanner';
 import { guestDataManager } from '@/utils/guestDataManager';
 import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 
 export default function InventoryScreen() {
   const { session } = useAuth(); // Get user session
+  const { isPremium, isLoading: isSubscriptionLoading } = useGlobalSubscription();
   // Removed guest limits for views - now unlimited
   const { colors } = useTheme(); // Get theme colors
   const responsive = useResponsive(); // Get responsive configuration
+  const router = useRouter();
+  const navigation = useNavigation();
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,11 +67,21 @@ export default function InventoryScreen() {
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const router = useRouter();
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const isMounted = useRef(true);
   const lastPressTimestamps = useRef<Record<string, number>>({});
+
+  // Update header title with seed count
+  useEffect(() => {
+    const canShowSeedCount = isPremium && !isSubscriptionLoading;
+
+    navigation.setOptions({
+      title: canShowSeedCount
+        ? `My Seed Inventory (${seeds.length})`
+        : 'My Seed Inventory',
+    });
+  }, [isPremium, isSubscriptionLoading, seeds.length, navigation]);
 
   // --- 2. Modify Data Loading Logic ---
   const loadSeeds = useCallback(
