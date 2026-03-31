@@ -1,18 +1,25 @@
 name: Build Swift on Windows
 
-on: [push]
+on:
+  push:
+    branches: [ "release/v1.3.0-pre-ai" ]
+  pull_request:
+    branches: [ "release/v1.3.0-pre-ai" ]
 
 jobs:
-  build-windows-executable:
+  build-and-test-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4 # Checkout the repository code
-      - name: Setup Swift
-        # Use a third-party action to install Swift on the Windows runner
-        uses: compnerd/gha-setup-swift@main 
-      - name: Disable NTFS protection (recommended for Swift on Windows)
+      - uses: actions/checkout@v4
+      - name: Setup Visual Studio environment
+        # The specific version might need adjustment, refer to the action's documentation
+        uses: seanmiddleditch/gha-setup-vsdevenv@8c6bbf80998779f2bba87b1452832e561b65fd57
+      - name: Install Swift
+        uses: SwiftyLab/setup-swift@v1
+        with:
+          # Specify the Swift version string, e.g., '5.10' or '6.0.0'
+          swift-version: 'latest-stable' 
+      - name: Disable NTFS protection (optional, may help with file ops)
         run: git config --global core.protectNTFS false
-      - name: Build Swift Package
-        run: swift build -c release --static-swift-stdlib
-      - name: Run Tests
+      - name: Run tests
         run: swift test
