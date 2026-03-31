@@ -11,14 +11,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Visual Studio environment
-        # The specific version might need adjustment, refer to the action's documentation
-        uses: seanmiddleditch/gha-setup-vsdevenv@8c6bbf80998779f2bba87b1452832e561b65fd57
-      - name: Install Swift
-        uses: SwiftyLab/setup-swift@v1
+      - name: Setup Swift
+        uses: SwiftyLab/setup-swift@v1.8.0 # Use a specific version tag
         with:
-          # Specify the Swift version string, e.g., '5.10' or '6.0.0'
-          swift-version: 'latest-stable' 
+          swift-version: '6.0.0' # Specify the Swift version
       - name: Disable NTFS protection (optional, may help with file ops)
         run: git config --global core.protectNTFS false
       - name: Run tests
