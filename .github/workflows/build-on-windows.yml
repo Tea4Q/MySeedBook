@@ -1,0 +1,18 @@
+name: Build Swift on Windows
+
+on: [push]
+
+jobs:
+  build-windows-executable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4 # Checkout the repository code
+      - name: Setup Swift
+        # Use a third-party action to install Swift on the Windows runner
+        uses: compnerd/gha-setup-swift@main 
+      - name: Disable NTFS protection (recommended for Swift on Windows)
+        run: git config --global core.protectNTFS false
+      - name: Build Swift Package
+        run: swift build -c release --static-swift-stdlib
+      - name: Run Tests
+        run: swift test
