@@ -37,6 +37,7 @@ import { PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '@/lib/theme';
 import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import { globalRevenueCat } from '@/lib/globalRevenueCat';
+import { PRICING, PRICING_COPY } from '@/lib/pricingCopy';
 
 type TierId = 'essential' | 'voice' | 'advanced_ai';
 type BillingId = 'monthly' | 'yearly';
@@ -61,8 +62,8 @@ const TIER_META: Record<Exclude<TierId, 'advanced_ai'>, {
   essential: {
     title: 'Essential',
     subtitle: 'Unlimited seeds + weather + cloud sync',
-    monthlyFallback: '$7.99 / month',
-    yearlyFallback: '$63.99 / year',
+    monthlyFallback: PRICING.essential.monthlyDisplay,
+    yearlyFallback: PRICING.essential.yearlyDisplay,
     features: [
       'Unlimited seeds',
       'Weather integration',
@@ -73,8 +74,8 @@ const TIER_META: Record<Exclude<TierId, 'advanced_ai'>, {
   voice: {
     title: 'Voice & AI Entry',
     subtitle: 'Everything in Essential + voice features',
-    monthlyFallback: '$9.99 / month',
-    yearlyFallback: '$79.99 / year',
+    monthlyFallback: PRICING.voice.monthlyDisplay,
+    yearlyFallback: PRICING.voice.yearlyDisplay,
     features: [
       'Voice notes',
       'AI voice transcription entry',
@@ -258,10 +259,10 @@ export default function GlobalSubscriptionModal({
               <Sprout size={26} color={colors.primaryText} />
             </View>
             <Text style={[styles.heroTitle, { color: colors.text }]}> 
-              {feature ? `Upgrade for ${feature}` : 'Choose Your Garden Plan'}
+              {feature ? `Upgrade for ${feature}` : PRICING_COPY.planChooserTitle}
             </Text>
             <Text style={[styles.heroSub, { color: textSecondary }]}> 
-              Start with Essential at $7.99, then move up to Voice & AI at $9.99.
+              {PRICING_COPY.modalHeroSub}
             </Text>
           </View>
 
@@ -364,7 +365,7 @@ export default function GlobalSubscriptionModal({
                   <Text style={[styles.tierSub, { color: textSecondary }]}>{TIER_META.voice.subtitle}</Text>
                 </View>
                 <View style={[styles.comingSoonBadge, { backgroundColor: `${colors.warning}22`, borderColor: colors.warning }]}>
-                  <Text style={[styles.comingSoonText, { color: colors.warning }]}>Coming in v1.3.1</Text>
+                  <Text style={[styles.comingSoonText, { color: colors.warning }]}>{PRICING.voice.comingSoonLabel}</Text>
                 </View>
               </View>
               {TIER_META.voice.features.map((f) => (

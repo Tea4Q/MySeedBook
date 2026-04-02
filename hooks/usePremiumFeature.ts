@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { premiumManager } from '../utils/premiumManager';
 import { useGlobalSubscription } from '../lib/globalSubscriptionManager';
+import { PRICING_COPY } from '../lib/pricingCopy';
 
 interface UsePremiumFeatureResult {
   isPremium: boolean;
@@ -52,8 +53,8 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
   const showUpgradePrompt = (feature?: string) => {
     const title = feature ? `Upgrade for ${feature}` : 'Choose a Garden Plan';
     const message = feature
-      ? `Unlock ${feature} with MySeedBook Essential at $7.99 — unlimited seeds, weather integration, and cloud sync.`
-      : 'MySeedBook Essential unlocks unlimited seeds, weather integration, and cloud sync at $7.99/month.';
+      ? PRICING_COPY.upgradePromptForFeature(feature)
+      : PRICING_COPY.upgradePromptDefault;
 
     Alert.alert(title, message, [
       { text: 'Not Now', style: 'cancel' },

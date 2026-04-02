@@ -15,9 +15,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 // import { Slot } from 'expo-router';
@@ -168,6 +170,14 @@ function createAnimatedTabButton({
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
+  const tabBarBaseHeight = isLandscape ? 56 : 64;
+  const tabBarPaddingTop = isLandscape ? 4 : 8;
+  const tabBarPaddingBottom = Math.max(insets.bottom, 8);
+  const tabBarHeight = tabBarBaseHeight + tabBarPaddingTop + tabBarPaddingBottom;
 
   return (
     <Tabs
@@ -182,15 +192,18 @@ export default function TabLayout() {
           fontSize: 18,
         },
         tabBarStyle: {
-          backgroundColor: colors.tabBarBackground,
+          backgroundColor: `${colors.tabBarBackground}E6`,
+          borderTopWidth: 0,
           borderTopColor: colors.tabBarActive,
-          height: 70,
+          height: tabBarHeight,
+          paddingTop: tabBarPaddingTop,
+          paddingBottom: tabBarPaddingBottom,
         },
         tabBarShowLabel: false,
         tabBarItemStyle: {
           justifyContent: 'center',
           alignItems: 'center',
-          paddingVertical: 8,
+          paddingVertical: 0,
         },
         tabBarActiveTintColor: colors.tabBarActive,
         tabBarInactiveTintColor: colors.tabBarInactive,

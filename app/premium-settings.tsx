@@ -15,6 +15,7 @@ import { usePremiumFeature } from '../hooks/usePremiumFeature';
 import PremiumModal from '../components/PremiumModal';
 import { premiumManager } from '../utils/premiumManager';
 import { useGlobalSubscription } from '../lib/globalSubscriptionManager';
+import { PRICING_COPY } from '../lib/pricingCopy';
 
 const TIER_FEATURES: Record<string, string[]> = {
   essential: [
@@ -233,10 +234,10 @@ export default function PremiumSettingsScreen() {
         <View style={[styles.upgradeCard, { backgroundColor: colors.primary + '15' }]}>
           <Sprout size={48} color={colors.primary} />
           <Text style={[styles.upgradeTitle, { color: colors.text }]}>
-            Choose Your Garden Plan
+            {PRICING_COPY.planChooserTitle}
           </Text>
           <Text style={[styles.upgradeDescription, { color: colors.text + '80' }]}>
-            Essential starts at $7.99. 
+            {PRICING_COPY.essentialStartingPrice}
           </Text>
           
           <Pressable
