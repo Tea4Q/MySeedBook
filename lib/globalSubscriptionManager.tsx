@@ -27,6 +27,10 @@ import { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
 import { globalRevenueCat, SubscriptionInfo, SubscriptionTier } from './globalRevenueCat';
 import { supabase } from './supabase';
 
+type ProfileResubscribeBlockRow = {
+  resubscribe_blocked_until: string | null;
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GlobalSubscriptionContextValue {
@@ -124,9 +128,6 @@ export function GlobalSubscriptionProvider({
       try {
         await globalRevenueCat.initialize(userId);
         await refreshInternal();
-        // Offerings are fetched on-demand by the subscription modal.
-        // This avoids startup noise when dashboard offerings are not configured yet.
-        setOfferings(null);
 
         // Check Supabase resubscribe block
         if (userId) {
@@ -138,14 +139,18 @@ export function GlobalSubscriptionProvider({
       }
     };
     bootstrap();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [userId]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const refreshInternal = async () => {
-    const latest = await globalRevenueCat.getCustomerInfo();
+    const [latest, nextOfferings] = await Promise.all([
+      globalRevenueCat.getCustomerInfo(),
+      globalRevenueCat.getOfferings(),
+    ]);
     setInfo(latest);
+    setOfferings(nextOfferings);
   };
 
   const checkResubscribeBlock = async (uid: string) => {
@@ -154,13 +159,14 @@ export function GlobalSubscriptionProvider({
         .from('profiles')
         .select('resubscribe_blocked_until')
         .eq('id', uid)
-        .single();
+        .single<ProfileResubscribeBlockRow>();
 
-      if (data?.resubscribe_blocked_until) {
-        const blockUntil = new Date(data.resubscribe_blocked_until);
+      const blockedUntil = data?.resubscribe_blocked_until ?? null;
+      if (blockedUntil) {
+        const blockUntil = new Date(blockedUntil);
         if (blockUntil > new Date()) {
           setIsResubscribeBlocked(true);
-          setResubscribeAllowedFrom(data.resubscribe_blocked_until);
+          setResubscribeAllowedFrom(blockedUntil);
           return;
         }
       }
@@ -174,7 +180,6 @@ export function GlobalSubscriptionProvider({
   const refresh = useCallback(async () => {
     await refreshInternal();
     if (userId) await checkResubscribeBlock(userId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const purchase = useCallback(

@@ -147,10 +147,10 @@ export default function GlobalSubscriptionModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (!isLoading && !retrying && packages.length === 0) {
+    if (offerings && !isLoading && !retrying && packages.length === 0) {
       setOffersError(true);
     }
-  }, [visible, isLoading, retrying, packages.length]);
+  }, [visible, offerings, isLoading, retrying, packages.length]);
 
   useEffect(() => {
     // Only essential is selectable in this build; voice tier is Coming in v1.3.1
@@ -192,6 +192,13 @@ export default function GlobalSubscriptionModal({
       setRetrying(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!visible || offerings || packages.length > 0 || isLoading || retrying || offersError) {
+      return;
+    }
+    void handleRetry();
+  }, [visible, offerings, packages.length, isLoading, retrying, offersError, handleRetry]);
 
   const handlePurchase = async () => {
     if (!selectedPackage) {

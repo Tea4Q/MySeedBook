@@ -246,11 +246,28 @@ useEffect(() => {
         } else {
           const { data, error } = await supabase
             .from('seeds')
-            .select('*, suppliers(*)')
+            .select('*')
             .eq('id', params.id!)
             .single();
           if (error) throw error;
-          fetched = data as Seed;
+
+          let hydratedSeed = data as Seed;
+          if (hydratedSeed?.supplier_id) {
+            const { data: supplierData, error: supplierError } = await supabase
+              .from('suppliers')
+              .select('*')
+              .eq('id', hydratedSeed.supplier_id)
+              .maybeSingle();
+
+            if (supplierError) throw supplierError;
+
+            hydratedSeed = {
+              ...hydratedSeed,
+              suppliers: supplierData ?? undefined,
+            } as Seed;
+          }
+
+          fetched = hydratedSeed;
         }
         if (!fetched) throw new Error('Seed not found');
         const parsed = parseSeedIntoFormState(fetched);

@@ -8,8 +8,8 @@
 
 Create these products in App Store Connect:
 
-- `com.myseedbook.catalogue.essential.month` at $7.99/month
-- `com.myseedbook.catalogue.essential.year` at $63.99/year
+- `com.myseedbook.catalogue.essential.monthly` at $7.99/month
+- `com.myseedbook.catalogue.essential.annual` at $63.99/year
 - `com.myseedbook.catalogue.voice.monthly` at $9.99/month
 - `com.myseedbook.catalogue.voice.yearly` at $79.99/year
 

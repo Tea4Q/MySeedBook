@@ -15,9 +15,9 @@ import {
   ScrollView,
 } from 'react-native';
 
-import { supabase } from '@/lib/supabase'; // Adjust path if needed
+import { supabase } from '@/lib/supabase';
 import { SmartImage } from '@/components/SmartImage'; // Import SmartImage
-import { Seed } from '@/types/database'; // Adjust path if needed
+import { Seed, Supplier } from '@/types/database'; // Adjust path if needed
 import { useFocusEffect, useRouter, useNavigation } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import { SeedCard } from '@/components/SeedCard';
@@ -97,7 +97,7 @@ export default function InventoryScreen() {
           // Apply search filter if there's a search term
           let filteredSeeds = allSeeds;
           if (searchTerm) {
-            filteredSeeds = allSeeds.filter(seed => 
+            filteredSeeds = allSeeds.filter((seed: Seed) => 
               seed.seed_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
               seed.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (seed.description && seed.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -122,13 +122,12 @@ export default function InventoryScreen() {
       try {
         let query = supabase
           .from('seeds')
-          .select('*, suppliers(*)')
+          .select('*')
           .eq('user_id', session.user.id)
           .is('deleted_at', null) // Exclude soft-deleted seeds
           .order('seed_name', { ascending: true });
 
         if (searchTerm) {
-          // Supabase/PostgREST does not support nested filters like suppliers(supplier_name.ilike...) in .or()
           // Only search on columns in the seeds table
           query = query.or(
             `seed_name.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
@@ -139,11 +138,29 @@ export default function InventoryScreen() {
 
         if (seedError) throw seedError;
 
-        if (seedData) {
-          setSeeds(seedData);
-        } else {
-          setSeeds([]);
+        const supplierIds = Array.from(
+          new Set((seedData ?? []).map((seed: Seed) => seed.supplier_id).filter(Boolean))
+        ) as string[];
+
+        let supplierMap = new Map<string, Supplier>();
+        if (supplierIds.length > 0) {
+          const { data: supplierData, error: supplierError } = await supabase
+            .from('suppliers')
+            .select('*')
+            .in('id', supplierIds)
+            .is('deleted_at', null);
+
+          if (supplierError) throw supplierError;
+
+          supplierMap = new Map((supplierData ?? []).map((supplier: Supplier) => [supplier.id, supplier]));
         }
+
+        const enrichedSeeds = (seedData ?? []).map((seed: Seed) => ({
+          ...seed,
+          suppliers: seed.supplier_id ? supplierMap.get(seed.supplier_id) ?? undefined : undefined,
+        }));
+
+        setSeeds(enrichedSeeds as Seed[]);
       } catch (e: any) {
         console.error('Error loading seeds:', e);
         setError(
