@@ -40,20 +40,24 @@ import {
 } from 'lucide-react-native';
 
 import { Swipeable } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth'; // Assuming you have an auth context
 import { useResponsive } from '@/utils/responsive';
 import GuestStatusBanner from '@/components/GuestStatusBanner';
 import { guestDataManager } from '@/utils/guestDataManager';
-import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
 import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
+import { useGuestLimits } from '@/hooks/useGuestLimits';
+import { FREE_LIMITS } from '@/utils/premiumManager';
 
 export default function InventoryScreen() {
-  const { session } = useAuth(); // Get user session
+  const { session, isGuest, refreshGuestUsage } = useAuth(); // Get user session
   const { isPremium, isLoading: isSubscriptionLoading } = useGlobalSubscription();
+  const { checkAndPromptForLimit } = useGuestLimits();
   // Removed guest limits for views - now unlimited
   const { colors } = useTheme(); // Get theme colors
   const responsive = useResponsive(); // Get responsive configuration
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
   const [seeds, setSeeds] = useState<Seed[]>([]);
@@ -65,7 +69,6 @@ export default function InventoryScreen() {
     null
   );
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const flatListRef = useRef<FlatList<Seed>>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -235,25 +238,27 @@ export default function InventoryScreen() {
     loadSeeds(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleAddSeed = () => {
-    router.push('/add-seed');
-  };
+  const handleAddSeed = async () => {
+    // Check guest seed limit before opening the form
+    if (isGuest) {
+      const canProceed = await checkAndPromptForLimit('seed');
+      if (!canProceed) return;
+    }
 
-  const handleBarcodeScan = (data: ScannedSeedData) => {
-    // Navigate to add-seed with scanned data
-    router.push({
-      pathname: '/add-seed',
-      params: {
-        scannedData: JSON.stringify({
-          seed_name: data.seedName,
-          type: data.type,
-          description: data.description,
-          supplier: data.supplier,
-          barcode: data.barcode,
-        }),
-      },
-    });
-    setShowBarcodeScanner(false);
+    // Check free-account seed limit before opening the form
+    if (!isGuest && session?.user && !isPremium) {
+      const { count } = await supabase
+        .from('seeds')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .is('deleted_at', null);
+      if ((count ?? 0) >= FREE_LIMITS.seeds) {
+        setShowPremiumModal(true);
+        return;
+      }
+    }
+
+    router.push('/add-seed');
   };
 
   const handleUpgradeRequired = () => {
@@ -262,6 +267,13 @@ export default function InventoryScreen() {
 
   const handleEdit = (seed: Seed) => {
     closeAllSwipeables();
+
+    // Sample seeds cannot be edited in guest mode
+    if (isGuest && seed.id.startsWith('sample-')) {
+      Alert.alert('Demo Seed', 'Sample seeds cannot be edited. Add your own seeds to edit them.');
+      return;
+    }
+
     setHighlightedSeedId(seed.id); // Set for potential highlight on return
 
     router.push({
@@ -272,6 +284,12 @@ export default function InventoryScreen() {
 
   const confirmDelete = (seedId: string) => {
     closeAllSwipeables();
+
+    // Sample seeds cannot be deleted in guest mode
+    if (isGuest && seedId.startsWith('sample-')) {
+      Alert.alert('Demo Seed', 'Sample seeds cannot be deleted. Only seeds you added can be removed.');
+      return;
+    }
     if (Platform.OS === 'web') {
       // Use window.confirm for web
       if (
@@ -300,6 +318,19 @@ export default function InventoryScreen() {
   const handleDelete = async (seedId: string) => {
     setDeletingSeedId(seedId);
     try {
+      if (isGuest) {
+        // Only guest-added seeds (demo-seed-*) can be deleted
+        if (seedId.startsWith('sample-')) {
+          // Should not reach here due to guard in confirmDelete, but be safe
+          return;
+        }
+        await guestDataManager.deleteDemoSeed(seedId);
+        if (isMounted.current) {
+          setSeeds((prev) => prev.filter((seed) => seed.id !== seedId));
+          await refreshGuestUsage();
+        }
+        return;
+      }
       const deletedAt = new Date().toISOString();
       const { error: updateError } = await (supabase
         .from('seeds') as any)
@@ -488,7 +519,7 @@ export default function InventoryScreen() {
       <GuestStatusBanner />
       
       {/* Floating Add Button */}
-      <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
+      <Pressable onPress={handleAddSeed} style={[styles.floatingAddButton, { backgroundColor: colors.primary, bottom: 24 + insets.bottom }]}>
         <PlusCircle size={24} color={colors.warning} />
       </Pressable>
 
@@ -573,14 +604,6 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* Barcode Scanner Modal */}
-      <BarcodeScannerModal
-        visible={showBarcodeScanner}
-        onClose={() => setShowBarcodeScanner(false)}
-        onScan={handleBarcodeScan}
-        onUpgradeRequired={handleUpgradeRequired}
-      />
-
       {/* Premium Modal */}
       <PremiumModal
         visible={showPremiumModal}
@@ -596,7 +619,7 @@ const styles = StyleSheet.create({
   },
   floatingAddButton: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 24, // overridden inline with insets.bottom
     right: 24,
     zIndex: 1000,
     padding: 16,

@@ -6,6 +6,8 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
@@ -175,16 +177,9 @@ export default function AddSupplierForm({
     }
   };
 
-  return (
-    <View style={embedded ? styles.embeddedContainer : [styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAwareScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        enableOnAndroid={true}
-        extraScrollHeight={20}
-        keyboardShouldPersistTaps="handled"
-      >
-        {error && (
+  const formContent = (
+    <>
+      {error && (
           <View style={[styles.errorContainer, { backgroundColor: colors.error + '15', borderColor: colors.error + '40' }]}>
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
@@ -340,7 +335,30 @@ export default function AddSupplierForm({
             </Pressable>
           )}
         </View>
-      </KeyboardAwareScrollView>
+    </>
+  );
+
+  return (
+    <View style={embedded ? styles.embeddedContainer : [styles.container, { backgroundColor: colors.background }]}>
+      {Platform.OS === 'web' ? (
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {formContent}
+        </ScrollView>
+      ) : (
+        <KeyboardAwareScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          keyboardShouldPersistTaps="handled"
+        >
+          {formContent}
+        </KeyboardAwareScrollView>
+      )}
     </View>
   );
 }

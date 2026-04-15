@@ -40,9 +40,7 @@ import { SupplierInput } from '@/components/SupplierInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
-import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
 import PremiumModal from '@/components/PremiumModal';
-import { saveBarcodeMapping } from '@/utils/barcodeMemory';
 // VoiceMicButton and parseVoiceCommand reserved for Voice & AI build
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
@@ -51,6 +49,8 @@ import { useTheme } from '@/lib/theme';
 import { useGuestLimits } from '@/hooks/useGuestLimits';
 import GuestStatusBanner from '@/components/GuestStatusBanner';
 import { useAuth } from '@/lib/auth';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
+import { FREE_LIMITS } from '@/utils/premiumManager';
 import { guestDataManager } from '@/utils/guestDataManager';
 import { addDays } from 'date-fns';
 
@@ -128,17 +128,15 @@ export default function AddOrEditSeedScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors } = useTheme(); // Add theme colors
-  const { user, isGuest } = useAuth(); // Add auth context
+  const { user, isGuest, refreshGuestUsage } = useAuth(); // Add auth context
+  const { isPremium } = useGlobalSubscription();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
-  const { checkAndPromptForLimit, trackAction } = useGuestLimits();
+  const { checkAndPromptForLimit } = useGuestLimits();
   
-  // Barcode scanner state
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [scannedBarcodeData, setScannedBarcodeData] = useState<{ barcode: string; barcodeType: string } | null>(null);
 
   // Voice input state
   // lastVoiceTranscript reserved for Voice & AI build
@@ -149,7 +147,6 @@ export default function AddOrEditSeedScreen() {
     newSupplierName?: string;
     reloadSuppliers?: string;
     id?: string; // Seed ID for editing
-    scannedData?: string; // JSON string of scanned barcode data
   }>();
 
   const isEditing = !!params.id;
@@ -169,36 +166,6 @@ export default function AddOrEditSeedScreen() {
       return () => backSubscription.remove();
     }, [])
   );
-
-// Handle scanned barcode data
-useEffect(() => {
-  if (params.scannedData) {
-    try {
-      const scanned = JSON.parse(params.scannedData) as ScannedSeedData;
-      setScannedBarcodeData({
-        barcode: scanned.barcode,
-        barcodeType: scanned.barcodeType,
-      });
-      setSeedPackage((prev) => ({
-        ...prev,
-        seed_name: scanned.seedName || prev.seed_name,
-        type: scanned.type || prev.type,
-        description: scanned.description
-          ? (prev.description ? `${prev.description}\n\n${scanned.description}` : scanned.description)
-          : prev.description,
-      }));
-      Alert.alert(
-        'Barcode Scanned!',
-        'Seed information has been loaded. Please review and complete the details.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Error parsing scanned data:', error);
-      Alert.alert('Error', 'Could not read scanned barcode data.');
-    }
-  }
-}, [params.scannedData]);
-
 
   // Parse a fetched Seed into form state
   const parseSeedIntoFormState = useCallback((parsed: Seed): Seed => {
@@ -424,7 +391,6 @@ useEffect(() => {
     setErrors({});
     setSelectedSupplier(null);
     setPriceInput(''); // Reset price input display
-    setScannedBarcodeData(null); // Clear scanned barcode data
     AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
       // Non-fatal cleanup failure
     });
@@ -498,6 +464,19 @@ useEffect(() => {
       }
     }
 
+    // Check free-account seed limit for authenticated non-premium users
+    if (!isEditing && !isGuest && user && !isPremium) {
+      const { count: exactCount } = await supabase
+        .from('seeds')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      if ((exactCount ?? 0) >= FREE_LIMITS.seeds) {
+        setShowPremiumModal(true);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setErrors({}); // Clear previous submit errors    
     
@@ -561,10 +540,16 @@ useEffect(() => {
         data: { user },
       } = await supabase.auth.getUser();
       
-      if (!user) {
-        // Guest user - simulate successful save without hitting Supabase
-        console.log('Guest mode: Simulating seed save', sanitizedPayload);
-        savedSeedId = `guest-seed-${Date.now()}`;
+      if (isGuest) {
+        // Guest user - persist seed to AsyncStorage via guestDataManager
+        if (isEditing && seedPackage.id) {
+          // Update existing demo seed
+          await guestDataManager.updateDemoSeed(seedPackage.id, sanitizedPayload);
+          savedSeedId = seedPackage.id;
+        } else {
+          const savedDemoSeed = await guestDataManager.addDemoSeed(sanitizedPayload);
+          savedSeedId = savedDemoSeed.id;
+        }
         responseError = null;
       } else {
         // Authenticated user - save to Supabase
@@ -667,7 +652,7 @@ useEffect(() => {
           console.error('Error adding purchase date to calendar:', calendarError);
           // Don't fail the seed creation if calendar addition fails
         }
-      } else if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && !user) {
+      } else if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && isGuest) {
         // Guest user - simulate calendar addition
         console.log('Guest mode: Simulating calendar event addition', {
           seed_id: savedSeedId,
@@ -738,27 +723,15 @@ useEffect(() => {
         }
       }
 
-      // Save barcode mapping to memory if this seed was scanned
-      if (scannedBarcodeData && seedPackage.seed_name) {
-        await saveBarcodeMapping(
-          scannedBarcodeData.barcode,
-          scannedBarcodeData.barcodeType,
-          {
-            seedName: seedPackage.seed_name,
-            type: seedPackage.type || undefined,
-            description: seedPackage.description || undefined,
-            supplier: selectedSupplier?.supplier_name || undefined,
-          }
-        );
-        console.log(`💾 Learned barcode: ${scannedBarcodeData.barcode} -> ${seedPackage.seed_name}`);
-      }
-
       // Reset form state
       setShowSuccess(true);
+
+      // Refresh guest usage so the banner count updates immediately
+      if (isGuest && !isEditing) {
+        await refreshGuestUsage();
+      }
       
-      // Track action for guest users
       if (!isEditing) {
-        await trackAction('seed');
         clearForm(); // Clear form only if adding new seed
       }
       
@@ -851,7 +824,7 @@ useEffect(() => {
         try {
           let supplier = null;
           
-          if (user) {
+          if (!isGuest && user) {
             // Authenticated user - fetch from Supabase
             const { data, error } = await supabase
               .from('suppliers')
@@ -869,7 +842,7 @@ useEffect(() => {
             }
             supplier = data;
           } else {
-            // Guest user - get from sample data
+            // Guest user - get from sample/demo data
             console.log('Guest mode: Loading supplier from sample data');
             const allSuppliers = await guestDataManager.getAllSuppliers();
             supplier = allSuppliers.find(s => s.id === params.newSupplierID);
@@ -901,7 +874,7 @@ useEffect(() => {
       };
       fetchNewSupplier();
     }
-  }, [params.newSupplierID, params.reloadSuppliers, user]);
+  }, [params.newSupplierID, params.reloadSuppliers, user, isGuest]);
 
   // Fetch supplier details when seedPackage.supplier_id changes
   useEffect(() => {
@@ -914,7 +887,7 @@ useEffect(() => {
       try {
         let supplier = null;
         
-        if (user) {
+        if (!isGuest && user) {
           // Authenticated user - fetch from Supabase
           const { data, error } = await supabase
             .from('suppliers')
@@ -925,7 +898,7 @@ useEffect(() => {
           if (error) throw error;
           supplier = data;
         } else {
-          // Guest user - get from sample data
+          // Guest user - get from sample/demo data
           console.log('Guest mode: Loading supplier details from sample data', seedPackage.supplier_id);
           const allSuppliers = await guestDataManager.getAllSuppliers();
           supplier = allSuppliers.find(s => s.id === seedPackage.supplier_id);
@@ -970,7 +943,7 @@ useEffect(() => {
       }
     };
     fetchSupplierDetails();
-  }, [seedPackage.supplier_id, user]);
+  }, [seedPackage.supplier_id, user, isGuest]);
 
   // Add useEffect to sync input state if seedPackage.seed_price changes externally
   // (Important for initial load when editing)
@@ -1039,48 +1012,6 @@ useEffect(() => {
     setActiveDateField(null);
   };
 
-  // --- Barcode Scan Handlers ---
-  const handleBarcodeScan = (data: ScannedSeedData) => {
-    console.log('📦 Barcode scan data received:', JSON.stringify(data, null, 2));
-    
-    // Store barcode data for later saving to memory
-    setScannedBarcodeData({
-      barcode: data.barcode,
-      barcodeType: data.barcodeType,
-    });
-    
-    // Auto-fill form with scanned data
-    setSeedPackage((prev) => {
-      const updated = {
-        ...prev,
-        seed_name: data.seedName || prev.seed_name,
-        type: data.type || prev.type,
-        description: data.description || prev.description,
-      };
-      console.log('📦 Updated seed package:', JSON.stringify(updated, null, 2));
-      return updated;
-    });
-
-    // Try to find matching supplier
-    if (data.supplier) {
-      // This would need to search through available suppliers
-      // For now, just log it
-      console.log('Scanned supplier:', data.supplier);
-    }
-
-    Alert.alert(
-      'Barcode Scanned!',
-      data.seedName 
-        ? `Found: ${data.seedName}. Please review and complete the details.`
-        : `Barcode captured (${data.barcode}). Please enter the seed name and details from your package.`,
-      [{ text: 'OK' }]
-    );
-  };
-
-  const handleUpgradeRequired = () => {
-    setShowPremiumModal(true);
-  };
-
   // --- Render the component ---
   if (isLoadingEdit) {
     return (
@@ -1133,6 +1064,7 @@ useEffect(() => {
             initialImages={seedPackage.seed_images as Imageinfo[]}
             onImagesChange={handleImagesChange}
             bucketName="seed-images"
+            maxImages={isPremium ? 6 : 3}
           />
           {/* Show image loading error if any */}
           {errors.images && (
@@ -1806,14 +1738,6 @@ useEffect(() => {
       </KeyboardAwareScrollView>
       {/* End of KeyboardAwareScrollView */}
 
-      {/* Barcode Scanner Modal */}
-      <BarcodeScannerModal
-        visible={showBarcodeScanner}
-        onClose={() => setShowBarcodeScanner(false)}
-        onScan={handleBarcodeScan}
-        onUpgradeRequired={handleUpgradeRequired}
-      />
-
       {/* Premium Modal */}
       <PremiumModal
         visible={showPremiumModal}
@@ -2241,25 +2165,5 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontStyle: 'italic',
-  },
-  // Barcode scanner button styles
-  barcodeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  barcodeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

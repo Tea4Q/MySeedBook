@@ -213,9 +213,13 @@ export function GlobalSubscriptionProvider({
   );
 
   const restore = useCallback(async (): Promise<boolean> => {
-    const updated = await globalRevenueCat.restorePurchases();
-    setInfo(updated);
-    return updated.isPremium;
+    try {
+      const updated = await globalRevenueCat.restorePurchases();
+      setInfo(updated);
+      return updated.isPremium;
+    } catch {
+      return false;
+    }
   }, []);
 
   const openManageSubscriptions = useCallback(async () => {

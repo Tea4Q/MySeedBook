@@ -38,6 +38,8 @@ import { useTheme } from '@/lib/theme';
 import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import { globalRevenueCat } from '@/lib/globalRevenueCat';
 import { PRICING, PRICING_COPY } from '@/lib/pricingCopy';
+import { useAuth } from '@/lib/auth';
+import { useRouter } from 'expo-router';
 
 type TierId = 'essential' | 'voice' | 'advanced_ai';
 type BillingId = 'monthly' | 'yearly';
@@ -113,6 +115,8 @@ export default function GlobalSubscriptionModal({
   feature,
 }: GlobalSubscriptionModalProps) {
   const { colors } = useTheme();
+  const { isGuest } = useAuth();
+  const router = useRouter();
   const {
     purchase,
     restore,
@@ -203,8 +207,8 @@ export default function GlobalSubscriptionModal({
   const handlePurchase = async () => {
     if (!selectedPackage) {
       Alert.alert(
-        'Plan Not Ready',
-        'This plan is not available in the store yet. Please try again shortly.'
+        'Unable to Connect to Store',
+        'Plan details could not be loaded. Please check your internet connection and tap "Try Again" to reload.'
       );
       return;
     }
@@ -224,11 +228,16 @@ export default function GlobalSubscriptionModal({
 
   const handleRestore = async () => {
     setLoadingPackageId('restore');
-    const restored = await restore();
-    setLoadingPackageId(null);
-    if (restored) {
-      Alert.alert('Restored', 'Your purchases were restored.', [{ text: 'OK', onPress: onClose }]);
-    } else {
+    try {
+      const restored = await restore();
+      setLoadingPackageId(null);
+      if (restored) {
+        Alert.alert('Restored', 'Your purchases were restored.', [{ text: 'OK', onPress: onClose }]);
+      } else {
+        Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
+      }
+    } catch (err: any) {
+      setLoadingPackageId(null);
       Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
     }
   };
@@ -252,6 +261,59 @@ export default function GlobalSubscriptionModal({
       ? TIER_META[tierId].yearlyFallback
       : TIER_META[tierId].monthlyFallback;
   };
+
+  // ─── Guest gate: prompt account creation before RevenueCat paywall ─────────
+  if (isGuest) {
+    const textSecondaryGuest = colors.textSecondary || `${colors.text}99`;
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={16}>
+            <X size={22} color={colors.text} />
+          </Pressable>
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary }]}>
+                <Sprout size={26} color={colors.primaryText} />
+              </View>
+              <Text style={[styles.heroTitle, { color: colors.text }]}>
+                Create a Free Account
+              </Text>
+              <Text style={[styles.heroSub, { color: textSecondaryGuest }]}>
+                You need a free account to subscribe. Creating one takes 30 seconds and gives you 10 free seeds and 3 free suppliers to start.
+              </Text>
+            </View>
+
+            <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {[
+                '10 free seeds',
+                '3 free suppliers',
+                'Cloud sync across devices',
+                'Upgrade to Essential anytime for unlimited access',
+              ].map((f) => (
+                <View key={f} style={styles.featureRow}>
+                  <Check size={16} color={colors.primary} />
+                  <Text style={[styles.featureText, { color: textSecondaryGuest }]}>{f}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Pressable
+              style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { onClose(); router.push('/auth'); }}
+            >
+              <Text style={[styles.ctaText, { color: colors.primaryText }]}>Create Free Account</Text>
+            </Pressable>
+
+            <Pressable style={styles.restoreBtn} onPress={onClose}>
+              <Text style={[styles.restoreText, { color: textSecondaryGuest }]}>Continue as Guest</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -408,12 +470,12 @@ export default function GlobalSubscriptionModal({
           <Pressable
             style={[
               styles.ctaBtn,
-              { backgroundColor: isResubscribeBlocked || !selectedPackage ? colors.border : colors.primary },
+              { backgroundColor: isResubscribeBlocked ? colors.border : colors.primary },
             ]}
             onPress={handlePurchase}
-            disabled={isResubscribeBlocked || !selectedPackage || loadingPackageId !== null}
+            disabled={isResubscribeBlocked || isLoading || retrying || loadingPackageId !== null}
           >
-            {loadingPackageId && loadingPackageId !== 'restore' ? (
+            {(loadingPackageId && loadingPackageId !== 'restore') || isLoading || retrying ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : (
               <Text style={[styles.ctaText, { color: colors.primaryText }]}>

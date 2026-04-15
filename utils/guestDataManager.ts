@@ -151,10 +151,12 @@ export class GuestDataManager {
   async deleteDemoSeed(seedId: string): Promise<boolean> {
     const existingSeeds = await guestTracker.loadDemoSeeds();
     const filteredSeeds = existingSeeds.filter(s => s.id !== seedId);
-    
-    if (filteredSeeds.length === existingSeeds.length) return false;
-    
+
+    if (filteredSeeds.length === existingSeeds.length) return false; // not a user-added seed
+
     await guestTracker.saveDemoSeeds(filteredSeeds);
+    // Remove from usage tracking so the banner count updates correctly
+    await guestTracker.removeDemoSeed(seedId);
     return true;
   }
 

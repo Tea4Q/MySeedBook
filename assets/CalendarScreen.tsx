@@ -37,7 +37,7 @@ import {
   Trash2,
   Calendar,
 } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -193,7 +193,7 @@ function DayPanel({
         useNativeDriver: true,
       }).start();
     }
-  }, [date, slideAnim]);
+  }, [date]);
 
   if (!date) return null;
 
@@ -239,7 +239,7 @@ function DayPanel({
       {events.length === 0 ? (
         <View style={panelStyles.empty}>
           <Text style={[panelStyles.emptyText, { color: colors.textSecondary }]}>
-            {'No events — tap "+ Add event" to schedule one'}
+            No events — tap "+ Add event" to schedule one
           </Text>
         </View>
       ) : (
@@ -441,7 +441,6 @@ export default function CalendarScreen() {
   useEffect(() => {
     fetchEventsForMonth(currentDate);
     fetchWeatherForMonth(currentDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate]);
 
   const fetchEvents = async () => {
@@ -1131,8 +1130,6 @@ export default function CalendarScreen() {
                   <input
                     type="date"
                     className="cal-date-input"
-                    title="Event date"
-                    aria-label="Event date"
                     value={
                       newEvent.date
                         ? newEvent.date.toISOString().split('T')[0]

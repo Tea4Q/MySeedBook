@@ -5,6 +5,7 @@ import { Platform, LogBox } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { guestTracker, GuestUsage } from '../utils/guestTracker';
+import { globalRevenueCat } from './globalRevenueCat';
 
 // Suppress the Expo LogBox toast for stale/expired refresh tokens — this is
 // an expected condition after a cache clear or app reinstall and is handled
@@ -213,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          emailRedirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/callback`,
+          emailRedirectTo: 'myseedbook-catalogue://auth/callback',
         },
       });
       
@@ -293,7 +294,7 @@ const signOut = async () => {
 
   const recoverPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/reset-password`,
+      redirectTo: 'myseedbook-catalogue://auth/reset-password',
     });
 
     if (error) throw error;
@@ -308,6 +309,8 @@ const signOut = async () => {
 
   // Guest authentication functions
   const signInAsGuest = async () => {
+    // Clear all demo data from previous guest sessions (seeds, suppliers, usage counts)
+    await guestTracker.clearDemoData();
     setIsGuest(true);
     setUser(null);
     setSession(null);
@@ -325,6 +328,7 @@ const signOut = async () => {
 
   // Enhanced signOut to handle guest state
   const enhancedSignOut = async () => {
+    await globalRevenueCat.logOut();
     await signOut();
     setIsGuest(false);
     setGuestUsage(null);

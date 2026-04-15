@@ -72,9 +72,9 @@ export const SUBSCRIPTION_SKUS = Platform.select({
 })!;
 
 export const FREE_LIMITS = {
-  seeds: 3,
-  suppliers: 2,
-  photos: 5,
+  seeds: 10,
+  suppliers: 3,
+  photos: 3,
   searches: 10,
   calendar_days: 30
 };

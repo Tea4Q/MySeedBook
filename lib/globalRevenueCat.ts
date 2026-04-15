@@ -133,6 +133,14 @@ class GlobalRevenueCat {
         } catch {
           // Non-fatal
         }
+      } else {
+        // Switching to guest — log out of RevenueCat so we don't inherit the
+        // previous authenticated user's entitlements.
+        try {
+          await Purchases.logOut();
+        } catch {
+          // Non-fatal
+        }
       }
       return;
     }

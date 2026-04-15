@@ -1,0 +1,292 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.cal-wrap{max-width:420px;margin:0 auto;padding:16px 12px 0}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-header h2{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.nav-btn{width:36px;height:36px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-primary);font-size:18px}
+.nav-btn:hover{background:var(--color-background-secondary)}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.wd{text-align:center;font-size:11px;font-weight:500;color:var(--color-text-secondary);padding:4px 0;letter-spacing:.5px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cell{border-radius:6px;padding:4px 2px 3px;cursor:pointer;min-height:52px;display:flex;flex-direction:column;align-items:center;transition:background .1s;position:relative}
+.cell:hover{background:var(--color-background-secondary)}
+.cell.other-month{opacity:.35}
+.cell.today .day-num{background:#2f9e44;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cell.selected{background:rgba(47,158,68,.12);outline:1.5px solid #2f9e44}
+.day-num{font-size:13px;color:var(--color-text-primary);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:2px;flex-shrink:0}
+.dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:36px}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.day-panel{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);margin-top:10px;overflow:hidden;transition:all .2s}
+.day-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.day-panel-title{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.add-btn-sm{display:flex;align-items:center;gap:5px;background:#2f9e44;color:#fff;border:none;border-radius:var(--border-radius-md);padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer}
+.add-btn-sm:hover{opacity:.9}
+.no-events{padding:14px;font-size:13px;color:var(--color-text-secondary);text-align:center}
+.event-row{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.event-row:last-child{border-bottom:none}
+.event-pill{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;flex-shrink:0;margin-top:1px}
+.event-info{flex:1;min-width:0}
+.event-seed{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.event-note{font-size:11px;color:var(--color-text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--color-text-secondary);padding:2px;font-size:14px;flex-shrink:0}
+.del-btn:hover{color:#e03131}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:999}
+.modal{background:var(--color-background-primary);border-radius:16px 16px 0 0;padding:20px 18px 32px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-hdr h3{font-size:16px;font-weight:500;color:var(--color-text-primary)}
+.close-btn{background:none;border:none;font-size:20px;cursor:pointer;color:var(--color-text-secondary);padding:2px}
+.field-label{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px;display:block;letter-spacing:.3px}
+.field-group{margin-bottom:14px}
+.txt-input{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:9px 12px;font-size:14px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none}
+.txt-input:focus{border-color:#2f9e44;box-shadow:0 0 0 2px rgba(47,158,68,.15)}
+.cat-pills{display:flex;flex-wrap:wrap;gap:6px}
+.cat-pill{border-radius:20px;border:0.5px solid var(--color-border-secondary);padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;color:var(--color-text-secondary);background:var(--color-background-primary);transition:.1s}
+.cat-pill.active{color:#fff;border-color:transparent}
+.date-row{display:flex;gap:10px}
+.date-row .field-group{flex:1}
+.submit-btn{width:100%;background:#2f9e44;color:#fff;border:none;border-radius:var(--border-radius-md);padding:12px;font-size:14px;font-weight:500;cursor:pointer;margin-top:6px}
+.submit-btn:hover{opacity:.9}
+.grow-row{display:flex;gap:10px}
+.grow-row .field-group{flex:1}
+.seed-match{position:absolute;top:100%;left:0;right:0;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);z-index:10;font-size:13px;overflow:hidden}
+.seed-opt{padding:8px 12px;cursor:pointer;color:var(--color-text-primary)}
+.seed-opt:hover{background:var(--color-background-secondary)}
+.seed-field-wrap{position:relative}
+</style>
+
+<div class="cal-wrap">
+  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">MySeedBook planting calendar with seed event tracking</h2>
+
+  <div class="cal-header">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <h2 id="month-label"></h2>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="weekdays">
+    <div class="wd">Su</div><div class="wd">Mo</div><div class="wd">Tu</div>
+    <div class="wd">We</div><div class="wd">Th</div><div class="wd">Fr</div><div class="wd">Sa</div>
+  </div>
+  <div class="grid" id="cal-grid"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#2f9e44"></div>Sow</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1971c2"></div>Purchase</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#be4bdb"></div>Germination</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0c8599"></div>Transplant</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e67700"></div>Harvest</div>
+  </div>
+
+  <div class="day-panel" id="day-panel" style="display:none">
+    <div class="day-panel-header">
+      <span class="day-panel-title" id="panel-date-label"></span>
+      <button class="add-btn-sm" onclick="openModal()">+ Add event</button>
+    </div>
+    <div id="panel-events"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bg" style="display:none" onclick="closeModal(event)">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-hdr">
+      <h3>Add planting event</h3>
+      <button class="close-btn" onclick="document.getElementById('modal-bg').style.display='none'">✕</button>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Seed name</label>
+      <div class="seed-field-wrap">
+        <input class="txt-input" id="seed-input" placeholder="Search or type seed name…" oninput="filterSeeds()" onfocus="filterSeeds()">
+        <div class="seed-match" id="seed-match" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Event type</label>
+      <div class="cat-pills" id="cat-pills"></div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Date</label>
+      <input class="txt-input" id="event-date" type="date">
+    </div>
+
+    <div id="grow-section" style="display:none">
+      <div class="grow-row">
+        <div class="field-group">
+          <label class="field-label">Days to germinate</label>
+          <input class="txt-input" id="days-germ" value="7" placeholder="e.g. 7 or 7-10">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Days to harvest</label>
+          <input class="txt-input" id="days-harv" value="80" placeholder="e.g. 80-100">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Notes (optional)</label>
+      <input class="txt-input" id="event-notes" placeholder="Any extra details…">
+    </div>
+
+    <button class="submit-btn" onclick="addEvent()">Save event</button>
+  </div>
+</div>
+
+<script>
+const CATS={sow:{label:'Sow',color:'#2f9e44'},purchase:{label:'Purchase',color:'#1971c2'},germination:{label:'Germination',color:'#be4bdb'},transplant:{label:'Transplant',color:'#0c8599'},harvest:{label:'Harvest',color:'#e67700'}};
+const SEEDS=['Tomato (Roma)','Tomato (Cherry)','Basil','Lettuce (Butterhead)','Carrot (Nantes)','Pepper (Bell)','Cucumber','Zucchini','Sunflower','Kale','Spinach','Beet','Radish'];
+
+let today=new Date();
+let current=new Date(today.getFullYear(),today.getMonth(),1);
+let selectedDate=null;
+let selectedCat='sow';
+let events=[
+  {id:1,date:new Date(today.getFullYear(),today.getMonth(),8),seed:'Tomato (Roma)',cat:'sow',notes:'Started indoors'},
+  {id:2,date:new Date(today.getFullYear(),today.getMonth(),15),seed:'Tomato (Roma)',cat:'germination',notes:'Expected germination'},
+  {id:3,date:new Date(today.getFullYear(),today.getMonth(),5),seed:'Basil',cat:'purchase',notes:'Bought at farmers market'},
+  {id:4,date:new Date(today.getFullYear(),today.getMonth(),20),seed:'Cucumber',cat:'transplant',notes:'Moving outdoors'},
+  {id:5,date:new Date(today.getFullYear(),today.getMonth(),3),seed:'Carrot (Nantes)',cat:'sow',notes:'Direct sow in raised bed'},
+];
+let nextId=6;
+
+const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function fmtDate(d){return months[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear()}
+function sameDay(a,b){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
+function parseDays(s){s=String(s).trim();if(s.includes('-')){const p=s.split('-');const mn=parseInt(p[0]);const mx=parseInt(p[1]);if(!isNaN(mn)&&!isNaN(mx))return Math.round((mn+mx)/2);}const v=parseInt(s);return isNaN(v)?7:v;}
+
+function changeMonth(d){current=new Date(current.getFullYear(),current.getMonth()+d,1);renderCal()}
+
+function renderCal(){
+  document.getElementById('month-label').textContent=months[current.getMonth()]+' '+current.getFullYear();
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
+  const start=new Date(current);
+  start.setDate(1);
+  const dow=start.getDay();
+  const daysInMonth=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+  const total=Math.ceil((dow+daysInMonth)/7)*7;
+
+  for(let i=0;i<total;i++){
+    const d=new Date(current.getFullYear(),current.getMonth(),1-dow+i);
+    const inMonth=d.getMonth()===current.getMonth();
+    const isToday=sameDay(d,today);
+    const isSel=selectedDate&&sameDay(d,selectedDate);
+    const evts=events.filter(e=>sameDay(e.date,d));
+    const cell=document.createElement('div');
+    cell.className='cell'+(inMonth?'',' other-month'.trimStart())+(isToday?' today':'')+(isSel?' selected':'');
+    if(!inMonth)cell.classList.add('other-month');
+    if(isToday)cell.classList.add('today');
+    if(isSel)cell.classList.add('selected');
+    cell.innerHTML=`<div class="day-num">${d.getDate()}</div><div class="dots">${evts.map(e=>`<div class="dot" style="background:${CATS[e.cat].color}"></div>`).join('')}</div>`;
+    cell.onclick=()=>selectDay(d);
+    grid.appendChild(cell);
+  }
+}
+
+function selectDay(d){
+  selectedDate=d;
+  renderCal();
+  showPanel(d);
+}
+
+function showPanel(d){
+  const panel=document.getElementById('day-panel');
+  panel.style.display='block';
+  document.getElementById('panel-date-label').textContent=fmtDate(d);
+  const evts=events.filter(e=>sameDay(e.date,d));
+  const cont=document.getElementById('panel-events');
+  if(evts.length===0){
+    cont.innerHTML='<div class="no-events">No events — tap "+ Add event" to schedule one</div>';
+  }else{
+    cont.innerHTML=evts.map(e=>{
+      const c=CATS[e.cat];
+      return `<div class="event-row">
+        <div class="event-pill" style="background:${c.color}20;color:${c.color}">${c.label}</div>
+        <div class="event-info">
+          <div class="event-seed">${e.seed}</div>
+          ${e.notes?`<div class="event-note">${e.notes}</div>`:''}
+        </div>
+        <button class="del-btn" onclick="deleteEvent(${e.id})">✕</button>
+      </div>`;
+    }).join('');
+  }
+}
+
+function deleteEvent(id){
+  events=events.filter(e=>e.id!==id);
+  renderCal();
+  if(selectedDate)showPanel(selectedDate);
+}
+
+function openModal(){
+  const d=selectedDate||today;
+  const pad=n=>String(n).padStart(2,'0');
+  document.getElementById('event-date').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  document.getElementById('seed-input').value='';
+  document.getElementById('event-notes').value='';
+  document.getElementById('days-germ').value='7';
+  document.getElementById('days-harv').value='80';
+  buildCatPills();
+  updateGrowSection();
+  document.getElementById('modal-bg').style.display='flex';
+}
+
+function buildCatPills(){
+  const cont=document.getElementById('cat-pills');
+  cont.innerHTML=Object.entries(CATS).map(([k,v])=>
+    `<div class="cat-pill${k===selectedCat?' active':''}" style="${k===selectedCat?'background:'+v.color+';':'color:'+v.color+';border-color:'+v.color+'40'}" onclick="selectCat('${k}')">${v.label}</div>`
+  ).join('');
+}
+
+function selectCat(k){selectedCat=k;buildCatPills();updateGrowSection()}
+function updateGrowSection(){document.getElementById('grow-section').style.display=(selectedCat==='sow'||selectedCat==='transplant')?'block':'none'}
+
+function filterSeeds(){
+  const v=document.getElementById('seed-input').value.toLowerCase();
+  const box=document.getElementById('seed-match');
+  const matches=SEEDS.filter(s=>s.toLowerCase().includes(v));
+  if(matches.length===0){box.style.display='none';return}
+  box.innerHTML=matches.slice(0,6).map(s=>`<div class="seed-opt" onclick="pickSeed('${s}')">${s}</div>`).join('');
+  box.style.display='block';
+}
+
+function pickSeed(s){document.getElementById('seed-input').value=s;document.getElementById('seed-match').style.display='none'}
+
+function addEvent(){
+  const seed=document.getElementById('seed-input').value.trim();
+  const notes=document.getElementById('event-notes').value.trim();
+  const dateVal=document.getElementById('event-date').value;
+  if(!seed||!dateVal){alert('Please enter a seed name and date.');return;}
+  const d=new Date(dateVal+'T00:00:00');
+  events.push({id:nextId++,date:d,seed,cat:selectedCat,notes});
+  if(selectedCat==='sow'){
+    const gd=new Date(d);gd.setDate(d.getDate()+parseDays(document.getElementById('days-germ').value));
+    events.push({id:nextId++,date:gd,seed,cat:'germination',notes:`Expected germination for ${seed}`});
+  }
+  if(selectedCat==='transplant'){
+    const hd=new Date(d);hd.setDate(d.getDate()+parseDays(document.getElementById('days-harv').value));
+    events.push({id:nextId++,date:hd,seed,cat:'harvest',notes:`Expected harvest for ${seed} (transplanted)`});
+  }
+  document.getElementById('modal-bg').style.display='none';
+  selectedDate=d;
+  renderCal();
+  showPanel(d);
+}
+
+function closeModal(e){if(e.target===document.getElementById('modal-bg'))document.getElementById('modal-bg').style.display='none'}
+
+document.addEventListener('click',function(e){
+  const si=document.getElementById('seed-input');
+  const sm=document.getElementById('seed-match');
+  if(sm&&!si.contains(e.target)&&!sm.contains(e.target))sm.style.display='none';
+});
+
+renderCal();
+</script>

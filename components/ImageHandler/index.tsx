@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { useTheme } from '@/lib/theme';
+import { useAuth } from '@/lib/auth';
 
 // Define the Imageinfo interface
 interface Imageinfo {
@@ -33,6 +34,8 @@ interface ImageHandlerProps {
   initialImages?: Imageinfo[];
   onImagesChange: (images: Imageinfo[]) => void;
   bucketName: string; // Add bucketName prop
+  /** Maximum images allowed. Guest/free = 3, premium = 6. Defaults to 3. */
+  maxImages?: number;
 }
 
 // Helper function to validate and retry image URLs with timeout
@@ -74,8 +77,10 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   initialImages = [],
   onImagesChange,
   bucketName,
+  maxImages = 3,
 }) => {
   const { colors } = useTheme();
+  const { isGuest } = useAuth();
   const [images, setImages] = useState<Imageinfo[]>(initialImages);
   const [webImageUrlInput, setWebImageUrlInput] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -96,6 +101,14 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
   const handleLocalImageSelected = useCallback(
     async (localUri: string) => {
       if (!localUri) return;
+
+      if (images.length >= maxImages) {
+        Alert.alert(
+          'Image Limit Reached',
+          `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''}`
+        );
+        return;
+      }
 
       const imageId = uuidv4();
       const newImage = {
@@ -132,6 +145,9 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           error: authError,
         } = await supabase.auth.getUser();
         
+        if (isGuest) {
+          throw new Error('Create a free account to upload photos from your device.');
+        }
         if (authError || !user) {
           console.error('Authentication error during upload:', authError);
           throw new Error('You must be logged in to upload images. Please sign in and try again.');
@@ -237,6 +253,14 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       return;
     }
 
+    if (images.length >= maxImages) {
+      Alert.alert(
+        'Image Limit Reached',
+        `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''}`
+      );
+      return;
+    }
+
     // Local device URIs (file://, content://) — route through the upload flow
     if (trimmedUrl.startsWith('file://') || trimmedUrl.startsWith('content://')) {
       await handleLocalImageSelected(trimmedUrl);
@@ -283,123 +307,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
     });
 
-    try {
-      // For external URLs, we can either:
-      // 1. Upload to Supabase storage (requires proper RLS policy)
-      // 2. Use the URL directly (faster, no storage costs)
-      
-      // Option 2: Use URL directly (recommended for public image URLs)
-      if (trimmedUrl.includes('rareseeds.com') || trimmedUrl.includes('burpee.com') || 
-          trimmedUrl.includes('seedsavers.org') || trimmedUrl.includes('johnnyseeds.com')) {
-        // For trusted seed supplier domains, use direct URL
-        setImages((prevImages) =>
-          prevImages.map((img) =>
-            img.id === imageId
-              ? {
-                  ...img,
-                  url: trimmedUrl,
-                  type: 'url',
-                  isLoading: false,
-                  localUri: undefined,
-                }
-              : img
-          )
-        );
-        setWebImageUrlInput('');
-        return;
-      }
-      
-      // For other URLs, still attempt Supabase upload
-      // Check if user is authenticated for Supabase storage
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        // If not authenticated, still allow direct URL usage
-        setImages((prevImages) =>
-          prevImages.map((img) =>
-            img.id === imageId
-              ? {
-                  ...img,
-                  url: trimmedUrl,
-                  type: 'url',
-                  isLoading: false,
-                  localUri: undefined,
-                }
-              : img
-          )
-        );
-        setWebImageUrlInput('');
-        return;
-      }
-      
-      const response = await fetch(trimmedUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-      }
-      const blob = await response.blob();
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      const fileExt = contentType.split('/').pop()?.toLowerCase() || 'jpg';
-      const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
-      const extensionToUse = validExtensions.includes(fileExt)
-        ? fileExt
-        : 'jpg';
-      const fileName = `${user.id}/${Date.now()}_${uuidv4().substring(
-        0,
-        8
-      )}.${extensionToUse}`;
-      const filePath = fileName;
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucketName) // Use bucketName prop
-        .upload(filePath, blob, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: contentType,
-        });
-      
-      if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        if (uploadError.message?.includes('row-level security')) {
-          throw new Error('Storage permission denied. Please check your account permissions.');
-        }
-        throw uploadError;
-      }
-      const { data: publicUrlData } = supabase.storage
-        .from(bucketName) // Use bucketName prop
-        .getPublicUrl(filePath);
-      if (!publicUrlData?.publicUrl) {
-        throw new Error('Could not get public URL for the uploaded image.');
-      }
-      setImages((prevImages) =>
-        prevImages.map((img) =>
-          img.id === imageId
-            ? {
-                ...img,
-                url: publicUrlData.publicUrl,
-                isLoading: false,
-                localUri: undefined,
-              }
-            : img
-        )
-      );
-    } catch (error: any) {
-      console.error('Error uploading image from URL:', error);
-      // Fallback: use the original URL directly rather than a broken placeholder
-      setImages((prevImages) =>
-        prevImages.map((img) =>
-          img.id === imageId
-            ? {
-                ...img,
-                url: trimmedUrl,
-                type: 'url' as const,
-                isLoading: false,
-                localUri: undefined,
-                error: undefined,
-              }
-            : img
-        )
-      );
-      setWebImageUrlInput('');
-    }
+    // For all external http/https URLs, store the URL directly.
+    // Fetching and re-uploading to Supabase fails for most sites due to
+    // CORS / mobile network restrictions, and offers no benefit for public URLs.
+    setImages((prevImages) =>
+      prevImages.map((img) =>
+        img.id === imageId
+          ? {
+              ...img,
+              url: trimmedUrl,
+              type: 'url',
+              isLoading: false,
+              localUri: undefined,
+            }
+          : img
+      )
+    );
+    setWebImageUrlInput('');
   }, [bucketName, webImageUrlInput, handleLocalImageSelected]);
 
   const handleRemoveImage = useCallback(
@@ -442,6 +366,13 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         error: authError,
       } = await supabase.auth.getUser();
       
+      if (isGuest) {
+        Alert.alert(
+          'Account Required',
+          'Create a free account to upload photos from your device. You can still add images by URL.'
+        );
+        return;
+      }
       if (authError || !user) {
         Alert.alert(
           'Authentication Required', 
@@ -488,8 +419,36 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     }
   }, [handleLocalImageSelected, bucketName]);
 
+  // Directly add an image from a URL string (used by paste handler for URL-type clipboard content)
+  const handlePastedImageUrl = useCallback((url: string) => {
+    if (images.length >= maxImages) {
+      Alert.alert(
+        'Image Limit Reached',
+        `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''}`
+      );
+      return;
+    }
+    const imageId = uuidv4();
+    const newImageEntry: Imageinfo = {
+      id: imageId,
+      type: 'url',
+      url: url,
+      isLoading: false,
+    };
+    setImages((prev) => [...prev, newImageEntry]);
+    onImagesChange([...images, newImageEntry]);
+  }, [images, maxImages, onImagesChange]);
+
   const handleWebFileSelected = useCallback(
     (file: globalThis.File) => {
+      if (images.length >= maxImages) {
+        Alert.alert(
+          'Image Limit Reached',
+          `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''}`
+        );
+        return;
+      }
+
       const allowedTypes = new Set([
         'image/jpeg',
         'image/jpg',
@@ -595,18 +554,57 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
     const onPaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items || items.length === 0) return;
+      const cd = event.clipboardData;
+      if (!cd) return;
 
-      for (let i = 0; i < items.length; i += 1) {
-        const item = items[i];
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            event.preventDefault();
-            handleWebFileSelected(file);
-            return;
+      // 1. Check items for a binary image (most browsers: "Copy Image")
+      const items = cd.items;
+      if (items) {
+        for (let i = 0; i < items.length; i += 1) {
+          const item = items[i];
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) {
+              event.preventDefault();
+              handleWebFileSelected(file);
+              return;
+            }
           }
+        }
+      }
+
+      // 2. Check files array (Edge / some Chromium builds put images here)
+      if (cd.files && cd.files.length > 0) {
+        const file = cd.files[0];
+        if (file.type.startsWith('image/')) {
+          event.preventDefault();
+          handleWebFileSelected(file);
+          return;
+        }
+      }
+
+      // 3. Check for a plain-text URL that looks like an image (Ctrl+V of image URL)
+      const plainText = cd.getData('text/plain');
+      if (plainText) {
+        const trimmed = plainText.trim();
+        if (
+          (trimmed.startsWith('http://') || trimmed.startsWith('https://')) &&
+          /\.(jpe?g|png|gif|webp|avif|bmp|svg)(\?[^"'\s]*)?$/i.test(trimmed)
+        ) {
+          event.preventDefault();
+          handlePastedImageUrl(trimmed);
+          return;
+        }
+      }
+
+      // 4. Extract src from HTML img tag (e.g. copied rich-text from a web page)
+      const html = cd.getData('text/html');
+      if (html) {
+        const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (match?.[1] && (match[1].startsWith('http://') || match[1].startsWith('https://'))) {
+          event.preventDefault();
+          handlePastedImageUrl(match[1]);
+          return;
         }
       }
     };
@@ -615,7 +613,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     return () => {
       window.removeEventListener('paste', onPaste);
     };
-  }, [handleWebFileSelected]);
+  }, [handleWebFileSelected, handlePastedImageUrl]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -716,7 +714,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           : {})}
       >
       <View style={images.length > 1 ? styles.multipleImagesContainer : styles.singleImageContainer}>
-        {images.slice(0, 3).map((image) => {
+        {images.slice(0, maxImages).map((image) => {
           // Prefer signed URL previews for storage compatibility, then public URL.
           const imageUri = image.previewUrl || image.url || image.localUri;
           return (
@@ -860,7 +858,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         );
       })}
       {/* Show notification if there are more than 3 images */}
-      {images.length > 3 && (
+      {images.length > maxImages && (
         <View style={{ 
           backgroundColor: colors.surface, 
           padding: 8, 
@@ -869,7 +867,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
           alignItems: 'center' 
         }}>
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            {images.length - 3} more image(s) not shown. First 3 displayed for performance.
+            {images.length - maxImages} more image(s) not shown. First {maxImages} displayed for performance.
           </Text>
         </View>
       )}

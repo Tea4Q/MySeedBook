@@ -274,7 +274,7 @@ export function SupplierSelect({
         }}
       >
         <View style={[styles.modalContainer, styles.addSupplierModalContainer]}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, Platform.OS === 'web' && styles.addSupplierWebContent]}>
             <AddSupplierForm
               initialSupplierName={pendingSupplierName || ''}
               onSuccess={handleSupplierAdded}
@@ -462,6 +462,10 @@ const styles = StyleSheet.create({
   addModeModalContent: {
     maxHeight: '90%', // Allow more space for the form
     flex: 1,
+  },
+  addSupplierWebContent: {
+    height: '85%', // Explicit height on web so ScrollView has a bounded parent to scroll within
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
