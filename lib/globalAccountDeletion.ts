@@ -79,6 +79,30 @@ class GlobalAccountDeletion {
   }
 
   /**
+   * Log a manual deletion request after repeated failures.
+   * Inserts to pending_deletion table and fires an email notification.
+   * Non-fatal — best effort, never throws.
+   */
+  async requestManualDeletion(userId: string, email: string): Promise<void> {
+    try {
+      await (supabase.from('pending_deletion') as any).insert({
+        user_id: userId,
+        user_email: email,
+        reason: 'password_timeout',
+        status: 'pending',
+      });
+    } catch (err) {
+      console.warn('[GlobalAccountDeletion] Could not write pending_deletion:', err);
+    }
+    // Fire-and-forget email to app owner
+    supabase.functions
+      .invoke('notify-deletion-request', { body: { userId, email } })
+      .catch((err) =>
+        console.warn('[GlobalAccountDeletion] Email notification failed:', err)
+      );
+  }
+
+  /**
    * Full account deletion workflow.
    *
    * @param userId   - Supabase auth UID
@@ -92,16 +116,8 @@ class GlobalAccountDeletion {
     password: string,
     planAtDeletion: string
   ): Promise<DeletionResult> {
-    // ── Step 1: guard against active subscription ──────────────────────────
-    const hasActive = await this.hasActiveSubscription();
-    if (hasActive) {
-      return {
-        success: false,
-        reason: 'active_subscription',
-        message:
-          'You have an active subscription. Please cancel it from your app store subscription settings before deleting your account.',
-      };
-    }
+    // ── Step 1: subscription guard is handled by the modal (Step 1 UI) ────────
+    // Skipped here to avoid a hanging RevenueCat network call.
 
     // ── Step 2: re-authenticate ────────────────────────────────────────────
     try {
@@ -116,7 +132,7 @@ class GlobalAccountDeletion {
 
     // ── Step 3: write deletion log (no PII) ───────────────────────────────
     try {
-      await supabase.from('global_deletion_log').insert({
+      await (supabase.from('global_deletion_log') as any).insert({
         user_id: userId,
         deleted_at: new Date().toISOString(),
         plan_at_deletion: planAtDeletion,
@@ -129,8 +145,7 @@ class GlobalAccountDeletion {
     // ── Step 4: set 30-day resubscribe block ──────────────────────────────
     const blockUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     try {
-      await supabase
-        .from('profiles')
+      await (supabase.from('profiles') as any)
         .update({ resubscribe_blocked_until: blockUntil })
         .eq('id', userId);
     } catch (err) {
@@ -139,12 +154,10 @@ class GlobalAccountDeletion {
 
     // ── Step 5: null out PII on profiles row ──────────────────────────────
     try {
-      await supabase
-        .from('profiles')
+      await (supabase.from('profiles') as any)
         .update({
           display_name: null,
           avatar_url: null,
-          // Add any other PII columns your app stores here
         })
         .eq('id', userId);
     } catch (err) {
@@ -155,20 +168,44 @@ class GlobalAccountDeletion {
     // You must create this RPC in Supabase (see migration file).
     // It calls auth.admin.deleteUser via a service-role function.
     try {
-      await supabase.rpc('global_delete_auth_user', { uid: userId });
+      await (supabase as any).rpc('global_delete_auth_user', { uid: userId });
     } catch (err) {
       console.warn('[GlobalAccountDeletion] RPC delete user failed:', err);
       // Sign out regardless so user loses access immediately
     }
 
     // ── Step 7: log out RevenueCat ─────────────────────────────────────────
-    await globalRevenueCat.logOut();
+    try {
+      await Promise.race([
+        globalRevenueCat.logOut(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('RevenueCat logOut timeout')), 5000)
+        ),
+      ]);
+    } catch (err) {
+      console.warn('[GlobalAccountDeletion] RevenueCat logOut failed or timed out:', err);
+    }
 
     // ── Step 8: sign out Supabase ──────────────────────────────────────────
-    await supabase.auth.signOut();
+    // Use a timeout so a slow network doesn't hang the spinner forever.
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('signOut timeout')), 8000)
+        ),
+      ]);
+    } catch (err) {
+      console.warn('[GlobalAccountDeletion] signOut failed or timed out:', err);
+      // Clear session locally regardless — user loses access immediately.
+    }
 
     // ── Step 9: clear all local storage ───────────────────────────────────
-    await this.clearLocalStorage();
+    try {
+      await this.clearLocalStorage();
+    } catch (err) {
+      console.warn('[GlobalAccountDeletion] clearLocalStorage failed:', err);
+    }
 
     return { success: true };
   }

@@ -7,9 +7,10 @@ import { GlobalSubscriptionProvider } from '@/lib/globalSubscriptionManager';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View, Platform } from 'react-native';
+import { View, Platform, Linking } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { supabase } from '@/lib/supabase';
 
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
@@ -63,6 +64,59 @@ function RootLayoutNav() {
       router.replace('/auth');
     }
   }, [isAppReady, isAuthenticated, router]);
+
+  // Parse hash fragment tokens from deep links (email confirmation, password reset)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const handleDeepLink = async (url: string) => {
+      try {
+        const hashIndex = url.indexOf('#');
+        if (hashIndex === -1) return;
+        const hash = url.slice(hashIndex + 1);
+        const params: Record<string, string> = {};
+        hash.split('&').forEach(part => {
+          const eqIndex = part.indexOf('=');
+          if (eqIndex === -1) return;
+          const key = decodeURIComponent(part.slice(0, eqIndex));
+          const value = decodeURIComponent(part.slice(eqIndex + 1));
+          params[key] = value;
+        });
+
+        if (!params.access_token || !params.refresh_token) return;
+
+        const { error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
+
+        if (error) {
+          console.warn('Deep link setSession error:', error.message);
+          return;
+        }
+
+        // For password reset links, navigate to the reset screen
+        if (params.type === 'recovery') {
+          router.replace('/auth/reset-password');
+        }
+        // For signup/email confirmation, onAuthStateChange SIGNED_IN handles navigation
+      } catch (err) {
+        console.warn('Deep link handling error:', err);
+      }
+    };
+
+    // App opened cold via deep link
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink(url);
+    });
+
+    // App already running, deep link arrives
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {

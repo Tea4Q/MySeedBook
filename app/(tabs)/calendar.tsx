@@ -388,7 +388,8 @@ export default function CalendarScreen() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<PlantingEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [eventsError, setEventsError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isAddEventModalVisible, setIsAddEventModalVisible] = useState(false);
@@ -446,6 +447,7 @@ export default function CalendarScreen() {
 
   const fetchEvents = async () => {
     setLoading(true);
+    setEventsError(false);
     try {
       const {
         data: { user },
@@ -469,7 +471,7 @@ export default function CalendarScreen() {
       );
     } catch (error) {
       console.error('Error fetching events:', error);
-      alert('Failed to load events. Please try again later.');
+      setEventsError(true);
     } finally {
       setLoading(false);
     }
@@ -477,6 +479,7 @@ export default function CalendarScreen() {
 
   const fetchEventsForMonth = async (date: Date) => {
     setLoading(true);
+    setEventsError(false);
     try {
       const {
         data: { user },
@@ -502,7 +505,7 @@ export default function CalendarScreen() {
       );
     } catch (error) {
       console.error('Error fetching month events:', error);
-      alert('Failed to load events. Please try again later.');
+      setEventsError(true);
     } finally {
       setLoading(false);
     }
@@ -737,6 +740,21 @@ export default function CalendarScreen() {
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Events load error ── */}
+        {eventsError && (
+          <View style={[styles.errorBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.errorBannerText, { color: colors.text }]}>
+              Unable to load events. Check your connection and try again.
+            </Text>
+            <Pressable
+              onPress={() => fetchEventsForMonth(currentDate)}
+              style={[styles.errorRetryBtn, { borderColor: colors.primary }]}
+            >
+              <Text style={[styles.errorRetryText, { color: colors.primary }]}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* ── Month navigation ── */}
         <View style={styles.calendarHeader}>
           <Pressable
@@ -1292,6 +1310,33 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  // Error banner
+  errorBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  errorRetryBtn: {
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  errorRetryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Header

@@ -33,6 +33,9 @@ export default function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   // Animation values with useMemo to prevent re-creation
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
@@ -49,7 +52,7 @@ export default function AuthScreen() {
     })), []
   );
 
-  const { signIn, signUp, signInAsGuest } = useAuth();
+  const { signIn, signUp, signInAsGuest, resendConfirmation } = useAuth();
   const ContainerComponent = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 
   useEffect(() => {
@@ -157,6 +160,8 @@ export default function AuthScreen() {
   const handleSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    setShowResend(false);
+    setResendSent(false);
     try {
       await signIn(loginEmail, loginPassword);
       // Let _layout.tsx handle navigation after auth state changes
@@ -170,9 +175,30 @@ export default function AuthScreen() {
           errorMessage.includes('fetch resource') ||
           errorMessage.includes('Network request failed')) {
         setError(`${errorMessage}\n\n💡 Tip: You can continue as a guest to explore the app offline!`);
+      } else if (errorMessage.includes('confirmation link')) {
+        setError(errorMessage);
+        setShowResend(true);
       } else {
         setError(errorMessage);
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!loginEmail) {
+      setError('Enter your email address above, then tap Resend.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await resendConfirmation(loginEmail);
+      setResendSent(true);
+      setShowResend(false);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message || 'Failed to resend. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -191,8 +217,8 @@ export default function AuthScreen() {
     try {
       console.log('🔍 Calling signUp...');
       await signUp(signupEmail, signupPassword);
-      console.log('✅ Sign up successful - navigation handled by layout');
-      // Let _layout.tsx handle navigation after auth state changes
+      console.log('✅ Sign up successful - showing email confirmation prompt');
+      setShowEmailConfirmation(true);
     } catch (err) {
       console.error('❌ Sign up error:', err);
       const errorMessage = (err as Error).message || 'Failed to sign up. Please try again.';
@@ -320,6 +346,25 @@ export default function AuthScreen() {
         >
           <BlurView intensity={10} style={styles.blurContainer}>
             <View style={styles.cardContent}>
+              {/* Email confirmation screen shown after successful signup */}
+              {showEmailConfirmation ? (
+                <View style={styles.confirmationContainer}>
+                  <Mail size={48} color="#4a7c59" style={{ marginBottom: 16 }} />
+                  <Text style={styles.confirmationTitle}>Check your email</Text>
+                  <Text style={styles.confirmationBody}>
+                    We sent a confirmation link to{' '}
+                    <Text style={styles.confirmationEmail}>{signupEmail}</Text>.
+                    {'\n'}Tap the link in the email to activate your account, then sign in below.
+                  </Text>
+                  <Pressable
+                    style={styles.primaryButton}
+                    onPress={() => { setShowEmailConfirmation(false); setIsLogin(true); }}
+                  >
+                    <Text style={styles.primaryButtonText}>Go to Sign In</Text>
+                  </Pressable>
+                </View>
+              ) : (
+              <>
               {/* Tab Selector */}
               <View style={styles.tabContainer}>
                 <Pressable
@@ -410,6 +455,26 @@ export default function AuthScreen() {
                   <Pressable style={styles.forgotPassword} onPress={handleForgotPassword}>
                     <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
                   </Pressable>
+
+                  {/* Resend confirmation email */}
+                  {showResend && (
+                    <Pressable
+                      style={[styles.forgotPassword, { marginTop: 4 }]}
+                      onPress={handleResendConfirmation}
+                      disabled={isLoading}
+                    >
+                      <Text style={[styles.forgotPasswordText, { color: '#a7d4b4' }]}>
+                        Resend confirmation email
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  {/* Resend success notice */}
+                  {resendSent && (
+                    <Text style={[styles.forgotPasswordText, { color: '#a7d4b4', textAlign: 'center', marginTop: 8 }]}>
+                      Confirmation email sent — check your inbox.
+                    </Text>
+                  )}
                 </View>
               ) : (
                 <View style={styles.formContainer}>
@@ -536,6 +601,8 @@ export default function AuthScreen() {
                   <ActivityIndicator color="#4a7c59" size="small" />
                 )}
               </Pressable>
+              </>
+              )}
             </View>
           </BlurView>
         </Animated.View>
@@ -773,5 +840,28 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
     marginTop: 2,
+  },
+  confirmationContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 8,
+    gap: 12,
+  },
+  confirmationTitle: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  confirmationBody: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  confirmationEmail: {
+    color: '#a7d4b4',
+    fontWeight: '600',
   },
 });

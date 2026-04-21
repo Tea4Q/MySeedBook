@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
 import { guestTracker, GuestUsage } from '../utils/guestTracker';
 import { globalRevenueCat } from './globalRevenueCat';
+import { clearSubscriptionCache } from './globalSubscriptionManager';
 
 // Suppress the Expo LogBox toast for stale/expired refresh tokens — this is
 // an expected condition after a cache clear or app reinstall and is handled
@@ -44,7 +45,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInAsGuest: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
+  resendConfirmation: (email: string) => Promise<void>;
+  updatePassword: (password: string, tokens?: { access_token: string; refresh_token: string }) => Promise<void>;
   refreshGuestUsage: () => Promise<void>;
 }
 
@@ -59,6 +61,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   signInAsGuest: async () => {},
   forgotPassword: async () => {},
+  resendConfirmation: async () => {},
   updatePassword: async () => {},
   refreshGuestUsage: async () => {},
 });
@@ -143,10 +146,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'SIGNED_IN') {
         setSession(session);
         setUser(session?.user ?? null);
-        // Navigate immediately after successful sign in
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 100);
+        // Only navigate if email is confirmed — skip for new signups awaiting confirmation
+        // so the confirmation screen in auth/index.tsx stays visible.
+        if (session?.user?.email_confirmed_at) {
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 100);
+        }
       } else {
         setSession(session);
         setUser(session?.user ?? null);
@@ -210,16 +216,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: 'myseedbook-catalogue://auth/callback',
+          emailRedirectTo: 'myseedbook-catalogue://auth',
         },
       });
       
       if (error) {
         throw error;
+      }
+
+      // When email confirmation is ON, Supabase silently succeeds for duplicate emails
+      // (to prevent enumeration). Detect this via empty identities array.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
       }
     } catch (error: any) {
       logger.error('Sign up error:', error);
@@ -300,9 +312,28 @@ const signOut = async () => {
     if (error) throw error;
   };
 
-  const updatePassword = async (password: string) => {
-   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) throw new Error('Session invalid. Try resetting again.');
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: 'myseedbook-catalogue://auth' },
+    });
+    if (error) throw error;
+  };
+
+  const updatePassword = async (
+    password: string,
+    tokens?: { access_token: string; refresh_token: string }
+  ) => {
+    if (tokens) {
+      const { error: setSessionError } = await supabase.auth.setSession(tokens);
+      if (setSessionError)
+        throw new Error('Reset link is invalid or has expired. Please request a new one.');
+    } else {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session)
+        throw new Error('Session invalid. Try resetting again.');
+    }
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   };
@@ -328,7 +359,11 @@ const signOut = async () => {
 
   // Enhanced signOut to handle guest state
   const enhancedSignOut = async () => {
+    const currentUserId = user?.id;
     await globalRevenueCat.logOut();
+    if (currentUserId) {
+      await clearSubscriptionCache(currentUserId);
+    }
     await signOut();
     setIsGuest(false);
     setGuestUsage(null);
@@ -372,7 +407,8 @@ const signOut = async () => {
     signUp: enhancedSignUp, 
     signOut: enhancedSignOut,
     signInAsGuest,
-    forgotPassword: recoverPassword, 
+    forgotPassword: recoverPassword,
+    resendConfirmation,
     updatePassword,
     refreshGuestUsage 
   }}>

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
@@ -27,6 +28,10 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [resetTokens, setResetTokens] = useState<{
+    access_token: string;
+    refresh_token: string;
+  } | null>(null);
 
   useEffect(() => {
     // Check if user has a valid session for password reset
@@ -84,21 +89,36 @@ export default function ResetPasswordScreen() {
             }
           }
         } else {
-          // On mobile, just check for existing session
+          // On mobile: Supabase embeds tokens in the deep link hash fragment.
+          // detectSessionInUrl is false for mobile, so we parse manually.
+          try {
+            const initialUrl = await Linking.getInitialURL();
+            if (initialUrl) {
+              const hashParams = parseHashParams(initialUrl);
+              if (
+                hashParams.access_token &&
+                hashParams.refresh_token &&
+                hashParams.type === 'recovery'
+              ) {
+                setResetTokens({
+                  access_token: hashParams.access_token,
+                  refresh_token: hashParams.refresh_token,
+                });
+                setIsValidSession(true);
+                setCheckingSession(false);
+                return;
+              }
+            }
+          } catch (linkErr) {
+            console.error('Linking.getInitialURL error:', linkErr);
+          }
+
+          // Fallback: check for an already-active session
           const { data: { session }, error } = await supabase.auth.getSession();
-          
-          console.log('Reset password session check (mobile):', { session: !!session, error });
-          
-          if (error) {
-            console.error('Session error:', error);
-            setError('Failed to validate reset session. Please try again.');
-            setIsValidSession(false);
-          } else if (!session) {
-            console.log('No session found for password reset');
+          if (error || !session) {
             setError('Invalid or expired reset link. Please request a new password reset.');
             setIsValidSession(false);
           } else {
-            console.log('Valid session found for password reset');
             setIsValidSession(true);
           }
         }
@@ -169,7 +189,7 @@ export default function ResetPasswordScreen() {
       
       console.log('Session valid, proceeding with password update');
       
-      await updatePassword(password);
+      await updatePassword(password, resetTokens ?? undefined);
       
       console.log('Password updated successfully');
       setPasswordUpdated(true);
@@ -184,6 +204,12 @@ export default function ResetPasswordScreen() {
 
   const handleBackToLogin = () => {
     router.replace('/auth');
+  };
+
+  const parseHashParams = (url: string): Record<string, string> => {
+    const hash = url.split('#')[1];
+    if (!hash) return {};
+    return Object.fromEntries(new URLSearchParams(hash));
   };
 
   if (checkingSession) {
@@ -374,6 +400,23 @@ export default function ResetPasswordScreen() {
     </View>
   );
 }
+
+const updatePassword = async (
+  password: string,
+  tokens?: { access_token: string; refresh_token: string }
+) => {
+  if (tokens) {
+    const { error: setSessionError } = await supabase.auth.setSession(tokens);
+    if (setSessionError)
+      throw new Error('Reset link is invalid or has expired. Please request a new one.');
+  } else {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session)
+      throw new Error('Session invalid. Try resetting again.');
+  }
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+};
 
 const styles = StyleSheet.create({
   container: {

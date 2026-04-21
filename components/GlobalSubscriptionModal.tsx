@@ -1,13 +1,12 @@
 /**
  * GlobalSubscriptionModal.tsx
- * Multi-tier paywall (v1.3.0 — Apple submission build):
+ * Paywall (v1.3.0):
  *  - Essential: $7.99/month or $63.99/year  (purchasable)
- *  - Voice & AI Entry: Coming in v1.3.1     (non-purchasable, shown as Coming Soon)
- *  - Advanced AI: Coming soon               (non-purchasable)
  *
- * NOTE: Voice & AI tier is intentionally shown as "Coming in v1.3.1" here.
- * To re-enable it, convert the voice <View> card back to a <Pressable> card
- * and restore the selectedTier state guard (see v1.3.1 branch).
+ * NOTE: Voice & AI and Advanced AI tiers are removed from this build per
+ * Apple App Store Review Guideline 3.1.1 — paywalls must only show
+ * purchasable items. Re-add them once those products are live on the
+ * RevenueCat dashboard and approved (see v1.3.1 branch).
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -24,14 +23,10 @@ import {
 } from 'react-native';
 import {
   Check,
-  Cloud,
   Leaf,
-  Mic,
   RefreshCw,
   Sprout,
-  Volume2,
   X,
-  Sparkles,
 } from 'lucide-react-native';
 import { PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '@/lib/theme';
@@ -86,13 +81,6 @@ const TIER_META: Record<Exclude<TierId, 'advanced_ai'>, {
     ],
   },
 };
-
-const ADVANCED_AI_FEATURES = [
-  'AI crop recommendations',
-  'Predictive planting assistant',
-  'Smart disease detection insights',
-  'Coming soon notice and waitlist updates',
-];
 
 function getTierFromPackage(pkg: PurchasesPackage): Exclude<TierId, 'advanced_ai'> | null {
   const id = pkg.product.identifier.toLowerCase();
@@ -423,48 +411,7 @@ export default function GlobalSubscriptionModal({
               ))}
             </Pressable>
 
-            {/* Voice & AI tier — Coming in v1.3.1. Non-interactive, matches Advanced AI card pattern. */}
-            <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: `${colors.border}AA` }]}>
-              <View style={styles.tierHeader}>
-                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.warning}22` }]}>
-                  <Mic size={18} color={colors.warning} />
-                </View>
-                <View style={styles.tierHeadTextWrap}>
-                  <Text style={[styles.tierTitle, { color: colors.text }]}>{TIER_META.voice.title}</Text>
-                  <Text style={[styles.tierSub, { color: textSecondary }]}>{TIER_META.voice.subtitle}</Text>
-                </View>
-                <View style={[styles.comingSoonBadge, { backgroundColor: `${colors.warning}22`, borderColor: colors.warning }]}>
-                  <Text style={[styles.comingSoonText, { color: colors.warning }]}>{PRICING.voice.comingSoonLabel}</Text>
-                </View>
-              </View>
-              {TIER_META.voice.features.map((f) => (
-                <View key={f} style={styles.featureRow}>
-                  <Cloud size={16} color={colors.warning} />
-                  <Text style={[styles.featureText, { color: textSecondary }]}>{f}</Text>
-                </View>
-              ))}
-            </View>
 
-            <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: `${colors.border}AA` }]}>
-              <View style={styles.tierHeader}>
-                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.warning}22` }]}> 
-                  <Sparkles size={18} color={colors.warning} />
-                </View>
-                <View style={styles.tierHeadTextWrap}>
-                  <Text style={[styles.tierTitle, { color: colors.text }]}>Advanced AI</Text>
-                  <Text style={[styles.tierSub, { color: textSecondary }]}>Next generation AI tools for gardeners</Text>
-                </View>
-                <View style={[styles.comingSoonBadge, { backgroundColor: `${colors.warning}22`, borderColor: colors.warning }]}>
-                  <Text style={[styles.comingSoonText, { color: colors.warning }]}>Coming Soon</Text>
-                </View>
-              </View>
-              {ADVANCED_AI_FEATURES.map((f) => (
-                <View key={f} style={styles.featureRow}>
-                  <Cloud size={16} color={colors.warning} />
-                  <Text style={[styles.featureText, { color: textSecondary }]}>{f}</Text>
-                </View>
-              ))}
-            </View>
           </View>
 
           <Pressable
@@ -506,12 +453,7 @@ export default function GlobalSubscriptionModal({
             </Pressable>
           </View>
 
-          <View style={styles.voiceCostNoteWrap}>
-            <Volume2 size={14} color={textSecondary} />
-            <Text style={[styles.legal, { color: textSecondary }]}>
-              Voice & AI entry features are coming in v1.3.1. Subscribe to Essential now and upgrade when it launches.
-            </Text>
-          </View>
+
         </ScrollView>
       </View>
     </Modal>
@@ -610,13 +552,6 @@ const styles = StyleSheet.create({
   tierPrice: { fontSize: 13, fontWeight: '700' },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureText: { fontSize: 12, flex: 1 },
-  comingSoonBadge: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  comingSoonText: { fontSize: 11, fontWeight: '700' },
   ctaBtn: {
     borderRadius: 14,
     paddingVertical: 15,
@@ -640,18 +575,4 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   linkDivider: { fontSize: 12 },
-  voiceCostNoteWrap: {
-    marginTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 8,
-  },
-  legal: {
-    fontSize: 11,
-    lineHeight: 17,
-    textAlign: 'center',
-    flexShrink: 1,
-  },
 });

@@ -26,7 +26,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AlertTriangle, CheckCircle, CreditCard, Lock, Trash2, X, XCircle } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle, CreditCard, Lock, Mail, Trash2, X, XCircle } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { globalAccountDeletion } from '@/lib/globalAccountDeletion';
@@ -74,6 +74,8 @@ export default function GlobalAccountDeletionModal({
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [showManualDeletion, setShowManualDeletion] = useState(false);
 
   // Reset state when modal opens
   React.useEffect(() => {
@@ -83,6 +85,8 @@ export default function GlobalAccountDeletionModal({
       setPasswordError('');
       setConfirmText('');
       setLoading(false);
+      setFailedAttempts(0);
+      setShowManualDeletion(false);
     }
   }, [visible, isPremium]);
 
@@ -100,10 +104,25 @@ export default function GlobalAccountDeletionModal({
     setPasswordError('');
     setLoading(true);
     try {
-      await globalAccountDeletion.reauthenticate(user?.email ?? '', password);
+      await Promise.race([
+        globalAccountDeletion.reauthenticate(user?.email ?? '', password),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), 10000)
+        ),
+      ]);
       setStep(3);
     } catch (err: any) {
-      setPasswordError(err.message ?? 'Incorrect password. Please try again.');
+      const newCount = failedAttempts + 1;
+      setFailedAttempts(newCount);
+      if (newCount >= 3) {
+        setShowManualDeletion(true);
+        globalAccountDeletion.requestManualDeletion(user?.id ?? '', user?.email ?? '')
+          .catch(() => {});
+      } else {
+        setPasswordError(
+          err.message ?? 'Incorrect password. Please try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -115,12 +134,17 @@ export default function GlobalAccountDeletionModal({
     if (confirmText !== 'DELETE') return;
     setLoading(true);
     try {
-      const result = await globalAccountDeletion.deleteAccount(
-        user?.id ?? '',
-        user?.email ?? '',
-        password,
-        planType ?? 'free'
-      );
+      const result = await Promise.race([
+        globalAccountDeletion.deleteAccount(
+          user?.id ?? '',
+          user?.email ?? '',
+          password,
+          planType ?? 'free'
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Account deletion timed out. Please try again.')), 20000)
+        ),
+      ]);
 
       if (!result.success) {
         if (result.reason === 'active_subscription') {
@@ -139,6 +163,8 @@ export default function GlobalAccountDeletionModal({
         'Your account has been deleted. You have been signed out immediately. Thank you for using MySeedBook.',
         [{ text: 'OK', onPress: onClose }]
       );
+    } catch (err: any) {
+      Alert.alert('Deletion Failed', err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -155,7 +181,7 @@ export default function GlobalAccountDeletionModal({
       <Text style={[styles.stepBody, { color: textSecondary }]}>
         You currently have an active{' '}
         <Text style={{ fontWeight: '700', color: colors.text }}>
-          {planType === 'annual' ? 'Annual' : 'Monthly'} Premium
+          {planType === 'yearly' ? 'Annual' : 'Monthly'} Premium
         </Text>{' '}
         subscription.
         {'\n\n'}
@@ -225,7 +251,7 @@ export default function GlobalAccountDeletionModal({
   );
 
   const renderStep3 = () => (
-    <>
+    <View style={styles.stepContent}>
       <View style={[styles.iconCircle, { backgroundColor: errorColor + '22', alignSelf: 'center', marginBottom: 12 }]}>
         <AlertTriangle size={32} color={errorColor} />
       </View>
@@ -282,7 +308,7 @@ export default function GlobalAccountDeletionModal({
       <Pressable style={styles.secondaryBtn} onPress={onClose}>
         <Text style={[styles.secondaryBtnText, { color: textSecondary }]}>Cancel</Text>
       </Pressable>
-    </>
+    </View>
   );
 
   const renderStep4 = () => (
@@ -332,6 +358,38 @@ export default function GlobalAccountDeletionModal({
     </View>
   );
 
+  // ─── Manual deletion fallback screen ─────────────────────────────────────
+
+  const renderManualDeletion = () => (
+    <View style={styles.stepContent}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.primary + '22' }]}>
+        <Mail size={32} color={colors.primary} />
+      </View>
+      <Text style={[styles.stepTitle, { color: colors.text }]}>Deletion Request Submitted</Text>
+      <Text style={[styles.stepBody, { color: textSecondary }]}>
+        We&apos;ve received your account deletion request and notified the MySeedBook team.
+        {`\n\n`}
+        Your account will be{' '}
+        <Text style={{ fontWeight: '700', color: colors.text }}>permanently deleted within 48 hours</Text>.
+        {`\n\n`}
+        No further action is needed from you.
+      </Text>
+      <View style={[styles.alertBox, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>
+        <CheckCircle size={18} color={colors.primary} />
+        <Text style={[styles.alertText, { color: textSecondary }]}>
+          If your account is not deleted within 48 hours, contact us at{' '}
+          <Text style={{ fontWeight: '600' }}>info@ChandraSEssentials.com</Text>
+        </Text>
+      </View>
+      <Pressable
+        style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
+        onPress={onClose}
+      >
+        <Text style={styles.primaryBtnText}>Close</Text>
+      </Pressable>
+    </View>
+  );
+
   // ─── Step labels ───────────────────────────────────────────────────────────
 
   const steps: Step[] = isPremium ? [1, 2, 3, 4] : [2, 3, 4];
@@ -357,8 +415,8 @@ export default function GlobalAccountDeletionModal({
             </Pressable>
           </View>
 
-          {/* Step indicator */}
-          <View style={styles.stepIndicator}>
+          {/* Step indicator — hidden on manual deletion screen */}
+          {!showManualDeletion && <View style={styles.stepIndicator}>
             {steps.map((s, i) => (
               <React.Fragment key={s}>
                 <View
@@ -380,17 +438,18 @@ export default function GlobalAccountDeletionModal({
                 )}
               </React.Fragment>
             ))}
-          </View>
+          </View>}
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-            {step === 4 && renderStep4()}
+            {showManualDeletion && renderManualDeletion()}
+            {!showManualDeletion && step === 1 && renderStep1()}
+            {!showManualDeletion && step === 2 && renderStep2()}
+            {!showManualDeletion && step === 3 && renderStep3()}
+            {!showManualDeletion && step === 4 && renderStep4()}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

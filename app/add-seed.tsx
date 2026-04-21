@@ -132,6 +132,7 @@ export default function AddOrEditSeedScreen() {
   const { isPremium } = useGlobalSubscription();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false); // Synchronous guard against double-submit
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
   const { checkAndPromptForLimit } = useGuestLimits();
@@ -453,8 +454,12 @@ export default function AddOrEditSeedScreen() {
 
   // --- Submit Handler ---
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-    if (!validateForm()) return;
+    if (isSubmittingRef.current) return; // synchronous check prevents race condition
+    isSubmittingRef.current = true;
+    if (!validateForm()) {
+      isSubmittingRef.current = false;
+      return;
+    }
 
     // Check guest limits for new seeds
     if (!isEditing) {
@@ -478,7 +483,7 @@ export default function AddOrEditSeedScreen() {
     }
 
     setIsSubmitting(true);
-    setErrors({}); // Clear previous submit errors    
+    setErrors({}); // Clear previous submit errors
     
     // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
@@ -768,6 +773,7 @@ export default function AddOrEditSeedScreen() {
       setShowSuccess(false); // Hide success message on error
     } finally {
       hasNavigatedAfterSaveRef.current = false;
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

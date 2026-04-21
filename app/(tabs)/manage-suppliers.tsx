@@ -317,6 +317,9 @@ export default function ManageSuppliersScreen() {
           <Text style={[styles.errorText, { color: colors.error }]}>
             {error}
           </Text>
+          <Pressable onPress={loadSuppliers} style={styles.retryButton}>
+            <Text style={[styles.retryButtonText, { color: colors.error }]}>Retry</Text>
+          </Pressable>
         </View>
       )}
 
@@ -627,9 +630,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     fontSize: 14,
+    flex: 1,
+  },
+  retryButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   content: {
     flex: 1,

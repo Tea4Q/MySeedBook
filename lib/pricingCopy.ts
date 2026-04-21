@@ -15,7 +15,7 @@ export const PRICING = {
 export const PRICING_COPY = {
   planChooserTitle: 'Choose Your Garden Plan',
   essentialStartingPrice: `Essential starts at ${PRICING.essential.monthlyAmount}.`,
-  modalHeroSub: `Essential starts at ${PRICING.essential.monthlyAmount}. Voice & AI is ${PRICING.voice.comingSoonLabel.toLowerCase()}.`,
+  modalHeroSub: `Essential starts at ${PRICING.essential.monthlyAmount}.`,
   upgradePromptDefault: `MySeedBook Essential unlocks unlimited seeds, weather integration, and cloud sync at ${PRICING.essential.monthlyAmount}/month.`,
   upgradePromptForFeature: (feature: string) =>
     `Unlock ${feature} with MySeedBook Essential at ${PRICING.essential.monthlyAmount} - unlimited seeds, weather integration, and cloud sync.`,

@@ -24,8 +24,64 @@ import React, {
 } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { globalRevenueCat, SubscriptionInfo, SubscriptionTier } from './globalRevenueCat';
 import { supabase } from './supabase';
+
+// ─── Subscription Cache ───────────────────────────────────────────────────────
+
+const CACHE_KEY_PREFIX = '@subscription_cache_v1';
+
+type CachedSubscriptionState = Pick<
+  SubscriptionInfo,
+  'tier' | 'isPremium' | 'isVoice' | 'planType' | 'renewalDate'
+>;
+
+async function loadSubscriptionCache(
+  userId: string
+): Promise<CachedSubscriptionState | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}_${userId}`);
+    return raw ? (JSON.parse(raw) as CachedSubscriptionState) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveSubscriptionCache(
+  userId: string,
+  info: SubscriptionInfo
+): Promise<void> {
+  try {
+    const toCache: CachedSubscriptionState = {
+      tier: info.tier,
+      isPremium: info.isPremium,
+      isVoice: info.isVoice,
+      planType: info.planType,
+      renewalDate: info.renewalDate,
+    };
+    await AsyncStorage.setItem(
+      `${CACHE_KEY_PREFIX}_${userId}`,
+      JSON.stringify(toCache)
+    );
+  } catch {
+    // Non-fatal
+  }
+}
+
+export async function clearSubscriptionCache(userId?: string): Promise<void> {
+  try {
+    if (userId) {
+      await AsyncStorage.removeItem(`${CACHE_KEY_PREFIX}_${userId}`);
+    } else {
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(k => k.startsWith(CACHE_KEY_PREFIX));
+      if (cacheKeys.length) await AsyncStorage.multiRemove(cacheKeys);
+    }
+  } catch {
+    // Non-fatal
+  }
+}
 
 type ProfileResubscribeBlockRow = {
   resubscribe_blocked_until: string | null;
@@ -124,10 +180,19 @@ export function GlobalSubscriptionProvider({
 
   useEffect(() => {
     const bootstrap = async () => {
-      setIsLoading(true);
+      // ── 1. Serve from cache immediately so UI is never blocked ──────────────
+      if (userId) {
+        const cached = await loadSubscriptionCache(userId);
+        if (cached) {
+          setInfo(prev => ({ ...prev, ...cached }));
+          setIsLoading(false); // unblock UI — background refresh will follow
+        }
+      }
+
+      // ── 2. Full RevenueCat init + refresh in background ─────────────────────
       try {
         await globalRevenueCat.initialize(userId);
-        await refreshInternal();
+        await refreshInternal(userId ?? undefined);
 
         // Check Supabase resubscribe block
         if (userId) {
@@ -144,13 +209,17 @@ export function GlobalSubscriptionProvider({
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  const refreshInternal = async () => {
+  const refreshInternal = async (uidForCache?: string) => {
     const [latest, nextOfferings] = await Promise.all([
       globalRevenueCat.getCustomerInfo(),
       globalRevenueCat.getOfferings(),
     ]);
     setInfo(latest);
     setOfferings(nextOfferings);
+    // Persist latest state so next launch / re-login is instant
+    if (uidForCache) {
+      saveSubscriptionCache(uidForCache, latest);
+    }
   };
 
   const checkResubscribeBlock = async (uid: string) => {
@@ -178,7 +247,7 @@ export function GlobalSubscriptionProvider({
   };
 
   const refresh = useCallback(async () => {
-    await refreshInternal();
+    await refreshInternal(userId ?? undefined);
     if (userId) await checkResubscribeBlock(userId);
   }, [userId]);
 
@@ -205,6 +274,17 @@ export function GlobalSubscriptionProvider({
         return true;
       } catch (err: any) {
         if (err?.userCancelled) return false;
+        // Google Play / App Store returns this when the user already owns the
+        // subscription. Auto-restore to sync their entitlement silently.
+        if (err?.code === '6') {
+          try {
+            const restored = await globalRevenueCat.restorePurchases();
+            setInfo(restored);
+            return restored.isPremium;
+          } catch {
+            // restore failed — fall through to generic error
+          }
+        }
         Alert.alert('Purchase Failed', err?.message ?? 'Please try again.');
         return false;
       }
