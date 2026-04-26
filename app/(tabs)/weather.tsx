@@ -27,7 +27,7 @@ import {
 
 export default function WeatherScreen() {
   const { checkFeature } = usePremiumFeature();
-  const { isLoading: rcLoading } = useGlobalSubscription();
+  const { isLoading: rcLoading, isPremium } = useGlobalSubscription();
   const { colors } = useTheme();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -99,7 +99,7 @@ export default function WeatherScreen() {
     setShowPremiumModal(false);
     loadWeatherData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rcLoading]); // re-runs once when RC resolves (false→true→false)
+  }, [rcLoading, isPremium]); // re-runs when RC resolves OR when premium status changes (e.g. after in-app purchase)
 
   // Handle refresh
   const onRefresh = () => {

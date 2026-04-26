@@ -36,6 +36,8 @@ export default function AuthScreen() {
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [showResend, setShowResend] = useState(false);
   const [resendSent, setResendSent] = useState(false);
+  const [confirmResendSent, setConfirmResendSent] = useState(false);
+  const [confirmResendCooldown, setConfirmResendCooldown] = useState(0);
 
   // Animation values with useMemo to prevent re-creation
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
@@ -53,6 +55,26 @@ export default function AuthScreen() {
   );
 
   const { signIn, signUp, signInAsGuest, resendConfirmation } = useAuth();
+
+  // Countdown timer for resend cooldown on the confirmation screen
+  useEffect(() => {
+    if (confirmResendCooldown <= 0) return;
+    const timer = setTimeout(() => setConfirmResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [confirmResendCooldown]);
+
+  const handleConfirmResend = async () => {
+    if (confirmResendCooldown > 0 || isLoading) return;
+    setIsLoading(true);
+    try {
+      await resendConfirmation(signupEmail);
+      setConfirmResendSent(true);
+      setConfirmResendCooldown(60); // prevent spam: 60 s cooldown
+    } catch {
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const ContainerComponent = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 
   useEffect(() => {
@@ -354,8 +376,32 @@ export default function AuthScreen() {
                   <Text style={styles.confirmationBody}>
                     We sent a confirmation link to{' '}
                     <Text style={styles.confirmationEmail}>{signupEmail}</Text>.
-                    {'\n'}Tap the link in the email to activate your account, then sign in below.
+                    {'\n'}Tap the link to activate your account, then come back to sign in.
                   </Text>
+                  <Text style={styles.confirmationSpamNote}>
+                    Can&apos;t find it? Check your spam or junk folder.
+                  </Text>
+
+                  {confirmResendSent ? (
+                    <Text style={styles.confirmationResendSuccess}>
+                      Email resent — check your inbox (and spam folder).
+                    </Text>
+                  ) : (
+                    <Pressable
+                      style={[styles.resendButton, (confirmResendCooldown > 0 || isLoading) && styles.resendButtonDisabled]}
+                      onPress={handleConfirmResend}
+                      disabled={confirmResendCooldown > 0 || isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#4a7c59" size="small" />
+                      ) : (
+                        <Text style={styles.resendButtonText}>
+                          {confirmResendCooldown > 0 ? `Resend in ${confirmResendCooldown}s` : 'Resend confirmation email'}
+                        </Text>
+                      )}
+                    </Pressable>
+                  )}
+
                   <Pressable
                     style={styles.primaryButton}
                     onPress={() => { setShowEmailConfirmation(false); setIsLogin(true); }}
@@ -863,5 +909,34 @@ const styles = StyleSheet.create({
   confirmationEmail: {
     color: '#a7d4b4',
     fontWeight: '600',
+  },
+  confirmationSpamNote: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  resendButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4a7c59',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  resendButtonDisabled: {
+    borderColor: 'rgba(74, 124, 89, 0.4)',
+  },
+  resendButtonText: {
+    color: '#a7d4b4',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  confirmationResendSuccess: {
+    color: '#a7d4b4',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });
