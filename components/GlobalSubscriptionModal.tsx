@@ -1,12 +1,8 @@
 /**
  * GlobalSubscriptionModal.tsx
- * Paywall (v1.3.0):
+ * Paywall (v1.3.1):
  *  - Essential: $7.99/month or $63.99/year  (purchasable)
- *
- * NOTE: Voice & AI and Advanced AI tiers are removed from this build per
- * Apple App Store Review Guideline 3.1.1 — paywalls must only show
- * purchasable items. Re-add them once those products are live on the
- * RevenueCat dashboard and approved (see v1.3.1 branch).
+ *  - Voice & AI Entry: $9.99/month or $79.99/year  (purchasable)
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,6 +19,7 @@ import {
 } from 'react-native';
 import {
   Check,
+  Crown,
   Leaf,
   RefreshCw,
   Sprout,
@@ -145,8 +142,9 @@ export default function GlobalSubscriptionModal({
   }, [visible, offerings, isLoading, retrying, packages.length]);
 
   useEffect(() => {
-    // Only essential is selectable in this build; voice tier is Coming in v1.3.1
-    if (tier === 'essential') {
+    if (tier === 'voice') {
+      setSelectedTier('voice');
+    } else {
       setSelectedTier('essential');
     }
   }, [tier]);
@@ -394,7 +392,7 @@ export default function GlobalSubscriptionModal({
               onPress={() => setSelectedTier('essential')}
             >
               <View style={styles.tierHeader}>
-                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.primary}22` }]}> 
+                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.primary}22` }]}>
                   <Leaf size={18} color={colors.primary} />
                 </View>
                 <View style={styles.tierHeadTextWrap}>
@@ -411,7 +409,31 @@ export default function GlobalSubscriptionModal({
               ))}
             </Pressable>
 
-
+            <Pressable
+              style={[
+                styles.tierCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                selectedTier === 'voice' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => setSelectedTier('voice')}
+            >
+              <View style={styles.tierHeader}>
+                <View style={[styles.tierIconBadge, { backgroundColor: `${colors.primary}22` }]}>
+                  <Crown size={18} color={colors.primary} />
+                </View>
+                <View style={styles.tierHeadTextWrap}>
+                  <Text style={[styles.tierTitle, { color: colors.text }]}>{TIER_META.voice.title}</Text>
+                  <Text style={[styles.tierSub, { color: textSecondary }]}>{TIER_META.voice.subtitle}</Text>
+                </View>
+                <Text style={[styles.tierPrice, { color: colors.text }]}>{tierPrice('voice', selectedBilling)}</Text>
+              </View>
+              {TIER_META.voice.features.map((f) => (
+                <View key={f} style={styles.featureRow}>
+                  <Check size={16} color={colors.primary} />
+                  <Text style={[styles.featureText, { color: textSecondary }]}>{f}</Text>
+                </View>
+              ))}
+            </Pressable>
           </View>
 
           <Pressable
@@ -426,7 +448,7 @@ export default function GlobalSubscriptionModal({
               <ActivityIndicator color={colors.primaryText} />
             ) : (
               <Text style={[styles.ctaText, { color: colors.primaryText }]}>
-                {isResubscribeBlocked ? 'Not Available Yet' : 'Continue with Essential'}
+                {isResubscribeBlocked ? 'Not Available Yet' : `Continue with ${TIER_META[selectedTier].title}`}
               </Text>
             )}
           </Pressable>

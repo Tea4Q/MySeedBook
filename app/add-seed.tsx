@@ -24,6 +24,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   ArrowLeft,
+  Calendar,
   Droplets,
   Sun,
   Ruler,
@@ -33,19 +34,16 @@ import {
   FlaskRound as Flask,
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
-import DatePickerField from '@/components/DatePickerField';
 import { VoiceNotes } from '@/components/VoiceNotes';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
 import PremiumModal from '@/components/PremiumModal';
-import BarcodeScannerModal, { type ScannedSeedData } from '@/components/BarcodeScannerModal';
-import { saveBarcodeMapping } from '@/utils/barcodeMemory';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
-import PremiumModal from '@/components/PremiumModal';
-// VoiceMicButton and parseVoiceCommand reserved for Voice & AI build
+// VoiceMicButton and parseVoiceCommand available in this v1.3.1 Voice & AI build
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
@@ -134,6 +132,7 @@ export default function AddOrEditSeedScreen() {
   const { colors } = useTheme(); // Add theme colors
   const { user, isGuest, refreshGuestUsage } = useAuth(); // Add auth context
   const { isPremium } = useGlobalSubscription();
+  const { checkFeature, showUpgradePrompt } = usePremiumFeature();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false); // Synchronous guard against double-submit

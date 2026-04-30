@@ -49,7 +49,6 @@ export const devCheckPremiumStatus = () => {
   console.log('  • Active:', subscription.isActive);
   console.log('  • Expires:', subscription.expiresAt);
   console.log('  • Weather Access:', premiumManager.hasFeature('weather_integration'));
-  console.log('  • Barcode Scanner:', premiumManager.hasFeature('barcode_scanner'));
   
   console.log('🤖 AI Features:');
   console.log('  • AI Garden Assistant:', premiumManager.hasFeature('ai_garden_assistant'));
@@ -78,7 +77,6 @@ export const devGrantAIFeatures = async () => {
         advanced_calendar: false,
         weather_integration: false,
         plant_identification: false,
-        barcode_scanner: false,
         data_export: false,
         priority_support: false,
         // AI Features only

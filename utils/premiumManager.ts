@@ -18,7 +18,6 @@ export interface PremiumFeatures {
   advanced_calendar: boolean;
   weather_integration: boolean;
   plant_identification: boolean;
-  barcode_scanner: boolean;
   data_export: boolean;
   priority_support: boolean;
   // AI Features (Phase 1)
@@ -168,7 +167,6 @@ class PremiumManager {
         advanced_calendar: false,
         weather_integration: false,
         plant_identification: false,
-        barcode_scanner: true,
         data_export: false,
         priority_support: false,
         // AI Features (Phase 1)
@@ -238,7 +236,6 @@ class PremiumManager {
           advanced_calendar: true,
           weather_integration: true,
           plant_identification: true,
-          barcode_scanner: true,
           data_export: true,
           priority_support: true,
           ai_garden_assistant: true,

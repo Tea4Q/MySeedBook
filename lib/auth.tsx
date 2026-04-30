@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isGuest, setIsGuest] = useState(false);
   const [guestUsage, setGuestUsage] = useState<GuestUsage | null>(null);
   const rootNavigation = useRootNavigation();
-  // Profile state is managed in UI screens, not here
+  const router = useRouter();
   
 
 

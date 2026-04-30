@@ -250,7 +250,12 @@ export default function TabLayout() {
         name="ai"
         options={{
           title: 'AI Assistant',
-          tabBarIcon: ({ color }) => <Brain size={24} color={color} />,
+          tabBarButton: createAnimatedTabButton({
+            label: 'AI',
+            icon: Brain,
+            activeTintColor: colors.tabBarActive,
+            inactiveTintColor: colors.tabBarInactive,
+          }),
         }}
       />
       <Tabs.Screen

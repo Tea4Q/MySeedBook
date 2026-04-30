@@ -24,7 +24,7 @@ import { supabase } from '@/lib/supabase';
 import type { Supplier } from '@/types/database';
 import { useTheme } from '@/lib/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// VoiceMicButton and parseVoiceCommand are reserved for the v1.3.1 Voice & AI build
+// VoiceMicButton and parseVoiceCommand available in this v1.3.1 Voice & AI build
 
 const getEditSupplierDraftKey = (supplierId: string) =>
   `edit_supplier_draft_v1_${supplierId}`;

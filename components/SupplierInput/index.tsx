@@ -22,7 +22,6 @@ import { useTheme } from '@/lib/theme';
 import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '../AddSupplierForm';
-import { useTheme } from '@/lib/theme';
 
 interface SupplierInputProps {
   onSelect: (supplier: Supplier) => void;
