@@ -16,7 +16,9 @@ import { weatherService } from '../../lib/services/weatherService';
 import { locationService } from '../../lib/services/locationService';
 import { gardeningInsightsService } from '../../lib/services/gardeningInsightsService';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import PremiumModal from '../../components/PremiumModal';
+import { useTheme } from '@/lib/theme';
 import {
   CurrentWeather,
   WeatherForecast,
@@ -25,6 +27,8 @@ import {
 
 export default function WeatherScreen() {
   const { checkFeature } = usePremiumFeature();
+  const { isLoading: rcLoading, isPremium } = useGlobalSubscription();
+  const { colors } = useTheme();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -80,16 +84,22 @@ export default function WeatherScreen() {
     }
   };
 
-  // Initial load - Check premium access and load weather data
+  // Initial load - wait for RevenueCat to finish bootstrapping before checking
+  // premium status, otherwise the gate fires on every first render (rc starts false)
   useEffect(() => {
+    if (rcLoading) return; // RC still initializing — keep the spinner visible
+
     if (!checkFeature('weather_integration')) {
       setShowPremiumModal(true);
-      setLoading(false); // Stop loading if no premium access
+      setLoading(false);
       return;
     }
+
+    // RC confirmed premium — clear any stale gate and load weather
+    setShowPremiumModal(false);
     loadWeatherData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [rcLoading, isPremium]); // re-runs when RC resolves OR when premium status changes (e.g. after in-app purchase)
 
   // Handle refresh
   const onRefresh = () => {
@@ -140,37 +150,37 @@ export default function WeatherScreen() {
   };
 
   // Show premium upgrade screen if user doesn't have weather integration
-  if (showPremiumModal && !showUpgradeModal) {
+  if (showPremiumModal) {
     return (
-      <View style={styles.premiumContainer}>
-        <FontAwesome5 name="cloud-sun" size={80} color="#4A90E2" style={styles.premiumIcon} />
-        <Text style={styles.premiumTitle}>Weather Integration</Text>
-        <Text style={styles.premiumDescription}>
+      <View style={[styles.premiumContainer, { backgroundColor: colors.background }]}>
+        <FontAwesome5 name="cloud-sun" size={80} color={colors.primary} style={styles.premiumIcon} />
+        <Text style={[styles.premiumTitle, { color: colors.text }]}>Weather Integration</Text>
+        <Text style={[styles.premiumDescription, { color: colors.textSecondary }]}>
           Get real-time weather data, gardening insights, and personalized recommendations to optimize your gardening success.
         </Text>
         <View style={styles.premiumFeatures}>
           <View style={styles.featureItem}>
-            <FontAwesome5 name="thermometer-half" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Real-time weather conditions</Text>
+            <FontAwesome5 name="thermometer-half" size={20} color={colors.primary} />
+            <Text style={[styles.featureText, { color: colors.text }]}>Real-time weather conditions</Text>
           </View>
           <View style={styles.featureItem}>
-            <FontAwesome5 name="calendar-alt" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>7-day detailed forecast</Text>
+            <FontAwesome5 name="calendar-alt" size={20} color={colors.primary} />
+            <Text style={[styles.featureText, { color: colors.text }]}>7-day detailed forecast</Text>
           </View>
           <View style={styles.featureItem}>
-            <FontAwesome5 name="seedling" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Gardening condition insights</Text>
+            <FontAwesome5 name="seedling" size={20} color={colors.primary} />
+            <Text style={[styles.featureText, { color: colors.text }]}>Gardening condition insights</Text>
           </View>
           <View style={styles.featureItem}>
-            <FontAwesome5 name="lightbulb" size={20} color="#4A90E2" />
-            <Text style={styles.featureText}>Personalized garden tips</Text>
+            <FontAwesome5 name="lightbulb" size={20} color={colors.primary} />
+            <Text style={[styles.featureText, { color: colors.text }]}>Personalized garden tips</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.upgradeButton} onPress={handlePremiumUpgrade}>
-          <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+        <TouchableOpacity style={[styles.upgradeButton, { backgroundColor: colors.primary }]} onPress={handlePremiumUpgrade}>
+          <Text style={[styles.upgradeButtonText, { color: colors.buttonText }]}>View Garden Plans</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)')}>
-          <Text style={styles.backButtonText}>Back to Garden</Text>
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>Back to Garden</Text>
         </TouchableOpacity>
 
         <PremiumModal
@@ -184,21 +194,21 @@ export default function WeatherScreen() {
 
   if (loading && !currentWeather) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-        <Text style={styles.loadingText}>Loading weather data...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading weather data...</Text>
       </View>
     );
   }
 
   if (error && !currentWeather) {
     return (
-      <View style={styles.errorContainer}>
-        <FontAwesome5 name="exclamation-triangle" size={48} color="#E74C3C" />
-        <Text style={styles.errorTitle}>Weather Unavailable</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => loadWeatherData()}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <FontAwesome5 name="exclamation-triangle" size={48} color={colors.error} />
+        <Text style={[styles.errorTitle, { color: colors.text }]}>Weather Unavailable</Text>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
+        <TouchableOpacity style={[styles.retryButton, { backgroundColor: colors.primary }]} onPress={() => loadWeatherData()}>
+          <Text style={[styles.retryButtonText, { color: colors.buttonText }]}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -207,26 +217,26 @@ export default function WeatherScreen() {
   return (
     <>
       <ScrollView 
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#4A90E2']}
-            tintColor="#4A90E2"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
         <View style={styles.header}>
           <View style={styles.locationContainer}>
             <TouchableOpacity onPress={handleLocationPress} style={styles.locationButton}>
-              <FontAwesome5 name="map-marker-alt" size={16} color="#4A90E2" />
-              <Text style={styles.locationText}>{locationName}</Text>
-              <FontAwesome5 name="chevron-right" size={12} color="#7F8C8D" />
+              <FontAwesome5 name="map-marker-alt" size={16} color={colors.primary} />
+              <Text style={[styles.locationText, { color: colors.text }]}>{locationName}</Text>
+              <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           
-          <Text style={styles.lastUpdated}>
+          <Text style={[styles.lastUpdated, { color: colors.textSecondary }]}>
             Last updated: {currentWeather ? new Date(currentWeather.timestamp).toLocaleTimeString() : '--:--'}
           </Text>
         </View>
@@ -252,10 +262,10 @@ export default function WeatherScreen() {
         )}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
             Weather data provided by OpenWeatherMap
           </Text>
-          <Text style={styles.footerSubtext}>
+          <Text style={[styles.footerSubtext, { color: colors.textSecondary }]}>
             Pull down to refresh • Tap location to change
           </Text>
         </View>
@@ -267,18 +277,15 @@ export default function WeatherScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#2C3E50',
   },
   errorContainer: {
     flex: 1,
@@ -352,7 +359,6 @@ const styles = StyleSheet.create({
   // Premium upgrade styles
   premiumContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,

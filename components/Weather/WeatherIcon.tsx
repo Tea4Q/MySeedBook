@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { WeatherMeteocon } from './MeteoconsFinal';
 
 // Map OpenWeatherMap conditions to Basmilius Meteocon names
 const toIconName = (weatherCode: string | number): string => {
@@ -33,6 +34,7 @@ const toIconName = (weatherCode: string | number): string => {
 
 interface WeatherIconProps {
   condition: string | number;
+  weatherCode: string | number; // ← was missing from props type
   size?: number;
   styleVariant?: 'line' | 'fill';
   autoPlay?: boolean;
@@ -59,17 +61,8 @@ export default function WeatherIcon({
   }, [autoPlay, iconName]);
 
   if (Platform.OS === 'web') {
-    // Use the official Meteocons SVGs on web (animate via SMIL in browsers)
-    const base = 'https://basmilius.github.io/weather-icons/production';
-    const src = `${base}/${styleVariant}/all/${iconName}.svg`;
-    
-    return React.createElement('img', {
-      src,
-      width: size,
-      height: size,
-      alt: iconName,
-      style: { maxWidth: '100%', height: 'auto' }
-    });
+    // Use locally-bundled SVG components (MeteoconsFinal) — no external CDN needed
+    return <WeatherMeteocon weatherCode={condition} size={size} />;
   }
 
   // Native: render Lottie JSON
@@ -119,4 +112,4 @@ const getMeteoconLottie = (name: string) => {
 };
 
 // Export for backward compatibility with existing components
-export const WeatherMeteocon = WeatherIcon;
+//export const WeatherMeteocon = WeatherIcon;

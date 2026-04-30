@@ -10,6 +10,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { CalendarWeatherData } from '../../lib/services/calendarWeatherService';
 import { AnimatedWeatherIcon } from './AnimatedWeatherIcon';
+import { useTheme, ThemeColors } from '@/lib/theme';
 
 interface WeatherDetailModalProps {
   visible: boolean;
@@ -24,6 +25,9 @@ export const WeatherDetailModal: React.FC<WeatherDetailModalProps> = ({
   weatherData,
   date,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -60,12 +64,12 @@ export const WeatherDetailModal: React.FC<WeatherDetailModalProps> = ({
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{formatDate(date)}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <FontAwesome5 name="times" size={24} color="#666" />
+              <FontAwesome5 name="times" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.noDataContainer}>
-            <FontAwesome5 name="cloud-meatball" size={48} color="#95A5A6" />
+            <FontAwesome5 name="cloud-meatball" size={48} color={colors.textSecondary} />
             <Text style={styles.noDataTitle}>No Weather Data</Text>
             <Text style={styles.noDataText}>
               Weather information is only available for today and the next 5 days.
@@ -87,7 +91,7 @@ export const WeatherDetailModal: React.FC<WeatherDetailModalProps> = ({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{formatDate(date)}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <FontAwesome5 name="times" size={24} color="#666" />
+            <FontAwesome5 name="times" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -228,182 +232,184 @@ export const WeatherDetailModal: React.FC<WeatherDetailModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E1E8ED',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  noDataContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  noDataTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  noDataText: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  weatherOverview: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  weatherIconSection: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  conditionDescription: {
-    fontSize: 16,
-    color: '#2C3E50',
-    textAlign: 'center',
-    textTransform: 'capitalize',
-    marginTop: 8,
-  },
-  temperatureSection: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  highTemp: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#E74C3C',
-  },
-  lowTemp: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#3498DB',
-    marginTop: -8,
-  },
-  tempLabels: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  warningCard: {
-    backgroundColor: '#FDF2F2',
-    borderLeftWidth: 3,
-    borderLeftColor: '#E74C3C',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginLeft: 12,
-  },
-  precipitationText: {
-    fontSize: 16,
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  precipitationAmount: {
-    fontSize: 14,
-    color: '#7F8C8D',
-  },
-  suitabilityBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-  suitabilityText: {
-    fontSize: 16,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  conditionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  conditionItem: {
-    width: '48%',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  conditionLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  conditionValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    textTransform: 'capitalize',
-  },
-  recommendationText: {
-    fontSize: 14,
-    color: '#D68910',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#C0392B',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  dataSource: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginBottom: 4,
-  },
-  dataProvider: {
-    fontSize: 11,
-    color: '#95A5A6',
-  },
-});
+function getStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    closeButton: {
+      padding: 8,
+    },
+    content: {
+      flex: 1,
+      padding: 16,
+    },
+    noDataContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    noDataTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    noDataText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    weatherOverview: {
+      flexDirection: 'row',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 16,
+      alignItems: 'center',
+    },
+    weatherIconSection: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    conditionDescription: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
+      textTransform: 'capitalize',
+      marginTop: 8,
+    },
+    temperatureSection: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    highTemp: {
+      fontSize: 40,
+      fontWeight: 'bold',
+      color: '#E74C3C',
+    },
+    lowTemp: {
+      fontSize: 32,
+      fontWeight: '600',
+      color: '#3498DB',
+      marginTop: -8,
+    },
+    tempLabels: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+    },
+    warningCard: {
+      backgroundColor: '#FDF2F2',
+      borderLeftWidth: 3,
+      borderLeftColor: '#E74C3C',
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginLeft: 12,
+    },
+    precipitationText: {
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    precipitationAmount: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    suitabilityBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      marginBottom: 16,
+    },
+    suitabilityText: {
+      fontSize: 16,
+      fontWeight: '600',
+      textTransform: 'capitalize',
+    },
+    conditionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    conditionItem: {
+      width: '48%',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    conditionLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    conditionValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      textTransform: 'capitalize',
+    },
+    recommendationText: {
+      fontSize: 14,
+      color: colors.warning,
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    warningText: {
+      fontSize: 14,
+      color: colors.error,
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    footer: {
+      alignItems: 'center',
+      paddingVertical: 20,
+    },
+    dataSource: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    dataProvider: {
+      fontSize: 11,
+      color: colors.textSecondary,
+    },
+  });
+}

@@ -1,3 +1,19 @@
+# March 2026
+
+- Release-prep update for `release/v1.3.0-pre-ai` to keep Apple review scope on stable features
+- Hid in-app Voice and AI purchase messaging for this branch and marked advanced voice/AI as coming in v1.3.1
+- Added full web image ingestion support (file picker, paste from clipboard, drag and drop)
+- Added a full-page drag overlay on web to improve discoverability during file drop
+- Expanded accepted image formats in web flows to JPG, PNG, GIF, WebP, and AVIF
+- Fixed calendar add-event modal reopen loop by clearing one-time route params after use
+- Added unsaved-changes protection plus draft autosave/restore in Add Seed
+- Added matching unsaved-changes protection plus per-record draft autosave/restore in Edit Supplier
+
+- Updated subscription structure to standalone Essential and Voice & AI Entry tiers
+- Updated RevenueCat product IDs and entitlement model for Essential and Voice plans
+- Reworked the upgrade screen with branded sprout imagery, monthly/yearly pricing, privacy and legal links, restore purchases access, and Advanced AI coming soon messaging
+- Added website-ready Terms of Service and Delete/Restore Purchases policy files under `docs/legal`
+
 # MySeedBook Catalogue - Development Changelog
 
 ## Version 1.3.2 - November 10, 2025

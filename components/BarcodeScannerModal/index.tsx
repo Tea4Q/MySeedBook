@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { X, Scan, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
-import { premiumManager } from '@/utils/premiumManager';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import { lookupSeedByBarcode, type SeedLookupResult } from '@/utils/seedDataLookup';
 
 // Platform-specific imports - only load on mobile
@@ -58,17 +58,27 @@ export default function BarcodeScannerModal({
   onUpgradeRequired,
 }: BarcodeScannerModalProps) {
   const { colors } = useTheme();
+  const { isPremium, isLoading: isSubscriptionLoading, refresh } = useGlobalSubscription();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
 
   // Check if platform supports barcode scanning
   const isPlatformSupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
   useEffect(() => {
-    checkPremiumStatus();
-  }, [visible]);
+    if (!visible) return;
+
+    const refreshPremiumStatus = async () => {
+      try {
+        await refresh();
+      } catch (error) {
+        console.error('❌ Error refreshing premium status:', error);
+      }
+    };
+
+    refreshPremiumStatus();
+  }, [visible, refresh]);
 
   useEffect(() => {
     if (visible && isPlatformSupported) {
@@ -79,19 +89,6 @@ export default function BarcodeScannerModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, isPlatformSupported]);
-
-  const checkPremiumStatus = async () => {
-    try {
-      await premiumManager.initialize();
-      const subscription = premiumManager.getSubscription();
-      const hasPremium = subscription?.features.barcode_scanner || false;
-      console.log('📷 Barcode scanner premium check:', hasPremium);
-      setIsPremium(hasPremium);
-    } catch (error) {
-      console.error('❌ Error checking premium status:', error);
-      setIsPremium(false);
-    }
-  };
 
   const requestCameraPermission = async () => {
     if (!isPlatformSupported || !requestCameraPermissionsAsync) {
@@ -197,6 +194,21 @@ export default function BarcodeScannerModal({
   }
 
   // Handle non-premium users
+  if (isSubscriptionLoading) {
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.container}>
+          <View style={[styles.content, { backgroundColor: colors.card }]}> 
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.message, { color: colors.textSecondary, marginTop: 16 }]}>
+              Checking subscription...
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   if (!isPremium) {
     return (
       <Modal visible={visible} transparent animationType="slide">
@@ -247,7 +259,7 @@ export default function BarcodeScannerModal({
             >
               <Sparkles size={20} color={colors.primaryText} />
               <Text style={[styles.upgradeButtonText, { color: colors.primaryText }]}>
-                Upgrade to Premium
+                View Garden Plans
               </Text>
             </Pressable>
 

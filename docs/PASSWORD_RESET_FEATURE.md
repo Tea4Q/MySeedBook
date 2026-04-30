@@ -31,7 +31,7 @@ The MySeedBook Catalogue app now includes a comprehensive password reset feature
 
 ### Deep Link Support
 - Web: Uses current domain with `/auth/reset-password` path
-- Mobile: Uses `myseedbook-catalogue://auth/reset-password` scheme
+- Mobile: Uses `myseedbook.package://login-callback` scheme
 - Matches the existing app configuration in `app.json`
 
 ### Security Features
@@ -120,7 +120,7 @@ The MySeedBook Catalogue app now includes a comprehensive password reset feature
 - SMTP settings must be properly configured
 - Redirect URLs should be added to allowed list:
   - Web: `https://yourdomain.com/auth/reset-password`
-  - Mobile: `myseedbook-catalogue://auth/reset-password`
+  - Mobile: `myseedbook.package://login-callback`
 
 ### App Configuration
 - App scheme is configured in `app.json` as `myseedbook-catalogue`

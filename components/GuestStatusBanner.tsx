@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from 'expo-router';
 import { User, AlertCircle } from 'lucide-react-native';
+import { GuestTracker } from '@/utils/guestTracker';
 
 interface GuestSeedLimitBannerProps {
   remainingSeeds: number;
@@ -71,7 +72,7 @@ export default function GuestStatusBanner() {
     return null;
   }
 
-  const remainingSeeds = Math.max(0, 10 - guestUsage.seedsAdded);
+  const remainingSeeds = Math.max(0, GuestTracker.GUEST_SEED_LIMIT - (guestUsage.demoSeedsCreated?.length ?? guestUsage.seedsAdded));
 
   return <GuestSeedLimitBanner remainingSeeds={remainingSeeds} />;
 }

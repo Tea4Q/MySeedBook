@@ -1,5 +1,23 @@
 # 🚀 Production Readiness Summary
 
+## ✅ March 2026 Update (release/v1.3.0-pre-ai)
+
+- ✅ **Pre-AI submission posture applied**
+   - Voice and AI tier messaging hidden/demoted for this release branch
+   - Upgrade and premium copy now align with stable reviewer-testable features
+
+- ✅ **Web image upload flow expanded**
+   - File picker, clipboard paste, and drag-and-drop supported
+   - Full-page drag overlay added to improve drop discoverability
+   - Web formats verified: JPG, PNG, GIF, WebP, AVIF
+
+- ✅ **Form reliability hardening**
+   - Add Seed now has unsaved-change leave prompts plus draft autosave/restore
+   - Edit Supplier now has matching leave prompts plus per-record draft autosave/restore
+
+- ✅ **Calendar flow reliability**
+   - One-shot route params are cleared after use to prevent modal reopen loops on tab remounts
+
 ## ✅ SECURITY CLEANUP COMPLETED
 
 Your gardening catalogue app has been successfully prepared for production deployment!

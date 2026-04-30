@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Status**: Updated November 2025  
+**Status**: Updated February 2026  
 **App Version**: 1.3.0 - Production Ready with Weather Integration  
 
 ## 📋 Current & Relevant Documentation
@@ -49,9 +49,40 @@
 
 ## 📈 Recent Completions
 
+
+### ✅ February 2026 Propagate Fix Workflow
+
+This repo includes `.github/workflows/propagate-fix.yml` to cherry-pick a fix commit into multiple target branches and open PRs automatically.
+
+### 1) Manual run (workflow_dispatch)
+
+1. Open **GitHub → Actions → Propagate Fix → Run workflow**.
+2. Set:
+   - `commit_sha`: commit to backport (usually merge commit from `main`)
+   - `source_branch`: usually `main`
+   - `target_branches`: comma-separated list (example: `release/v1.3.0-pre-ai,feature/voice,feature/weather`)
+3. Run workflow.
+4. Review created backport PRs and merge after CI passes.
+
+### 2) Label flow (auto on merged PR)
+
+1. Add label `propagate-fix` to a PR targeting `main`.
+2. Merge the PR.
+3. Workflow triggers on PR close+merge, then:
+   - uses `merge_commit_sha`
+   - backports to branches from repo variable `PROPAGATE_TARGET_BRANCHES`
+   - falls back to default list in workflow if variable is not set
+4. Review and merge generated PRs.
+
+### Notes
+
+- If cherry-pick conflicts, workflow reports conflict and skips PR for that branch.
+- Resolve conflicts manually by creating a backport branch and opening a PR.
+
+
 ### ✅ November 2025 - Weather Integration & Premium Features:
 1. **Weather Integration** - 5-day forecast with animated icons (Meteocons)
-2. **Premium Subscription System** - Monthly ($5.99) and Yearly ($49.99) tiers
+2. **Subscription System** - Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99) tiers
 3. **Feedback System** - User feedback with Supabase backend
 4. **Dependency Fixes** - Resolved bundling issues with pretty-format and Lottie
 5. **Web Platform Support** - Fixed Alert compatibility for web

@@ -1,0 +1,9 @@
+MySeedBook Delete and Restore Purchases Policy
+Effective date: March 18, 2026
+
+1. Deleting a MySeedBook account does not automatically cancel an App Store or Google Play subscription.
+2. Subscription cancellation must be handled directly in Apple App Store or Google Play account settings.
+3. Users can restore eligible active purchases from within the app by using the Restore Purchases action.
+4. Billing, refunds, renewals, and cancellations are controlled by Apple and Google Play platform rules.
+5. If a deleted account is recreated, access restoration may depend on account status, platform validation, and any app resubscribe cooldown rules.
+6. Refund requests must be submitted through the purchase platform.

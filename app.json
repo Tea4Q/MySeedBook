@@ -18,12 +18,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.myseedbook.catalogue",
-      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses the camera to capture photos of your seeds and plants for your garden catalogue.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images of your seeds and plants.",
-        "NSMicrophoneUsageDescription": "This app uses the microphone to record voice notes while you work in your garden, allowing hands-free note-taking about your plants and seeds.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for premium voice input when entering seeds, suppliers, and calendar events.",
         "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate weather information for your gardening activities."
       },
       "config": {
@@ -85,7 +84,9 @@
     },
     "runtimeVersion": "1.3.0",
     "updates": {
-      "url": "https://u.expo.dev/debc61fc-b3ac-46ad-9220-6c452667b7e3"
+      "url": "https://u.expo.dev/debc61fc-b3ac-46ad-9220-6c452667b7e3",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
     }
   }
 }

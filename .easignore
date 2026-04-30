@@ -15,10 +15,12 @@ docs/
 !README.md
 
 # Build artifacts and logs
-.expo/
+.gradle
+.node_modules
+.expo
 .expo-shared/
-dist/
-build/
+dist
+build
 android/app/build/
 android/build/
 android/.gradle/

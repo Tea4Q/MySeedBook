@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme } from '@/lib/theme';
 import { router } from 'expo-router';
 import { MessageSquare, Star, Send, ArrowLeft } from 'lucide-react-native';
 import { feedbackService } from '../lib/services/feedbackService';

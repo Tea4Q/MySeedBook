@@ -22,6 +22,7 @@ import { useTheme } from '@/lib/theme';
 import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '../AddSupplierForm';
+import { useTheme } from '@/lib/theme';
 
 interface SupplierInputProps {
   onSelect: (supplier: Supplier) => void;
@@ -166,13 +167,13 @@ export function SupplierInput({
 
         {showDropdown && (
           <View 
-            style={[styles.dropdown, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+            style={[styles.dropdown, { backgroundColor: colors.card, borderColor: colors.border }]}
             pointerEvents="box-none"
           >
             {isLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#2d7a3a" />
-                <Text style={styles.loadingText}>Loading suppliers...</Text>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading suppliers...</Text>
               </View>
             ) : (
               <View pointerEvents="auto">
@@ -190,7 +191,7 @@ export function SupplierInput({
                       activeOpacity={0.7}
                     >
                       <Building2 size={20} color={colors.primary} />
-                      <Text style={[styles.supplierName, { color: colors.inputText }]}>{supplier.supplier_name}</Text>
+                      <Text style={[styles.supplierName, { color: colors.text }]}>{supplier.supplier_name}</Text>
                       <Check size={16} color={colors.primary} />
                     </TouchableOpacity>
                   ))}
@@ -202,8 +203,8 @@ export function SupplierInput({
                     onPress={handleAddNewSupplier}
                     activeOpacity={0.8}
                   >
-                    <Plus size={20} color={colors.primaryText} />
-                    <Text style={[styles.addNewText, { color: colors.primaryText }]}>
+                    <Plus size={20} color={colors.buttonText} />
+                    <Text style={styles.addNewText}>
                       Add &quot;{inputValue}&quot; as new supplier
                     </Text>
                   </TouchableOpacity>
@@ -231,11 +232,11 @@ export function SupplierInput({
         onRequestClose={handleCancelAdd}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Supplier</Text>
-              <Pressable style={styles.closeButton} onPress={handleCancelAdd}>
-                <X size={24} color="#666666" />
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Supplier</Text>
+                <Pressable style={styles.closeButton} onPress={handleCancelAdd}>
+                  <X size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
             <AddSupplierForm
@@ -302,7 +303,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#666666',
   },
   addNewItem: {
     flexDirection: 'row',
@@ -322,7 +322,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -333,12 +332,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#212529',
   },
   closeButton: {
     padding: 8,

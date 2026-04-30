@@ -50,7 +50,7 @@
 - Optimize growing conditions based on forecasts
 - Take their gardening to the next level with professional weather insights
 
-### 💎 **Upgrade to Premium**
+### 💎 **Choose Your Garden Plan**
 Get access to complete weather integration features and take your gardening success to new heights!
 
 ---

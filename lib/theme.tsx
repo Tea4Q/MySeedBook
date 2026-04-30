@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Theme = 'light' | 'dark';
 
-interface ThemeColors {
+export interface ThemeColors {
   background: string;
   surface: string;
   card: string;
@@ -31,28 +31,28 @@ interface ThemeColors {
 }
 
 const lightTheme: ThemeColors = {
-  background: '#ffffff',
-  surface: '#f8f9fa',
-  card: '#ffffff',
-  text: '#212529',
-  textSecondary: '#495057',
-  primary: '#2f9e44',
-  primaryText: '#ffffff',
-  border: '#e9ecef',
-  header: '#f8f9fa',
-  headerText: '#212529',
-  icon: '#2f9e44',
-  success: '#8ce99a',
-  warning: '#ffec99',
-  error: '#ff8787',
+  background: '#E7DFCF',
+  surface: '#F0EAD8',
+  card: '#FFFDF9',
+  text: '#2B2F24',
+  textSecondary: '#6B6B5A',
+  primary: '#3A4A2C',
+  primaryText: '#FFFFFF',
+  border: '#D8CFBD',
+  header: '#3A4A2C',
+  headerText: '#FFFFFF',
+  icon: '#3A4A2C',
+  success: '#4E7A43',
+  warning: '#A47A2A',
+  error: '#A44A3F',
   tabBarBackground: '#262A2B',
   tabBarActive: '#BCAB92',
   tabBarInactive: '#8B8776',
-  inputBackground: '#ffffff',
-  inputBorder: '#e0e0e0',
-  inputText: '#333333',
-  buttonBackground: '#2f9e44',
-  buttonText: '#ffffff',
+  inputBackground: '#F5F0E7',
+  inputBorder: '#D8CFBD',
+  inputText: '#2B2F24',
+  buttonBackground: '#3A4A2C',
+  buttonText: '#FFFFFF',
   modalBackground: 'rgba(0, 0, 0, 0.5)',
   shadowColor: '#000000',
 };

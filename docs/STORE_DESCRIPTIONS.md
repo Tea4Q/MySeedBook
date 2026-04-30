@@ -66,6 +66,9 @@ Built by gardeners, for gardeners. We understand the challenges of keeping track
 Start your organized gardening journey today! Download MySeedBook Catalogue and watch your garden flourish with better planning and organization.
 
 🌱 Your seeds deserve the best care - give them the organization they need to thrive!
+
+Privacy Policy: https://myseedbook.app/privacy-policy
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 ```
 
 ## 🍎 **Apple App Store Promotional Text** (170 characters max)

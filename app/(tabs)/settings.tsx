@@ -1,18 +1,60 @@
-import { View, Text, StyleSheet, Pressable, Switch, Alert, ActivityIndicator, Platform,  } from 'react-native';
-
-import { Bell, Sun, Moon, LogOut, TestTube, MessageSquare } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { Bell, Sun, Moon, LogOut, MessageSquare, Crown, Leaf, CreditCard, RefreshCw, Trash2, ChevronRight } from 'lucide-react-native';
+import Constants from 'expo-constants';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
+import { globalProfileManager, ProfileData } from '@/lib/globalProfileManager';
+import GlobalProfileAvatar from '@/components/GlobalProfileAvatar';
+import GlobalSubscriptionModal from '@/components/GlobalSubscriptionModal';
+import GlobalAccountDeletionModal from '@/components/GlobalAccountDeletionModal';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme } = useTheme();
-  const { signOut } = useAuth();
-  const [notifications] = useState({
-    plantingReminders: false,
-  });
+  const { user, signOut } = useAuth();
+  const {
+    isPremium,
+    planLabel,
+    renewalDate,
+    isEligibleForRefund,
+    openManageSubscriptions,
+    requestRefund,
+    isResubscribeBlocked,
+  } = useGlobalSubscription();
+
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+
+  const appVersion = Constants.expoConfig?.version ?? '1.3.0';
+  const devBundleMarker = React.useMemo(() => {
+    if (!__DEV__) return null;
+
+    // Timestamp updates on each fresh dev bundle load, useful for web vs device parity checks.
+    return new Date().toISOString();
+  }, []);
+
+  const loadProfile = useCallback(async () => {
+    if (!user?.id) return;
+    const data = await globalProfileManager.getProfile(user.id);
+    setProfile(data);
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleThemeChange = (selectedTheme: 'light' | 'dark') => {
     setTheme(selectedTheme);
@@ -23,8 +65,6 @@ export default function SettingsScreen() {
       try {
         setIsSigningOut(true);
         await signOut();
-        // Let _layout.tsx handle navigation automatically based on auth state
-        // No manual navigation needed here
       } catch (err) {
         console.error('Sign out error:', err);
         if (Platform.OS === 'web') {
@@ -38,195 +78,259 @@ export default function SettingsScreen() {
     };
 
     if (Platform.OS === 'web') {
-      // Use window.confirm for web
       if (window.confirm('Are you sure you want to sign out?')) {
         await confirmSignOut();
       }
     } else {
-      Alert.alert(
-        'Sign Out',
-        'Are you sure you want to sign out?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Sign Out',
-            style: 'destructive',
-            onPress: confirmSignOut,
-          },
-        ]
-      );
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: confirmSignOut },
+      ]);
     }
   };
 
+  const textSecondary = colors.text + '99';
+  const errorColor = '#EF4444';
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.section, { borderBottomColor: colors.border }, styles.disabledSection]}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
-          <Text style={[styles.comingSoonLabel, { color: colors.textSecondary }]}>Coming Soon</Text>
+    <>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{ backgroundColor: colors.background }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ══════════════════════════════════════════════
+            SECTION 1 — PROFILE
+        ══════════════════════════════════════════════ */}
+        <View style={[styles.sectionGroupHeader, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionGroupLabel, { color: textSecondary }]}>PROFILE</Text>
         </View>
-        <View style={[styles.setting, styles.disabledSetting]}>
-          <View style={styles.settingInfo}>
-            <Bell size={24} color={colors.textSecondary} />
-            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Planting Reminders</Text>
-          </View>
-          <Switch
-            value={notifications.plantingReminders}
-            onValueChange={() => {}} // Disabled
-            trackColor={{ false: colors.border, true: colors.textSecondary }}
-            thumbColor={colors.textSecondary}
-            ios_backgroundColor={colors.border}
-            disabled={true}
-          />
-        </View>
-           {/* Profile section with Create/Edit Profile button */}
-      <View style={[styles.setting, styles.disabledSetting]}> 
-        <View style={styles.settingInfo}>
-          <Text style={[styles.settingText, { color: colors.textSecondary }]}>👤 Profile</Text>
-     </View>
+
+        {/* Avatar + name row — tap to go to full profile screen */}
         <Pressable
           style={({ pressed }) => [
-            { alignSelf: 'flex-start', borderRadius: 8, marginVertical: 8, borderWidth: 1, borderColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8 },
-            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
+            styles.profileRow,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            pressed && { opacity: 0.85 },
           ]}
-          onPress={() => router.push('/auth/create-profile')}
-          android_ripple={{ color: colors.primary + '20' }}
-          disabled={true} // Disable button for now
+          onPress={() => router.push('/global-profile' as any)}
+          android_ripple={{ color: colors.primary + '18' }}
         >
-          <View style ={[styles.settingInfo, styles.disabledSetting]}>
-          <Text style={[styles.settingText, { color: colors.primary}]}>Create or Edit Profile</Text>
+          <GlobalProfileAvatar
+            userId={user?.id}
+            avatarUrl={profile?.avatar_url}
+            displayName={profile?.display_name ?? user?.email}
+            size={56}
+            editable={false}
+          />
+          <View style={styles.profileRowText}>
+            <Text style={[styles.profileName, { color: colors.text }]} numberOfLines={1}>
+              {profile?.display_name ?? user?.email?.split('@')[0] ?? 'My Profile'}
+            </Text>
+            <Text style={[styles.profileEmail, { color: textSecondary }]} numberOfLines={1}>
+              {user?.email ?? ''}
+            </Text>
           </View>
+          <ChevronRight size={18} color={textSecondary} />
         </Pressable>
-        
-      </View>
-      </View>
 
-      <View style={[styles.section, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
-        <View style={styles.setting}>
-          <View style={styles.settingInfo}>
-            <Sun size={24} color={colors.icon} />
-            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Light Mode</Text>
-          </View>
-          <Pressable 
-            style={[
-              styles.themeButton, 
-              { backgroundColor: colors.surface },
-              theme === 'light' && [styles.activeTheme, { backgroundColor: colors.primary }]
-            ]}
-            onPress={() => handleThemeChange('light')}
-          >
-            <Text style={[
-              styles.themeButtonText, 
-              { color: theme === 'light' ? colors.primaryText : colors.text }
-            ]}>
-              {theme === 'light' ? 'On' : 'Off'}
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.setting}>
-          <View style={styles.settingInfo}>
-            <Moon size={24} color={colors.icon} />
-            <Text style={[styles.settingText, { color: colors.textSecondary }]}>Dark Mode</Text>
-          </View>
-          <Pressable 
-            style={[
-              styles.themeButton, 
-              { backgroundColor: colors.surface },
-              theme === 'dark' && [styles.activeTheme, { backgroundColor: colors.primary }]
-            ]}
-            onPress={() => handleThemeChange('dark')}
-          >
-            <Text style={[
-              styles.themeButtonText, 
-              { color: theme === 'dark' ? colors.primaryText : colors.text }
-            ]}>
-              {theme === 'dark' ? 'On' : 'Off'}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={[styles.section, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Help & Support</Text>
-        <Pressable 
-          style={({ pressed }) => [
-            styles.setting,
-            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
-          ]}
-          onPress={() => router.push('/feedback')}
-          android_ripple={{ color: colors.primary + '20' }}
-        >
-          <View style={styles.settingInfo}>
-            <MessageSquare size={24} color={colors.primary} />
-            <Text style={[styles.settingText, { color: colors.text }]}>
-              Send Feedback
-            </Text>
-          </View>
-        </Pressable>
-      </View>
-
-      <View style={[styles.section, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
-        <Text style={[styles.version, { color: colors.textSecondary }]}>Version 1.0.0</Text>
-      </View>
-
-      {/* Development section - Premium Testing */}
-      {(__DEV__ || process.env.EXPO_PUBLIC_ENABLE_PREMIUM_TESTING === 'true') && (
-        <View style={[styles.section, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {__DEV__ ? 'Development' : 'Admin Tools'}
-          </Text>
-          <Pressable 
-            style={({ pressed }) => [
-              styles.setting,
-              pressed && { backgroundColor: colors.surface, opacity: 0.7 }
-            ]}
-            onPress={() => router.push('/premium-settings')}
-            android_ripple={{ color: colors.primary + '20' }}
-          >
-            <View style={styles.settingInfo}>
-              <TestTube size={24} color={colors.primary} />
-              <Text style={[styles.settingText, { color: colors.text }]}>
-                Test Premium Features
+        {/* Subscription card */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* Status row */}
+          <View style={styles.subStatusRow}>
+            {isPremium ? (
+              <Crown size={22} color={colors.primary} />
+            ) : (
+              <Leaf size={22} color={textSecondary} />
+            )}
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[styles.subStatusTitle, { color: colors.text }]}>
+                {isPremium ? planLabel : 'Free Plan'}
+              </Text>
+              {isPremium && renewalDate && (
+                <Text style={[styles.subStatusSub, { color: textSecondary }]}>
+                  Renews {new Date(renewalDate).toLocaleDateString()}
+                </Text>
+              )}
+            </View>
+            <View
+              style={[
+                styles.tierBadge,
+                { backgroundColor: isPremium ? colors.primary + '22' : colors.border },
+              ]}
+            >
+              <Text style={[styles.tierBadgeText, { color: isPremium ? colors.primary : textSecondary }]}>
+                {isPremium ? 'PREMIUM' : 'FREE'}
               </Text>
             </View>
+          </View>
+
+          {/* Upgrade button — shown only when free and not blocked */}
+          {!isPremium && !isResubscribeBlocked && (
+            <Pressable
+              style={[styles.upgradeBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setShowUpgradeModal(true)}
+            >
+              <Crown size={16} color="#fff" />
+              <Text style={styles.upgradeBtnText}>View Garden Plans</Text>
+            </Pressable>
+          )}
+
+          {/* Resubscribe blocked */}
+          {!isPremium && isResubscribeBlocked && (
+            <View style={[styles.blockedBanner, { backgroundColor: colors.border }]}>
+              <Text style={[styles.blockedText, { color: textSecondary }]}>
+                New subscriptions available after account cooldown period ends.
+              </Text>
+            </View>
+          )}
+
+          {/* Manage / Refund — shown only when premium */}
+          {isPremium && (
+            <View style={styles.subActions}>
+              <Pressable
+                style={[styles.subActionBtn, { borderColor: colors.border }]}
+                onPress={openManageSubscriptions}
+              >
+                <CreditCard size={16} color={colors.primary} />
+                <Text style={[styles.subActionText, { color: colors.primary }]}>Manage</Text>
+              </Pressable>
+
+              {isEligibleForRefund && (
+                <Pressable
+                  style={[styles.subActionBtn, { borderColor: colors.border }]}
+                  onPress={requestRefund}
+                >
+                  <RefreshCw size={16} color={textSecondary} />
+                  <Text style={[styles.subActionText, { color: textSecondary }]}>Request Refund</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Delete account */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            style={({ pressed }) => [styles.dangerRow, pressed && { opacity: 0.7 }]}
+            onPress={() => setShowDeleteModal(true)}
+          >
+            <Trash2 size={20} color={errorColor} />
+            <Text style={[styles.dangerText, { color: errorColor }]}>Delete Account</Text>
           </Pressable>
         </View>
-      )}
 
-      {/* Sign Out section */}
-      <View style={[styles.section, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-        <Pressable 
-          style={({ pressed }) => [
-            styles.setting, 
-            styles.signOutButton,
-            pressed && { backgroundColor: colors.surface, opacity: 0.7 }
-          ]}
-          onPress={() => {
-            handleSignOut();
-          }}
-          disabled={isSigningOut}
-          android_ripple={{ color: colors.error + '20' }}
-        >
-          <View style={styles.settingInfo}>
-            <LogOut size={24} color={colors.error || '#FF6B6B'} />
-            <Text style={[styles.settingText, { color: colors.error || '#FF6B6B' }]}>
-              Sign Out
-            </Text>
+        {/* ══════════════════════════════════════════════
+            SECTION 2 — APP SETTINGS
+        ══════════════════════════════════════════════ */}
+        <View style={[styles.sectionGroupHeader, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionGroupLabel, { color: textSecondary }]}>APP SETTINGS</Text>
+        </View>
+
+        {/* Appearance */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Appearance</Text>
+
+          <View style={styles.themeToggleRow}>
+            <Pressable
+              style={[
+                styles.themeOption,
+                { borderColor: theme === 'light' ? colors.primary : colors.border },
+                theme === 'light' && { backgroundColor: colors.primary + '18' },
+              ]}
+              onPress={() => handleThemeChange('light')}
+            >
+              <Sun size={20} color={theme === 'light' ? colors.primary : textSecondary} />
+              <Text style={[styles.themeOptionText, { color: theme === 'light' ? colors.primary : colors.text }]}>
+                Light
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.themeOption,
+                { borderColor: theme === 'dark' ? colors.primary : colors.border },
+                theme === 'dark' && { backgroundColor: colors.primary + '18' },
+              ]}
+              onPress={() => handleThemeChange('dark')}
+            >
+              <Moon size={20} color={theme === 'dark' ? colors.primary : textSecondary} />
+              <Text style={[styles.themeOptionText, { color: theme === 'dark' ? colors.primary : colors.text }]}>
+                Dark
+              </Text>
+            </Pressable>
           </View>
-          {isSigningOut && (
-            <ActivityIndicator size="small" color={colors.error || '#FF6B6B'} />
-          )}
-        </Pressable>
-      </View>
+        </View>
 
-   
-    </View>
+        {/* Notifications (coming soon) */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.6 }]}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <Bell size={20} color={textSecondary} />
+              <Text style={[styles.settingLabel, { color: textSecondary }]}>Planting Reminders</Text>
+            </View>
+            <View style={styles.comingSoonBadge}>
+              <Text style={[styles.comingSoonText, { color: textSecondary }]}>Coming Soon</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Help & Support */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Help & Support</Text>
+          <Pressable
+            style={({ pressed }) => [styles.settingRow, pressed && { opacity: 0.7 }]}
+            onPress={() => router.push('/feedback')}
+            android_ripple={{ color: colors.primary + '20' }}
+          >
+            <View style={styles.settingLeft}>
+              <MessageSquare size={20} color={colors.primary} />
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Send Feedback</Text>
+            </View>
+            <ChevronRight size={16} color={textSecondary} />
+          </Pressable>
+        </View>
+
+        {/* About */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>About</Text>
+          <Text style={[styles.versionText, { color: textSecondary }]}>
+            Version {appVersion}
+          </Text>
+          {devBundleMarker && (
+            <Text style={[styles.devMarkerText, { color: textSecondary }]}> 
+              Dev Bundle: {devBundleMarker}
+            </Text>
+          )}
+        </View>
+
+        {/* Sign Out */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 32 }]}>
+          <Pressable
+            style={({ pressed }) => [styles.settingRow, pressed && { opacity: 0.7 }]}
+            onPress={handleSignOut}
+            disabled={isSigningOut}
+            android_ripple={{ color: errorColor + '20' }}
+          >
+            <View style={styles.settingLeft}>
+              <LogOut size={20} color={errorColor} />
+              <Text style={[styles.settingLabel, { color: errorColor }]}>Sign Out</Text>
+            </View>
+            {isSigningOut && <ActivityIndicator size="small" color={errorColor} />}
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* Modals */}
+      <GlobalSubscriptionModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
+      <GlobalAccountDeletionModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
+    </>
   );
 }
 
@@ -234,83 +338,170 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  titleContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+  sectionGroupHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 6,
   },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  sectionGroupLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.1,
   },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  disabledSection: {
-    opacity: 0.6,
-  },
-  sectionHeader: {
+  profileRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    gap: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
+  profileRowText: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  comingSoonLabel: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: 'rgba(128, 128, 128, 0.2)',
+  profileEmail: {
+    fontSize: 13,
+    marginTop: 1,
   },
-  setting: {
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  subStatusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  disabledSetting: {
-    opacity: 0.8,
+  subStatusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
   },
-  settingInfo: {
+  subStatusSub: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  tierBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  tierBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  upgradeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  upgradeBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  blockedBanner: {
+    borderRadius: 8,
+    padding: 10,
+  },
+  blockedText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  subActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  subActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 9,
+    paddingVertical: 9,
+  },
+  subActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 2,
+  },
+  dangerText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  themeToggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  themeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
-  settingText: {
-    fontSize: 16,
+  settingLabel: {
+    fontSize: 15,
   },
-  themeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  comingSoonBadge: {
+    borderRadius: 6,
+    backgroundColor: 'rgba(128,128,128,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  activeTheme: {
-    // Active styling is handled dynamically
+  comingSoonText: {
+    fontSize: 11,
+    fontStyle: 'italic',
   },
-  themeButtonText: {
+  versionText: {
     fontSize: 14,
-    fontWeight: '500',
   },
-  version: {
-    fontSize: 14,
-  },
-  signOutButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    minHeight: 48, // Ensure minimum touch target
+  devMarkerText: {
+    fontSize: 11,
+    marginTop: 6,
   },
 });

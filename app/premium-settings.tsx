@@ -8,16 +8,36 @@ import {
   Alert,
   Switch
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme } from '@/lib/theme';
 import { router } from 'expo-router';
-import { Crown, CheckCircle, Settings, ExternalLink, ArrowLeft, TestTube } from 'lucide-react-native';
+import { Sprout, CheckCircle, Settings, ExternalLink, ArrowLeft, TestTube } from 'lucide-react-native';
 import { usePremiumFeature } from '../hooks/usePremiumFeature';
 import PremiumModal from '../components/PremiumModal';
 import { premiumManager } from '../utils/premiumManager';
+import { useGlobalSubscription } from '../lib/globalSubscriptionManager';
+import { PRICING_COPY } from '../lib/pricingCopy';
+
+const TIER_FEATURES: Record<string, string[]> = {
+  essential: [
+    'Unlimited seeds',
+    'Unlimited suppliers',
+    'Unlimited photos',
+    'Weather integration',
+    'Cloud sync across devices',
+    'Advanced calendar',
+  ],
+  voice: [
+    'Everything in Essential',
+    'Voice notes',
+    'AI voice transcription entry',
+    'Hands-free add and edit workflow',
+  ],
+};
 
 export default function PremiumSettingsScreen() {
   const { colors } = useTheme();
   const { isPremium, subscription } = usePremiumFeature();
+  const { tier, planType, renewalDate, planLabel, openManageSubscriptions } = useGlobalSubscription();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isTestPremium, setIsTestPremium] = useState(isPremium);
 
@@ -48,20 +68,7 @@ export default function PremiumSettingsScreen() {
   };
 
   const handleManageSubscription = () => {
-    Alert.alert(
-      'Manage Subscription',
-      'To manage your subscription, please visit your App Store or Google Play account settings.',
-      [
-        {
-          text: 'Open Settings',
-          onPress: () => {
-            // TODO: Open app store subscription management
-            console.log('Opening app store subscription management');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    openManageSubscriptions();
   };
 
   const handleContactSupport = () => {
@@ -100,13 +107,13 @@ export default function PremiumSettingsScreen() {
           {/* Premium Status */}
           <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
             <View style={styles.statusHeader}>
-              <Crown size={32} color={colors.primary} />
+              <Sprout size={32} color={colors.primary} />
               <View style={styles.statusContent}>
                 <Text style={[styles.statusTitle, { color: colors.text }]}>
-                  Premium Active
+                  Subscription Active
                 </Text>
                 <Text style={[styles.statusSubtitle, { color: colors.primary }]}>
-                  {subscription.tier === 'premium-yearly' ? 'Yearly Plan' : 'Monthly Plan'}
+                  {planLabel || (planType === 'yearly' ? 'Yearly Plan' : 'Monthly Plan')}
                 </Text>
               </View>
               <CheckCircle size={24} color={colors.primary} />
@@ -114,40 +121,32 @@ export default function PremiumSettingsScreen() {
             
             <View style={styles.statusDetails}>
               <Text style={[styles.statusDetailText, { color: colors.text + '80' }]}>
-                Active until: {formatDate(subscription.expiresAt)}
+                Active until: {renewalDate ?? formatDate(subscription.expiresAt)}
               </Text>
             </View>
           </View>
 
         {/* Premium Features */}
         <View style={[styles.featuresCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Your Premium Features
+          <Text style={[styles.cardTitle, { color: colors.text }]}> 
+            Included in Your Plan
           </Text>
-          
-          {Object.entries(subscription.features).map(([key, enabled]) => {
-            if (!enabled) return null;
-            
-            const featureNames: Record<string, string> = {
-              unlimited_seeds: 'Unlimited Seeds',
-              unlimited_suppliers: 'Unlimited Suppliers',
-              unlimited_photos: 'Unlimited Photos',
-              advanced_calendar: 'Advanced Calendar',
-              plant_identification: 'Plant Identification',
-              barcode_scanner: 'Barcode Scanner',
-              data_export: 'Data Export & Backup',
-              priority_support: 'Priority Support'
-            };
-            
-            return (
-              <View key={key} style={styles.featureItem}>
-                <CheckCircle size={20} color={colors.primary} />
-                <Text style={[styles.featureText, { color: colors.text }]}>
-                  {featureNames[key] || key}
-                </Text>
-              </View>
-            );
-          })}
+
+          {(tier === 'voice' ? TIER_FEATURES.voice : TIER_FEATURES.essential).map((featureName) => (
+            <View key={featureName} style={styles.featureItem}>
+              <CheckCircle size={20} color={colors.primary} />
+              <Text style={[styles.featureText, { color: colors.text }]}>
+                {featureName}
+              </Text>
+            </View>
+          ))}
+
+          {__DEV__ && !tier && subscription.features.plant_identification && (
+            <View style={styles.featureItem}>
+              <CheckCircle size={20} color={colors.primary} />
+              <Text style={[styles.featureText, { color: colors.text }]}>Development fallback premium features enabled</Text>
+            </View>
+          )}
         </View>
 
         {/* Management Options */}
@@ -171,9 +170,9 @@ export default function PremiumSettingsScreen() {
             style={styles.managementButton}
             onPress={handleContactSupport}
           >
-            <Crown size={20} color={colors.primary} />
+            <Sprout size={20} color={colors.primary} />
             <Text style={[styles.managementButtonText, { color: colors.text }]}>
-              Premium Support
+              Subscription Support
             </Text>
             <ExternalLink size={16} color={colors.text + '80'} />
           </Pressable>
@@ -233,21 +232,21 @@ export default function PremiumSettingsScreen() {
 
         {/* Upgrade Prompt */}
         <View style={[styles.upgradeCard, { backgroundColor: colors.primary + '15' }]}>
-          <Crown size={48} color={colors.primary} />
+          <Sprout size={48} color={colors.primary} />
           <Text style={[styles.upgradeTitle, { color: colors.text }]}>
-            Unlock Premium Features
+            {PRICING_COPY.planChooserTitle}
           </Text>
           <Text style={[styles.upgradeDescription, { color: colors.text + '80' }]}>
-            Get unlimited access to all features, advanced planning tools, and priority support.
+            {PRICING_COPY.essentialStartingPrice}
           </Text>
           
           <Pressable
             style={[styles.upgradeButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowPremiumModal(true)}
           >
-            <Crown size={20} color="#FFFFFF" />
+            <Sprout size={20} color="#FFFFFF" />
             <Text style={[styles.upgradeButtonText, { color: '#FFFFFF' }]}>
-              Upgrade to Premium
+              View Subscription Plans
             </Text>
           </Pressable>
         </View>
@@ -255,31 +254,37 @@ export default function PremiumSettingsScreen() {
         {/* Feature Comparison */}
         <View style={[styles.comparisonCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Free vs Premium
+            Plan Comparison
           </Text>
           
           <View style={styles.comparisonRow}>
             <Text style={[styles.comparisonFeature, { color: colors.text }]}>Seeds</Text>
             <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>3 max</Text>
-            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Unlimited</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Essential+</Text>
           </View>
           
           <View style={styles.comparisonRow}>
             <Text style={[styles.comparisonFeature, { color: colors.text }]}>Suppliers</Text>
             <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>2 max</Text>
-            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Unlimited</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Essential+</Text>
           </View>
           
           <View style={styles.comparisonRow}>
             <Text style={[styles.comparisonFeature, { color: colors.text }]}>Photos</Text>
             <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>5 max</Text>
-            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Unlimited</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Essential+</Text>
           </View>
           
           <View style={styles.comparisonRow}>
-            <Text style={[styles.comparisonFeature, { color: colors.text }]}>Calendar</Text>
+            <Text style={[styles.comparisonFeature, { color: colors.text }]}>Weather + Sync</Text>
             <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>Basic</Text>
-            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Advanced</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.primary }]}>Essential+</Text>
+          </View>
+
+          <View style={styles.comparisonRow}>
+            <Text style={[styles.comparisonFeature, { color: colors.text }]}>Voice Notes</Text>
+            <Text style={[styles.comparisonFree, { color: colors.text + '80' }]}>No</Text>
+            <Text style={[styles.comparisonPremium, { color: colors.textSecondary ?? colors.text + '80' }]}>v1.3.1</Text>
           </View>
         </View>
       </ScrollView>

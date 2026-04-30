@@ -21,10 +21,16 @@ import { useTheme } from '@/lib/theme';
 import type { Supplier } from '@/types/database';
 import AddSupplierForm from '@/components/AddSupplierForm';
 import { DemoBanner } from '@/components/DemoBanner';
+import PremiumModal from '@/components/PremiumModal';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
+import { FREE_LIMITS } from '@/utils/premiumManager';
+import { useGuestLimits } from '@/hooks/useGuestLimits';
 
 export default function ManageSuppliersScreen() {
   const { colors } = useTheme();
   const { isGuest } = useAuth();
+  const { isPremium } = useGlobalSubscription();
+  const { checkAndPromptForLimit } = useGuestLimits();
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
@@ -34,6 +40,27 @@ export default function ManageSuppliersScreen() {
     supplier: Supplier | null;
   }>({ visible: false, supplier: null });
   const [showAddSupplierModal, setShowAddSupplierModal] = React.useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+
+  const handleAddSupplierPress = async () => {
+    // Guest limit check (1 supplier)
+    if (isGuest) {
+      const canProceed = await checkAndPromptForLimit('supplier');
+      if (!canProceed) return;
+    }
+    // Free authenticated users are limited to FREE_LIMITS.suppliers
+    if (!isGuest && !isPremium) {
+      const { count } = await supabase
+        .from('suppliers')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
+      if ((count ?? 0) >= FREE_LIMITS.suppliers) {
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+    setShowAddSupplierModal(true);
+  };
 
   console.log('🔍 ManageSuppliersScreen rendered - isGuest:', isGuest);
 
@@ -113,8 +140,8 @@ export default function ManageSuppliersScreen() {
 
   const toggleSupplierStatus = async (supplier: Supplier) => {
     try {
-      const { error: supabaseError } = await supabase
-        .from('suppliers')
+      const { error: supabaseError } = await (supabase
+        .from('suppliers') as any)
         .update({ is_active: !supplier.is_active })
         .eq('id', supplier.id);
 
@@ -183,8 +210,8 @@ export default function ManageSuppliersScreen() {
       }
 
       // Try soft delete first (if deleted_at column exists)
-      let { error: supabaseError } = await supabase
-        .from('suppliers')
+      let { error: supabaseError } = await (supabase
+        .from('suppliers') as any)
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', supplier.id);
 
@@ -253,7 +280,7 @@ export default function ManageSuppliersScreen() {
       {/* Floating Add Button */}
       <Pressable
         style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}
-        onPress={() => setShowAddSupplierModal(true)}
+        onPress={handleAddSupplierPress}
       >
         <PlusCircle size={28} color={colors.warning} />
       </Pressable>
@@ -290,6 +317,9 @@ export default function ManageSuppliersScreen() {
           <Text style={[styles.errorText, { color: colors.error }]}>
             {error}
           </Text>
+          <Pressable onPress={loadSuppliers} style={styles.retryButton}>
+            <Text style={[styles.retryButtonText, { color: colors.error }]}>Retry</Text>
+          </Pressable>
         </View>
       )}
 
@@ -526,6 +556,11 @@ export default function ManageSuppliersScreen() {
           </View>
         </View>
       </Modal>
+
+      <PremiumModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </View>
   );
 }
@@ -595,9 +630,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     fontSize: 14,
+    flex: 1,
+  },
+  retryButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   content: {
     flex: 1,

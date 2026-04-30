@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { WeatherMeteocon } from './MeteoconsFinal';
 import { CurrentWeather } from '../../types/weather';
+import { useTheme, ThemeColors } from '@/lib/theme';
 
 interface CurrentWeatherCardProps {
   weather: CurrentWeather;
@@ -10,6 +11,9 @@ interface CurrentWeatherCardProps {
 }
 
 export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({ weather, onPress }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const formatTime = (timestamp: number): string => {
     return new Date(timestamp).toLocaleTimeString('en-US', { 
       hour: 'numeric', 
@@ -102,114 +106,116 @@ export const CurrentWeatherCard: React.FC<CurrentWeatherCardProps> = ({ weather,
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+function getStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 20,
+      margin: 16,
+      shadowColor: colors.shadowColor,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  location: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  lastUpdated: {
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  mainWeather: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  temperatureSection: {
-    alignItems: 'center',
-  },
-  temperature: {
-    fontSize: 60,
-    fontWeight: 'bold',
-    lineHeight: 70,
-  },
-  feelsLike: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginTop: -5,
-  },
-  conditionSection: {
-    alignItems: 'center',
-    flex: 1,
-    marginLeft: 20,
-  },
-  weatherIcon: {
-    marginBottom: 8,
-  },
-  condition: {
-    fontSize: 16,
-    color: '#2C3E50',
-    textAlign: 'center',
-    textTransform: 'capitalize',
-  },
-  details: {
-    borderTopWidth: 1,
-    borderTopColor: '#ECF0F1',
-    paddingTop: 15,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  detailItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  sunTimes: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#ECF0F1',
-  },
-  sunTimeItem: {
-    alignItems: 'center',
-  },
-  sunTimeLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  sunTimeValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-});
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    location: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    lastUpdated: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    mainWeather: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    temperatureSection: {
+      alignItems: 'center',
+    },
+    temperature: {
+      fontSize: 60,
+      fontWeight: 'bold',
+      lineHeight: 70,
+    },
+    feelsLike: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: -5,
+    },
+    conditionSection: {
+      alignItems: 'center',
+      flex: 1,
+      marginLeft: 20,
+    },
+    weatherIcon: {
+      marginBottom: 8,
+    },
+    condition: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
+      textTransform: 'capitalize',
+    },
+    details: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 15,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    detailItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    detailLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 4,
+      marginBottom: 2,
+    },
+    detailValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    sunTimes: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 8,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    sunTimeItem: {
+      alignItems: 'center',
+    },
+    sunTimeLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 4,
+      marginBottom: 2,
+    },
+    sunTimeValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  });
+}

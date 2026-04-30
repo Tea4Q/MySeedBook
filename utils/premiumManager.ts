@@ -1,9 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// IAP will be added in v1.3.2 - currently all users are on free tier
+// Local fallback manager for development/testing when store IAP is unavailable.
+// Canonical subscription source of truth is RevenueCat context.
 
-export type SubscriptionTier = 'free' | 'premium' | 'premium-yearly';
+export type SubscriptionTier =
+  | 'free'
+  | 'essential-monthly'
+  | 'essential-yearly'
+  | 'voice-monthly'
+  | 'voice-yearly';
 
 export interface PremiumFeatures {
   unlimited_seeds: boolean;
@@ -34,35 +40,49 @@ export interface UserSubscription {
 
 // Product IDs for App Store and Google Play
 export const SUBSCRIPTION_PRODUCTS = {
-  monthly: Platform.select({
-    ios: 'com.myseedbook.catalogue.premium.monthly',
-    android: 'myseedbook_premium_monthly',
-    default: 'premium_monthly_web'
+  essentialMonthly: Platform.select({
+    ios: 'com.myseedbook.catalogue.essential.monthly',
+    android: 'myseedbook_essential_month',
+    default: 'essential_monthly_web',
   })!,
-  yearly: Platform.select({
-    ios: 'com.myseedbook.catalogue.premium.yearly', 
-    android: 'myseedbook_premium_yearly',
-    default: 'premium_yearly_web'
-  })!
+  essentialYearly: Platform.select({
+    ios: 'com.myseedbook.catalogue.essential.yearly',
+    android: 'myseedbook_essential_year',
+    default: 'essential_yearly_web',
+  })!,
+  voiceMonthly: Platform.select({
+    ios: 'com.myseedbook.catalogue.voice.monthly',
+    android: 'myseedbook_voice_monthly',
+    default: 'voice_monthly_web',
+  })!,
+  voiceYearly: Platform.select({
+    ios: 'com.myseedbook.catalogue.voice.yearly',
+    android: 'myseedbook_voice_yearly',
+    default: 'voice_yearly_web',
+  })!,
 };
 
 // Get subscription product IDs as array
 export const SUBSCRIPTION_SKUS = Platform.select({
   ios: [
-    'com.myseedbook.catalogue.premium.monthly',
-    'com.myseedbook.catalogue.premium.yearly'
+    'com.myseedbook.catalogue.essential.month',
+    'com.myseedbook.catalogue.essential.year',
+    'com.myseedbook.catalogue.voice.monthly',
+    'com.myseedbook.catalogue.voice.yearly',
   ],
   android: [
-    'myseedbook_premium_monthly',
-    'myseedbook_premium_yearly'
+    'com_myseedbook_essential_month',
+    'com_myseedbook_essential_year',
+    'com_myseedbook_voice_monthly',
+    'com_myseedbook_voice_yearly',
   ],
   default: []
 })!;
 
 export const FREE_LIMITS = {
-  seeds: 3,
-  suppliers: 2,
-  photos: 5,
+  seeds: 10,
+  suppliers: 3,
+  photos: 3,
   searches: 10,
   calendar_days: 30
 };
@@ -193,14 +213,14 @@ class PremiumManager {
   private async activateSubscription(productId: string, purchase: any): Promise<void> {
     try {
       // Determine subscription tier
-      let tier: SubscriptionTier = 'premium';
-      if (productId === SUBSCRIPTION_PRODUCTS.yearly) {
-        tier = 'premium-yearly';
-      }
+      let tier: SubscriptionTier = 'essential-monthly';
+      if (productId === SUBSCRIPTION_PRODUCTS.essentialYearly) tier = 'essential-yearly';
+      if (productId === SUBSCRIPTION_PRODUCTS.voiceMonthly) tier = 'voice-monthly';
+      if (productId === SUBSCRIPTION_PRODUCTS.voiceYearly) tier = 'voice-yearly';
 
       // Calculate expiration date
       const expirationDate = new Date();
-      if (tier === 'premium-yearly') {
+      if (tier === 'essential-yearly' || tier === 'voice-yearly') {
         expirationDate.setFullYear(expirationDate.getFullYear() + 1);
       } else {
         expirationDate.setMonth(expirationDate.getMonth() + 1);
@@ -340,7 +360,7 @@ class PremiumManager {
       return;
     }
     
-    await this.simulatePurchase(SUBSCRIPTION_PRODUCTS.monthly);
+    await this.simulatePurchase(SUBSCRIPTION_PRODUCTS.essentialMonthly);
     console.log('Test premium features enabled');
   }
 

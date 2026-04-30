@@ -83,14 +83,27 @@ export class GuestTracker {
     return { ...this.usage };
   }
 
+  static readonly GUEST_SEED_LIMIT = 3;
+  static readonly GUEST_SUPPLIER_LIMIT = 1;
+
   async canAddSeed(): Promise<boolean> {
-    // Guests can now add unlimited demo seeds
-    return true;
+    await this.initialize();
+    return this.usage.demoSeedsCreated.length < GuestTracker.GUEST_SEED_LIMIT;
   }
 
   async getRemainingSeeds(): Promise<number> {
-    // Return a high number to indicate unlimited
-    return 999;
+    await this.initialize();
+    return Math.max(0, GuestTracker.GUEST_SEED_LIMIT - this.usage.demoSeedsCreated.length);
+  }
+
+  async canAddSupplier(): Promise<boolean> {
+    await this.initialize();
+    return this.usage.demoSuppliersCreated.length < GuestTracker.GUEST_SUPPLIER_LIMIT;
+  }
+
+  async getRemainingSuppliers(): Promise<number> {
+    await this.initialize();
+    return Math.max(0, GuestTracker.GUEST_SUPPLIER_LIMIT - this.usage.demoSuppliersCreated.length);
   }
 
   async trackSeedAdded(): Promise<void> {
@@ -104,6 +117,16 @@ export class GuestTracker {
     if (!this.usage.demoSeedsCreated.includes(seedId)) {
       this.usage.demoSeedsCreated.push(seedId);
       this.usage.seedsAdded++;
+      await this.save();
+    }
+  }
+
+  async removeDemoSeed(seedId: string): Promise<void> {
+    await this.initialize();
+    const idx = this.usage.demoSeedsCreated.indexOf(seedId);
+    if (idx !== -1) {
+      this.usage.demoSeedsCreated.splice(idx, 1);
+      this.usage.seedsAdded = Math.max(0, this.usage.seedsAdded - 1);
       await this.save();
     }
   }

@@ -1,0 +1,141 @@
+name: Propagate Fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Commit SHA to cherry-pick (usually merge commit on main)"
+        required: true
+        type: string
+      source_branch:
+        description: "Source branch that contains the fix"
+        required: false
+        default: "main"
+        type: string
+      target_branches:
+        description: "Comma-separated target branches"
+        required: false
+        default: "release/v1.3.0-pre-ai,feature/voice,feature/weather"
+        type: string
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    name: Prepare matrix
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.merged == true &&
+       contains(github.event.pull_request.labels.*.name, 'propagate-fix'))
+    outputs:
+      source_branch: ${{ steps.vars.outputs.source_branch }}
+      fix_sha: ${{ steps.vars.outputs.fix_sha }}
+      matrix: ${{ steps.vars.outputs.matrix }}
+    steps:
+      - name: Resolve inputs
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            SOURCE_BRANCH="${{ inputs.source_branch }}"
+            FIX_SHA="${{ inputs.commit_sha }}"
+            TARGETS_RAW="${{ inputs.target_branches }}"
+          else
+            SOURCE_BRANCH="main"
+            FIX_SHA="${{ github.event.pull_request.merge_commit_sha }}"
+            TARGETS_RAW="${{ vars.PROPAGATE_TARGET_BRANCHES }}"
+            if [[ -z "$TARGETS_RAW" ]]; then
+              TARGETS_RAW="release/v1.3.0-pre-ai,feature/voice,feature/weather"
+            fi
+          fi
+
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          targets = os.environ["TARGETS_RAW"]
+          arr = [x.strip() for x in targets.split(",") if x.strip()]
+          print(f"matrix={json.dumps(arr)}")
+          PY
+
+          echo "source_branch=$SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "fix_sha=$FIX_SHA" >> "$GITHUB_OUTPUT"
+        env:
+          TARGETS_RAW: ${{ inputs.target_branches }}
+
+  propagate:
+    name: Cherry-pick into ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.source_branch }}
+
+      - name: Configure git
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Cherry-pick fix
+        id: cp
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          FIX_SHA: ${{ needs.prepare.outputs.fix_sha }}
+        run: |
+          set -e
+          SAFE_TARGET="${TARGET//\//-}"
+          BP_BRANCH="backport/${SAFE_TARGET}/${FIX_SHA:0:8}"
+
+          git fetch origin "$TARGET"
+          git checkout -B "$BP_BRANCH" "origin/$TARGET"
+
+          if ! git cherry-pick -x "$FIX_SHA"; then
+            git cherry-pick --abort || true
+            echo "status=conflict" >> "$GITHUB_OUTPUT"
+            echo "bp_branch=$BP_BRANCH" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git push --set-upstream origin "$BP_BRANCH"
+          echo "status=ok" >> "$GITHUB_OUTPUT"
+          echo "bp_branch=$BP_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR
+        if: steps.cp.outputs.status == 'ok'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ matrix.target }}
+          SOURCE: ${{ steps.cp.outputs.bp_branch }}
+          FIX_SHA: ${{ needs.prepare.outputs.fix_sha }}
+        run: |
+          EXISTING="$(gh pr list --base "$TARGET" --head "$SOURCE" --state open --json number --jq '.[0].number')"
+          if [[ -n "$EXISTING" ]]; then
+            echo "PR already exists: #$EXISTING"
+            exit 0
+          fi
+
+          gh pr create \
+            --base "$TARGET" \
+            --head "$SOURCE" \
+            --title "chore(backport): propagate fix ${FIX_SHA:0:8} to $TARGET" \
+            --body "Automated cherry-pick of \`$FIX_SHA\` into \`$TARGET\`."
+
+      - name: Report conflict
+        if: steps.cp.outputs.status == 'conflict'
+        shell: bash
+        run: |
+          echo "Cherry-pick conflict on branch '${{ matrix.target }}'. Manual backport required."

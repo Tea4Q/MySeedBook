@@ -41,6 +41,34 @@ export const ENV = {
       hotSeason: 80,   // Hot season crops (okra, melons)
     },
   },
+
+  // OpenAI Whisper — voice transcription for premium voice input
+  // Get key from: https://platform.openai.com/api-keys
+  // Add EXPO_PUBLIC_OPENAI_API_KEY to your .env.local file
+  openai: {
+    apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '',
+  },
+
+  // RevenueCat subscription configuration
+  // Get API keys from: https://app.revenuecat.com → Projects → API Keys
+  revenuecat: {
+    iosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',
+    androidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
+    // Product IDs must match what you create in App Store Connect / Google Play:
+    //   iOS Essential: com.myseedbook.catalogue.essential.monthly
+    //                  com.myseedbook.catalogue.essential.yearly
+    //   iOS Voice:     com.myseedbook.catalogue.voice.monthly
+    //                  com.myseedbook.catalogue.voice.yearly
+    //   Android Essential: myseedbook_essential_month
+    //                      myseedbook_essential_year
+    //   Android Voice:     myseedbook_voice_monthly
+    //                      myseedbook_voice_yearly
+    // RevenueCat entitlements:
+    //   essential
+    //   voice
+    essentialEntitlement: 'essential',
+    voiceEntitlement: 'voice',
+  },
 };
 
 // Helper functions

@@ -1,7 +1,7 @@
 # Privacy Policy - MySeedBook Catalogue
 
-**Effective Date:** 09/15/2025  
-**Last Updated:** 09/15/2025
+**Effective Date:** 03/18/2026  
+**Last Updated:** 03/18/2026
 
 ## Introduction
 

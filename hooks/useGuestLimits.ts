@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { guestTracker } from '@/utils/guestTracker';
+import { guestTracker, GuestTracker } from '@/utils/guestTracker';
 
 export function useGuestLimits() {
   const { isGuest, refreshGuestUsage } = useAuth();
@@ -9,32 +9,38 @@ export function useGuestLimits() {
 
   const checkAndPromptForLimit = async (action: 'seed' | 'supplier' | 'view'): Promise<boolean> => {
     if (!isGuest) return true; // Not a guest, allow action
-    
-    // For demo experience, allow all actions but show upgrade prompts occasionally
+
     if (action === 'seed') {
-      const usage = await guestTracker.getUsage();
-      
-      // Show upgrade prompt after user has created several demo items
-      if (usage.seedsAdded > 0 && usage.seedsAdded % 5 === 0) {
+      const canAdd = await guestTracker.canAddSeed();
+      if (!canAdd) {
         Alert.alert(
-          'Save Your Garden Permanently!',
-          `You've created ${usage.seedsAdded} demo seeds. Create an account to save your garden forever and unlock unlimited features!`,
+          'Guest Limit Reached',
+          `You can add up to ${GuestTracker.GUEST_SEED_LIMIT} seeds as a guest. Create a free account to add up to 10 seeds, or upgrade for unlimited access.`,
           [
-            {
-              text: 'Create Account',
-              onPress: () => router.push('/auth'),
-              style: 'default'
-            },
-            {
-              text: 'Continue Demo',
-              style: 'cancel'
-            }
+            { text: 'Create Account', onPress: () => router.push('/auth'), style: 'default' },
+            { text: 'Not Now', style: 'cancel' },
           ]
         );
+        return false;
       }
     }
-    
-    return true; // Always allow the action
+
+    if (action === 'supplier') {
+      const canAdd = await guestTracker.canAddSupplier();
+      if (!canAdd) {
+        Alert.alert(
+          'Guest Limit Reached',
+          `You can add up to ${GuestTracker.GUEST_SUPPLIER_LIMIT} supplier as a guest. Create a free account to add up to 3 suppliers, or upgrade for unlimited access.`,
+          [
+            { text: 'Create Account', onPress: () => router.push('/auth'), style: 'default' },
+            { text: 'Not Now', style: 'cancel' },
+          ]
+        );
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const trackAction = async (action: 'seed' | 'supplier' | 'view') => {

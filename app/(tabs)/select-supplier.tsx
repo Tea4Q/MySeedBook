@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   StyleSheet,
-  Pressable,
-  Image,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { Plus, Edit } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
+import { Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { supabase } from '@/lib/supabase'; // Adjust the import path as necessary
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
+import { AppText } from '@/components/ui/AppText';
+import { SupplierCard, type Supplier } from '@/components/SupplierCard';
 
 type Supplier = {
   id: string;
@@ -65,6 +67,7 @@ const mockSuppliers: Supplier[] = [
 
 export default function SelectSupplierScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
   const [loading, setLoading] = useState(true);
@@ -151,86 +154,61 @@ export default function SelectSupplierScreen() {
     router.push('/manage-suppliers'); // Navigate to manage suppliers instead
   };
 
-  const renderItem = ({ item }: { item: Supplier }) => (
-    <Pressable
-      onPress={() => handleSelectSupplier(item)}
-      style={styles.itemContainer}
-    >
-      {item.supplier_image && (
-        <Image
-          source={{ uri: item.supplier_image }}
-          style={styles.itemImage}
-        />
-      )}
-      <View style={styles.itemTextContainer}>
-        <Text style={styles.itemText}>{item.supplier_name}</Text>
-        {item.description && (
-          <Text style={styles.itemDescription}>
-            {item.description.substring(0, 100)}...
-          </Text>
-        )}
-      </View>
-      <Pressable
-        onPress={(e) => {
-          e.stopPropagation();
-          handleEditSupplier(item.id);
-        }}
-        style={styles.iconButton}
-      >
-        <Edit size={20} color="#007AFF" />
-      </Pressable>
-    </Pressable>
-  );
-
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Floating Add Button */}
-      <Pressable onPress={handleAddSupplier} style={styles.floatingAddButton}>
-        <Plus size={28} color="#ffffff" />
+      <Pressable onPress={handleAddSupplier} style={[styles.floatingAddButton, { backgroundColor: colors.primary }]}>
+        <Plus size={28} color={colors.buttonText} />
       </Pressable>
 
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
         placeholder="Search Suppliers..."
+        placeholderTextColor={colors.textSecondary}
         value={searchTerm}
         onChangeText={setSearchTerm}
         clearButtonMode="while-editing"
       />
 
       {loading && (
-        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       )}
 
-      {!loading && error && <Text style={styles.errorText}>{error}</Text>}
+      {!loading && error && <AppText variant="body" color={colors.error} style={styles.centeredText}>{error}</AppText>}
 
       {!loading &&
         !error &&
         suppliers.length === 0 &&
         (hasFetchedUserData ? (
-          <Text style={styles.emptyText}>
+          <AppText variant="body" color={colors.textSecondary} style={styles.centeredText}>
             You haven&apos;t added any suppliers yet. Add one!
-          </Text>
+          </AppText>
         ) : (
-          <Text style={styles.emptyText}>Loading suppliers...</Text>
+          <AppText variant="body" color={colors.textSecondary} style={styles.centeredText}>Loading suppliers...</AppText>
         ))}
 
       {!loading && !error && suppliers.length > 0 && (
         <FlatList
           data={suppliers}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <SupplierCard
+              supplier={item}
+              onSelect={() => handleSelectSupplier(item)}
+              onEdit={() => handleEditSupplier(item.id)}
+            />
+          )}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   floatingAddButton: {
     position: 'absolute',
@@ -239,92 +217,25 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     padding: 16,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
   },
-  titleContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: '#ffffff',
-  },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
   searchInput: {
     height: 50,
-    borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
     marginHorizontal: 15,
     marginTop: 10,
     marginBottom: 5,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
     fontSize: 16,
   },
   list: {
     paddingHorizontal: 15,
     paddingBottom: 20,
-  },
-  itemContainer: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#eee',
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  itemImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  itemTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  itemText: {
-    fontSize: 17,
-    fontWeight: '500',
-    marginBottom: 3,
-  },
-  itemDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
-  iconButton: {
-    padding: 8,
-    marginLeft: 10,
   },
   loader: {
     marginTop: 30,
@@ -332,18 +243,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginTop: 20,
-    paddingHorizontal: 15,
-    fontSize: 15,
-  },
-  emptyText: {
+  centeredText: {
     textAlign: 'center',
     marginTop: 40,
-    fontSize: 16,
-    color: '#666',
     paddingHorizontal: 20,
   },
 });

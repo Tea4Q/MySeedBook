@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-n
 import { FontAwesome5 } from '@expo/vector-icons';
 import { WeatherMeteocon } from './MeteoconsFinal';
 import { WeatherForecast } from '../../types/weather';
+import { useTheme, ThemeColors } from '@/lib/theme';
 
 interface WeatherForecastCardProps {
   forecast: WeatherForecast[];
@@ -14,6 +15,8 @@ export const WeatherForecastCard: React.FC<WeatherForecastCardProps> = ({
   showTitle = true 
 }) => {
   const { width } = useWindowDimensions();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const isTablet = width >= 768; // Tablet breakpoint
   
   const formatDate = (dateString: string): string => {
@@ -127,120 +130,118 @@ export const WeatherForecastCard: React.FC<WeatherForecastCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+function getStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      margin: 16,
+      shadowColor: colors.shadowColor,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 16,
-  },
-  scrollContent: {
-    paddingHorizontal: 4,
-    paddingRight: 16,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  dayCard: {
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginRight: 12,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-    minWidth: 140,
-    width: 140,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  firstCard: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#90CAF9',
-  },
-  dayLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2C3E50',
-    marginBottom: 10,
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  iconContainer: {
-    marginBottom: 10,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  weatherIcon: {
-    // Icon sizing handled by component
-  },
-  tempRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 4,
-  },
-  temp: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 26,
-  },
-  tempDivider: {
-    fontSize: 18,
-    color: '#95A5A6',
-    fontWeight: '400',
-  },
-  tempLow: {
-    color: '#7F8C8D',
-  },
-  condition: {
-    fontSize: 12,
-    color: '#34495E',
-    textAlign: 'center',
-    marginBottom: 12,
-    textTransform: 'capitalize',
-    height: 32,
-    lineHeight: 16,
-  },
-  detailsGrid: {
-    width: '100%',
-    gap: 6,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingVertical: 3,
-    gap: 6,
-  },
-  detailLabel: {
-    fontSize: 11,
-    color: '#7F8C8D',
-    fontWeight: '500',
-    width: 40,
-  },
-  detailValue: {
-    fontSize: 11,
-    color: '#2C3E50',
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-  },
-});
+    title: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 16,
+    },
+    scrollContent: {
+      paddingHorizontal: 4,
+      paddingRight: 16,
+    },
+    gridContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    dayCard: {
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      marginRight: 12,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      minWidth: 110,
+      width: 110,
+    },
+    gridCard: {
+      flex: 1,
+      minWidth: 120,
+      maxWidth: 150,
+      marginRight: 0,
+    },
+    firstCard: {
+      backgroundColor: colors.primary + '20',
+    },
+    dayLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    weatherIcon: {
+      marginBottom: 8,
+    },
+    temperatureContainer: {
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    highTemp: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      lineHeight: 24,
+    },
+    lowTemp: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    condition: {
+      fontSize: 12,
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+      textTransform: 'capitalize',
+      minHeight: 32,
+    },
+    precipitationContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    precipIcon: {
+      marginRight: 4,
+    },
+    precipitationText: {
+      fontSize: 11,
+      color: '#4A90E2',
+      fontWeight: '500',
+    },
+    detailsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    detailItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+    },
+    detailText: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      marginLeft: 4,
+      fontWeight: '500',
+    },
+  });
+}

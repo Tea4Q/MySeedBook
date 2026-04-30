@@ -1,0 +1,18 @@
+appId: com.myseedbook.catalogue
+---
+- launchApp
+- assertVisible: "Continue as Guest"
+- tapOn: "Continue as Guest"
+- assertVisible: "Add Seed"
+- tapOn: "Add Seed"
+- assertVisible: "Seed Name"
+- tapOn: "Add Seed"
+- assertVisible: "Validation"
+- back
+- tapOn: "Calendar"
+- assertVisible: "Add Event"
+- tapOn: "Add Event"
+- assertVisible: "Add Event"
+- back
+- tapOn: "Manage Suppliers"
+- assertVisible: "Add Supplier"

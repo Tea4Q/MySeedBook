@@ -71,6 +71,41 @@ Added `expo.doctor` configuration to `package.json`:
 
 ---
 
+### ✅ Issue 3: Apple 403 "Access forbidden" (PLA Update Required)
+
+**Problem:**
+```
+Apple 403 detected - Access forbidden.
+Unable to process request - PLA Update available - You currently don't have access to this membership resource.
+```
+
+**Root Cause:**
+Apple requires a new Program License Agreement (PLA) to be accepted for your Developer account. Until accepted by an Account Holder/Admin, Apple blocks API access used by EAS for iOS signing and build operations.
+
+**Solution:**
+1. Sign in to Apple Developer with the correct team account:
+  - https://developer.apple.com/account/
+2. Accept any pending agreement in the banner or Agreements section.
+3. Also verify App Store Connect agreements:
+  - https://appstoreconnect.apple.com/agreements/
+4. Ensure your role has permission (Account Holder or Admin for agreement acceptance).
+5. Re-authenticate locally and retry build:
+  ```bash
+  eas logout
+  eas login
+  eas credentials
+  eas build --platform ios --profile development
+  ```
+
+**Result:**
+Once the PLA is accepted and account access refreshes, Apple API calls succeed and EAS iOS builds proceed normally.
+
+**Notes:**
+- Propagation may take a few minutes after acceptance.
+- If you belong to multiple Apple teams, confirm EAS is using the correct team during credential setup.
+
+---
+
 ## What This Means for Your Project
 
 ### ✅ **Prebuild Workflow Enabled**
