@@ -80,24 +80,29 @@ CREATE INDEX IF NOT EXISTS idx_seeds_supplier_id ON public.seeds(supplier_id);
 ALTER TABLE public.seeds ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view their own seeds" ON public.seeds;
 CREATE POLICY "Users can view their own seeds"
   ON public.seeds FOR SELECT TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own seeds" ON public.seeds;
 CREATE POLICY "Users can insert their own seeds"
   ON public.seeds FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own seeds" ON public.seeds;
 CREATE POLICY "Users can update their own seeds"
   ON public.seeds FOR UPDATE TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own seeds" ON public.seeds;
 CREATE POLICY "Users can delete their own seeds"
   ON public.seeds FOR DELETE TO authenticated
   USING (auth.uid() = user_id);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_seeds_updated_at ON public.seeds;
 CREATE TRIGGER update_seeds_updated_at
   BEFORE UPDATE ON public.seeds
   FOR EACH ROW

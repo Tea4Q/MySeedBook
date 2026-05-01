@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS public.feedback (
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can insert their own feedback
+DROP POLICY IF EXISTS "Users can insert their own feedback" ON public.feedback;
 CREATE POLICY "Users can insert their own feedback"
   ON public.feedback
   FOR INSERT
   WITH CHECK (true); -- Allow anyone to submit feedback (including guests)
 
 -- Policy: Users can view their own feedback
+DROP POLICY IF EXISTS "Users can view their own feedback" ON public.feedback;
 CREATE POLICY "Users can view their own feedback"
   ON public.feedback
   FOR SELECT
@@ -32,10 +34,11 @@ CREATE POLICY "Users can view their own feedback"
 -- Policy: Admin can view all feedback (you'll need to add admin role later)
 -- For now, we'll just allow users to see their own
 
--- Create index for faster queries
-CREATE INDEX idx_feedback_user_id ON public.feedback(user_id);
-CREATE INDEX idx_feedback_created_at ON public.feedback(created_at DESC);
-CREATE INDEX idx_feedback_status ON public.feedback(status);
+-- Create index for faster queries`
+CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON public.feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON public.feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON public.feedback(status);  
+
 
 -- Create updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -46,6 +49,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_feedback_updated_at ON public.feedback;
 CREATE TRIGGER update_feedback_updated_at 
   BEFORE UPDATE ON public.feedback
   FOR EACH ROW

@@ -30,12 +30,14 @@ CREATE TABLE IF NOT EXISTS public.global_deletion_log (
 -- Authenticated users can insert their own row but not read or update it.
 ALTER TABLE public.global_deletion_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "deletion_log_insert_own" ON public.global_deletion_log;
 CREATE POLICY "deletion_log_insert_own"
   ON public.global_deletion_log
   FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "deletion_log_service_role_all" ON public.global_deletion_log;
 CREATE POLICY "deletion_log_service_role_all"
   ON public.global_deletion_log
   FOR ALL
@@ -51,19 +53,23 @@ INSERT INTO storage.buckets (id, name, public)
   ON CONFLICT (id) DO NOTHING;
 
 -- Authenticated users can upload to their own folder only
-CREATE POLICY IF NOT EXISTS "avatars_insert_own"
+DROP POLICY IF EXISTS "avatars_insert_own" ON storage.objects;
+CREATE POLICY "avatars_insert_own"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
 
-CREATE POLICY IF NOT EXISTS "avatars_update_own"
+DROP POLICY IF EXISTS "avatars_update_own" ON storage.objects;
+CREATE POLICY "avatars_update_own"
   ON storage.objects FOR UPDATE TO authenticated
   USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
 
-CREATE POLICY IF NOT EXISTS "avatars_delete_own"
+DROP POLICY IF EXISTS "avatars_delete_own" ON storage.objects;
+CREATE POLICY "avatars_delete_own"
   ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
 
-CREATE POLICY IF NOT EXISTS "avatars_public_read"
+DROP POLICY IF EXISTS "avatars_public_read" ON storage.objects;
+CREATE POLICY "avatars_public_read"
   ON storage.objects FOR SELECT TO public
   USING (bucket_id = 'avatars');
 

@@ -19,6 +19,7 @@
       }
     },
     "preview": {
+      "autoIncrement": true,
       "distribution": "internal",
       "node": "22.12.0",
       "env": {
@@ -62,6 +63,13 @@
     }
   },
   "submit": {
+    "preview": {
+      "ios": {
+        "appleId": "Chandra@ChandraSEssentials.com",
+        "ascAppId": "6759670875",
+        "appleTeamId": "55885H9NLV"
+      }
+    },
     "production": {
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",

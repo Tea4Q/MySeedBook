@@ -44,18 +44,21 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_seed_id ON calendar_events(seed_i
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
+DROP POLICY IF EXISTS "Users can view their own calendar events" ON calendar_events;
 CREATE POLICY "Users can view their own calendar events"
   ON calendar_events
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create calendar events" ON calendar_events;
 CREATE POLICY "Users can create calendar events"
   ON calendar_events
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own calendar events" ON calendar_events;
 CREATE POLICY "Users can update their own calendar events"
   ON calendar_events
   FOR UPDATE
@@ -63,6 +66,7 @@ CREATE POLICY "Users can update their own calendar events"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own calendar events" ON calendar_events;
 CREATE POLICY "Users can delete their own calendar events"
   ON calendar_events
   FOR DELETE
@@ -70,6 +74,7 @@ CREATE POLICY "Users can delete their own calendar events"
   USING (auth.uid() = user_id);
 
 -- Create updated_at trigger
+DROP TRIGGER IF EXISTS update_calendar_events_updated_at ON calendar_events;
 CREATE TRIGGER update_calendar_events_updated_at
   BEFORE UPDATE ON calendar_events
   FOR EACH ROW
