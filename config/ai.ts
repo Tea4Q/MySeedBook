@@ -3,18 +3,31 @@ import { Platform } from 'react-native';
 import OpenAI from 'openai';
 import { premiumManager } from '@/utils/premiumManager';
 
+// AsyncStorage keys used across components for AI credentials
+export const AI_STORAGE_KEYS = {
+  apiKey: 'openai_api_key',
+  baseUrl: 'openai_base_url',
+} as const;
+
 // OpenAI Configuration
 export class AIConfig {
   private static openai: OpenAI | null = null;
   private static apiKey: string | null = null;
+  private static baseUrl: string | null = null;
 
-  // Initialize with API key (should be stored securely)
-  static initialize(apiKey: string) {
+  /**
+   * Initialize the AI client.
+   * @param apiKey  OpenAI API key (or your backend's key)
+   * @param baseUrl Optional base URL for OpenAI-compatible backends
+   *               (e.g. http://localhost:11434/v1 for Ollama,
+   *                     http://localhost:1234/v1 for LM Studio)
+   */
+  static initialize(apiKey: string, baseUrl?: string) {
     this.apiKey = apiKey;
+    this.baseUrl = baseUrl || null;
     this.openai = new OpenAI({
       apiKey: apiKey,
-      // Note: For production, you'd want to use a proxy server
-      // as OpenAI doesn't officially support React Native
+      ...(baseUrl ? { baseURL: baseUrl } : {}),
       dangerouslyAllowBrowser: true,
     });
   }
@@ -25,6 +38,10 @@ export class AIConfig {
 
   static isConfigured(): boolean {
     return this.openai !== null && this.apiKey !== null;
+  }
+
+  static getBaseUrl(): string | null {
+    return this.baseUrl;
   }
 }
 

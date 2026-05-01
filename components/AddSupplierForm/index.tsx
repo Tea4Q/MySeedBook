@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -60,6 +60,7 @@ export default function AddSupplierForm({
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const nameInputRef = useRef<import('react-native').TextInput>(null);
   
   // Phone formatting helper function
   const formatPhoneNumber = (value: string): string => {
@@ -112,6 +113,7 @@ export default function AddSupplierForm({
   const validateForm = () => {
     if (!formData.supplier_name?.trim()) {
       Alert.alert('Validation Error', 'Supplier name is required.');
+      setTimeout(() => nameInputRef.current?.focus(), 100);
       return false;
     }
     
@@ -203,6 +205,7 @@ export default function AddSupplierForm({
               <Text style={[styles.label, { color: colors.text }]}>Supplier Name *</Text>
             </View>
             <TextInput
+              ref={nameInputRef}
               style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               placeholder="Enter Supplier Name"
               placeholderTextColor={colors.textSecondary}

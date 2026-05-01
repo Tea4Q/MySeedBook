@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Platform,
   BackHandler,
+  findNodeHandle,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
@@ -136,6 +137,12 @@ export default function AddOrEditSeedScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false); // Synchronous guard against double-submit
+  const scrollViewRef = useRef<any>(null);
+  const imagesFieldRef = useRef<View>(null);
+  const nameFieldRef = useRef<View>(null);
+  const typeFieldRef = useRef<View>(null);
+  const quantityFieldRef = useRef<View>(null);
+  const supplierFieldRef = useRef<View>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
   const { checkAndPromptForLimit } = useGuestLimits();
@@ -459,8 +466,10 @@ export default function AddOrEditSeedScreen() {
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return; // synchronous check prevents race condition
     isSubmittingRef.current = true;
-    if (!validateForm()) {
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
       isSubmittingRef.current = false;
+      scrollToFirstError(formErrors);
       return;
     }
 
@@ -970,13 +979,13 @@ export default function AddOrEditSeedScreen() {
   }, [seedPackage.seed_price, priceInput, formatPriceForDisplay]);
 
   // --- Validation ---
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (!seedPackage.seed_name?.trim()) errors.name = 'Seed name is required';
+  const validateForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.seed_name?.trim()) newErrors.name = 'Seed name is required';
     if (!seedPackage.quantity || seedPackage.quantity <= 0)
-      errors.quantity = 'Quantity must be greater than 0';
-    if (!seedPackage.type) errors.type = 'Seed type is required';
-    if (!seedPackage.supplier_id) errors.supplier = 'Supplier is required';
+      newErrors.quantity = 'Quantity must be greater than 0';
+    if (!seedPackage.type) newErrors.type = 'Seed type is required';
+    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
     
     // Validate supplier_id format - allow sample IDs for guest users
     if (seedPackage.supplier_id) {
@@ -984,7 +993,7 @@ export default function AddOrEditSeedScreen() {
       const isValidFormat = isValidUUID(seedPackage.supplier_id) || isSampleId;
       
       if (!isValidFormat) {
-        errors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+        newErrors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
       }
     }
     
@@ -992,13 +1001,42 @@ export default function AddOrEditSeedScreen() {
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     const loadingImages = imageArray.filter(img => img.isLoading);
     if (loadingImages.length > 0) {
-      errors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
+      newErrors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
     }
     
-    // Add more validation rules as needed
-    setErrors(errors);
-    return Object.keys(errors).length === 0;
+    setErrors(newErrors);
+    return newErrors;
   };
+
+  const scrollToFirstError = useCallback((formErrors: Record<string, string>) => {
+    const priority = ['images', 'name', 'type', 'quantity', 'supplier'];
+    const firstKey = priority.find(k => formErrors[k]);
+    if (!firstKey || !scrollViewRef.current) return;
+    const refMap: Record<string, React.RefObject<any>> = {
+      images: imagesFieldRef,
+      name: nameFieldRef,
+      type: typeFieldRef,
+      quantity: quantityFieldRef,
+      supplier: supplierFieldRef,
+    };
+    const target = refMap[firstKey]?.current;
+    if (!target) return;
+    setTimeout(() => {
+      try {
+        const node = findNodeHandle(scrollViewRef.current);
+        if (node == null) return;
+        target.measureLayout(
+          node,
+          (_x: number, y: number) => {
+            scrollViewRef.current?.scrollTo?.({ x: 0, y: Math.max(0, y - 20), animated: true });
+          },
+          () => {}
+        );
+      } catch {
+        // ignore
+      }
+    }, 100);
+  }, []);
 
   // --- Supplier Select Handler ---
   const handleSupplierSelect = (supplier: Supplier) => {
@@ -1060,6 +1098,7 @@ export default function AddOrEditSeedScreen() {
         </View>
       )}
       <KeyboardAwareScrollView 
+        ref={scrollViewRef}
         style={styles.content} 
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -1068,7 +1107,7 @@ export default function AddOrEditSeedScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Image Section */}
-        <View style={[styles.imageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View ref={imagesFieldRef} style={[styles.imageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <ImageHandler
             initialImages={seedPackage.seed_images as Imageinfo[]}
             onImagesChange={handleImagesChange}
@@ -1085,7 +1124,7 @@ export default function AddOrEditSeedScreen() {
           {/* Voice Input Row — enabled in Voice & AI build */}
 
           {/* Seed Name */}
-          <View style={styles.inputGroup}>
+          <View ref={nameFieldRef} style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Seed Name *</Text>
             <TextInput
               style={[
@@ -1108,7 +1147,7 @@ export default function AddOrEditSeedScreen() {
           </View>
 
           {/* Seed Type */}
-          <View style={styles.inputGroup}>
+          <View ref={typeFieldRef} style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Seed Type *</Text>
             <View style={styles.typeContainer}>
               {seedTypes.map((type) => (
@@ -1170,7 +1209,7 @@ export default function AddOrEditSeedScreen() {
           {/* Quantity and Price Row */}
           <View style={styles.quantityPriceRow}>
             {/* Quantity Input */}
-            <View style={[styles.inputGroup, styles.quantityInput]}>
+            <View ref={quantityFieldRef} style={[styles.inputGroup, styles.quantityInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Quantity *</Text>
               <TextInput
                 style={[styles.input, errors.quantity && styles.inputError, { 
@@ -1449,7 +1488,7 @@ export default function AddOrEditSeedScreen() {
           <View style={styles.dateSupplierRow}>
 
             {/* Supplier Selection */}
-            <View style={[styles.inputGroup, styles.supplierInput]}>
+            <View ref={supplierFieldRef} style={[styles.inputGroup, styles.supplierInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Supplier *</Text>
               <Text style={[styles.helpText, { color: colors.textSecondary }]}>
                 💡 Type to search or add new supplier

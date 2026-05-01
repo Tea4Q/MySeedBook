@@ -16,7 +16,7 @@ import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { AIMessage, AIConversation, AIGardenContext } from '@/types/ai';
 import { Seed, Supplier } from '@/types/database';
-import { AIConfig, GARDEN_AI_CONFIG } from '@/config/ai';
+import { AIConfig, GARDEN_AI_CONFIG, AI_STORAGE_KEYS } from '@/config/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
@@ -43,16 +43,18 @@ export default function AIGardenAssistant({
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
   // Initialize AI configuration
-  useEffect(() => {
-    checkAPIKeyConfiguration();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { checkAPIKeyConfiguration(); }, []);
 
   const checkAPIKeyConfiguration = async () => {
     try {
-      const storedKey = await AsyncStorage.getItem('openai_api_key');
+      const [storedKey, storedUrl] = await Promise.all([
+        AsyncStorage.getItem(AI_STORAGE_KEYS.apiKey),
+        AsyncStorage.getItem(AI_STORAGE_KEYS.baseUrl),
+      ]);
       if (storedKey) {
         setApiKey(storedKey);
-        AIConfig.initialize(storedKey);
+        AIConfig.initialize(storedKey, storedUrl ?? undefined);
         setIsConfigured(true);
         await loadWelcomeMessage();
       } else {
@@ -71,7 +73,7 @@ export default function AIGardenAssistant({
     }
     
     try {
-      await AsyncStorage.setItem('openai_api_key', apiKey.trim());
+      await AsyncStorage.setItem(AI_STORAGE_KEYS.apiKey, apiKey.trim());
       AIConfig.initialize(apiKey.trim());
       setIsConfigured(true);
       setShowApiKeyInput(false);

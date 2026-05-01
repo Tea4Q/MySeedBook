@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
   StyleSheet,
+  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -47,6 +48,7 @@ export default function EditSupplierScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const allowExitRef = React.useRef(false);
+  const nameInputRef = useRef<TextInput>(null);
   const initialSnapshotRef = React.useRef<string>('');
 
   const snapshotForm = (value: typeof formData) => JSON.stringify(value);
@@ -165,6 +167,7 @@ export default function EditSupplierScreen() {
   const handleSubmit = async () => {
     if (!formData.supplier_name.trim()) {
       setError('Supplier name is required');
+      setTimeout(() => nameInputRef.current?.focus(), 100);
       return;
     }
 
@@ -244,6 +247,7 @@ export default function EditSupplierScreen() {
               <Text style={[styles.label, { color: colors.text }]}>Supplier Name *</Text>
             </View>
             <TextInput
+              ref={nameInputRef}
               style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.supplier_name}
               onChangeText={(text) =>

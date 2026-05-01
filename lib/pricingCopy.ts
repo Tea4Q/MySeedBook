@@ -19,4 +19,6 @@ export const PRICING_COPY = {
   upgradePromptDefault: `MySeedBook Essential unlocks unlimited seeds, weather integration, and cloud sync at ${PRICING.essential.monthlyAmount}/month.`,
   upgradePromptForFeature: (feature: string) =>
     `Unlock ${feature} with MySeedBook Essential at ${PRICING.essential.monthlyAmount} - unlimited seeds, weather integration, and cloud sync.`,
+  upgradePromptForAIFeature: (feature: string) =>
+    `Unlock ${feature} with the Voice & AI plan at ${PRICING.voice.monthlyAmount}/month — includes AI garden chat, smart shopping, and voice notes.`,
 } as const;

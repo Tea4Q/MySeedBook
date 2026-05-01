@@ -120,23 +120,16 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       };
 
       setImages((prevImages) => {
-        // Check if we should replace all existing images with this new one
-        // This happens when the user uploads their first image to replace defaults/mock data
-        const shouldReplaceAll = prevImages.length > 0 && 
-          prevImages.every(img => 
-            // Replace if all existing images are external URLs (likely mock/default data)
-            img.type === 'url' || 
-            // Or if any existing image URLs contain common stock photo domains
-            (img.url && (
-              img.url.includes('unsplash.com') || 
-              img.url.includes('pexels.com') || 
-              img.url.includes('pixabay.com') ||
-              img.url.includes('butterfly-pea-blue')
-            ))
+        // Only replace all if every existing image is a known stock/placeholder URL
+        const isPlaceholder = (img: Imageinfo) =>
+          !!img.url && (
+            img.url.includes('unsplash.com') ||
+            img.url.includes('pexels.com') ||
+            img.url.includes('pixabay.com') ||
+            img.url.includes('butterfly-pea-blue')
           );
-
-        const newImages = shouldReplaceAll ? [newImage] : [...prevImages, newImage];
-        return newImages;
+        const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
+        return shouldReplaceAll ? [newImage] : [...prevImages, newImage];
       });
       try {
         // Get current user for authentication and folder organization
@@ -289,21 +282,15 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     };
     
     setImages((prevImages) => {
-      // Check if we should replace all existing images with this new one
-      // This happens when the user adds their first image to replace defaults/mock data
-      const shouldReplaceAll = prevImages.length > 0 && 
-        prevImages.every(img => 
-          // Replace if all existing images are external URLs (likely mock/default data)
-          img.type === 'url' || 
-          // Or if any existing image URLs contain common stock photo domains
-          (img.url && (
-            img.url.includes('unsplash.com') || 
-            img.url.includes('pexels.com') || 
-            img.url.includes('pixabay.com') ||
-            img.url.includes('butterfly-pea-blue')
-          ))
+      // Only replace all if every existing image is a known stock/placeholder URL
+      const isPlaceholder = (img: Imageinfo) =>
+        img.url && (
+          img.url.includes('unsplash.com') ||
+          img.url.includes('pexels.com') ||
+          img.url.includes('pixabay.com') ||
+          img.url.includes('butterfly-pea-blue')
         );
-
+      const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
       return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
     });
 

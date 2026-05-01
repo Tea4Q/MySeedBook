@@ -5,15 +5,13 @@ import {
   StyleSheet,
   Pressable,
   Alert,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Mic, MicOff, Play, Pause, Volume2, Trash2 } from 'lucide-react-native';
+import { Mic, MicOff, Play, Pause, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
-import { useAuth } from '@/lib/auth';
-import { AIConfig } from '@/config/ai';
+
+import { transcribeAudio } from '@/lib/voice/transcription';
 import { Audio, AVPlaybackStatus } from 'expo-av';
-import * as Speech from 'expo-speech';
 
 interface VoiceNotesProps {
   onTextExtracted: (text: string) => void;
@@ -38,18 +36,24 @@ export default function VoiceNotes({
   const [transcriptionText, setTranscriptionText] = useState('');
   
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingUriRef = useRef<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     return () => {
-      // Cleanup
-      stopRecording();
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+      // Inline cleanup using refs directly to avoid stale-closure dependency
+      const rec = recordingRef.current;
+      if (rec) {
+        recordingRef.current = null;
+        rec.stopAndUnloadAsync().catch(() => {});
       }
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
       }
     };
   }, []);
@@ -129,17 +133,22 @@ export default function VoiceNotes({
 
   const stopRecording = async () => {
     try {
-      if (!recordingRef.current) return;
+      const recording = recordingRef.current;
+      if (!recording) return;
 
+      // Null the ref immediately so concurrent calls hit the guard above
+      recordingRef.current = null;
       setIsRecording(false);
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      recordingUriRef.current = uri ?? null;
+
       if (uri) {
         setHasRecording(true);
         
@@ -148,10 +157,7 @@ export default function VoiceNotes({
           allowsRecordingIOS: false,
         });
 
-        // Auto-transcribe if we have OpenAI configured
-        if (AIConfig.isConfigured()) {
-          await transcribeRecording(uri);
-        }
+        await transcribeRecording(uri);
       }
     } catch (error) {
       console.error('Failed to stop recording:', error);
@@ -161,30 +167,14 @@ export default function VoiceNotes({
 
   const transcribeRecording = async (uri: string) => {
     setIsProcessing(true);
-    
     try {
-      const client = AIConfig.getClient();
-      if (!client) {
-        throw new Error('AI client not configured');
-      }
-
-      // For now, we'll provide a placeholder transcription
-      // In a real implementation, you would:
-      // 1. Upload the audio file to your server
-      // 2. Use OpenAI Whisper API or another speech-to-text service
-      // 3. Return the transcription
-      
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockTranscription = "Voice recording transcription would appear here. To fully implement this, you would need to integrate with OpenAI's Whisper API or another speech-to-text service.";
-      
-      setTranscriptionText(mockTranscription);
-      onTextExtracted(mockTranscription);
-      
-    } catch (error) {
+      const text = await transcribeAudio(uri);
+      setTranscriptionText(text);
+      onTextExtracted(text);
+    } catch (error: any) {
       console.error('Transcription failed:', error);
-      Alert.alert('Transcription Failed', 'Could not convert speech to text. You can still use the recording.');
+      const message: string = error?.message || 'Could not convert speech to text.';
+      Alert.alert('Transcription Failed', message);
     } finally {
       setIsProcessing(false);
     }
@@ -192,9 +182,7 @@ export default function VoiceNotes({
 
   const playRecording = async () => {
     try {
-      if (!recordingRef.current) return;
-      
-      const uri = recordingRef.current.getURI();
+      const uri = recordingUriRef.current;
       if (!uri) return;
 
       if (soundRef.current) {
@@ -250,6 +238,7 @@ export default function VoiceNotes({
               soundRef.current = null;
             }
             recordingRef.current = null;
+            recordingUriRef.current = null;
           },
         },
       ]

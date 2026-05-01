@@ -1,24 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
   Pressable,
 } from 'react-native';
-import { Brain, MessageCircle, ShoppingCart, Mic, Sparkles, Crown } from 'lucide-react-native';
+import { Brain, MessageCircle, Settings, ShoppingCart, Mic, Sparkles, Crown } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
 import { AIGardenAssistant } from '@/components/AIGardenAssistant';
 import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
 import { VoiceNotes } from '@/components/VoiceNotes';
+import AISettingsPanel from '@/components/AISettingsPanel';
 import PremiumModal from '@/components/PremiumModal';
 import { Seed, Supplier } from '@/types/database';
 import { getAIFeatures } from '@/config/ai';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
+import { PRICING_COPY } from '@/lib/pricingCopy';
 
-type ActiveView = 'overview' | 'chat' | 'shopping' | 'voice';
+type ActiveView = 'overview' | 'chat' | 'shopping' | 'voice' | 'settings';
 
 export default function AIScreen() {
   const { session } = useAuth();
@@ -89,6 +92,14 @@ export default function AIScreen() {
     loadAIFeatures();
   }, [loadUserData, loadAIFeatures]);
 
+  const showAIUpgradePrompt = (featureName: string) => {
+    Alert.alert(
+      `Upgrade for ${featureName}`,
+      PRICING_COPY.upgradePromptForAIFeature(featureName),
+      [{ text: 'Not Now', style: 'cancel' }]
+    );
+  };
+
   const handleVoiceTextExtracted = (text: string) => {
     setVoiceText(text);
     // Could auto-navigate to chat and send the voice text
@@ -96,7 +107,7 @@ export default function AIScreen() {
       if (aiFeatures.ai_chat) {
         setActiveView('chat');
       } else {
-        showUpgradePrompt('AI Garden Chat');
+        showAIUpgradePrompt('AI Garden Chat');
       }
     }
   };
@@ -105,7 +116,7 @@ export default function AIScreen() {
     if (aiFeatures[featureName]) {
       setActiveView(viewId);
     } else {
-      showUpgradePrompt(displayName);
+      showAIUpgradePrompt(displayName);
     }
   };
 
@@ -337,6 +348,10 @@ export default function AIScreen() {
         );
       default:
         return renderOverview();
+      case 'settings':
+        return (
+          <AISettingsPanel onConfigured={() => loadAIFeatures()} />
+        );
     }
   };
 
@@ -353,8 +368,8 @@ export default function AIScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Navigation Bar (if not overview) */}
-      {activeView !== 'overview' && (
+      {/* Navigation Bar */}
+      {activeView !== 'overview' ? (
         <View style={[styles.navigationBar, { backgroundColor: colors.surface }]}>
           <Pressable
             style={styles.backButton}
@@ -363,6 +378,13 @@ export default function AIScreen() {
             <Text style={[styles.backButtonText, { color: colors.primary }]}>
               ← Back to AI Features
             </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={[styles.navigationBar, { backgroundColor: colors.surface }]}>
+          <View style={{ flex: 1 }} />
+          <Pressable style={styles.settingsButton} onPress={() => setActiveView('settings')}>
+            <Settings size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
       )}
@@ -399,6 +421,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -406,6 +430,9 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  settingsButton: {
+    padding: 4,
   },
   overviewContainer: {
     flex: 1,
