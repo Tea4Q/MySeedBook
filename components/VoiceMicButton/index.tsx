@@ -8,9 +8,12 @@ import {
   Animated,
 } from 'react-native';
 import { Mic, MicOff } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useGlobalSubscription } from '../../lib/globalSubscriptionManager';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
+import { useAIConfigured } from '../../hooks/useAIConfigured';
 import PremiumModal from '../PremiumModal';
+import AISetupModal from '../AISetupModal';
 
 interface VoiceMicButtonProps {
   onTranscript: (text: string) => void;
@@ -29,7 +32,10 @@ interface VoiceMicButtonProps {
  */
 export function VoiceMicButton({ onTranscript, size = 'md', style }: VoiceMicButtonProps) {
   const { isPremium } = useGlobalSubscription();
+  const { isConfigured } = useAIConfigured();
+  const router = useRouter();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const { status, transcript, error, startRecording, stopAndTranscribe, reset } =
     useVoiceInput();
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -60,6 +66,10 @@ export function VoiceMicButton({ onTranscript, size = 'md', style }: VoiceMicBut
   const handlePress = async () => {
     if (!isPremium) {
       setShowPremiumModal(true);
+      return;
+    }
+    if (isConfigured === false) {
+      setShowSetupModal(true);
       return;
     }
     if (status === 'recording') {
@@ -126,6 +136,11 @@ export function VoiceMicButton({ onTranscript, size = 'md', style }: VoiceMicBut
       <PremiumModal
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
+      />
+      <AISetupModal
+        visible={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        onOpenSettings={() => router.push('/(tabs)/ai')}
       />
     </>
   );

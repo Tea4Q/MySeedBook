@@ -85,3 +85,7 @@ yarn-error.*
 # @end expo-cli
 .env
 .env.local
+
+# playwright
+playwright-report/
+test-results/

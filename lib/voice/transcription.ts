@@ -1,12 +1,15 @@
 /**
  * Transcribes a recorded audio file using the OpenAI Whisper API.
- * Requires EXPO_PUBLIC_OPENAI_API_KEY in your .env.local file.
+ * Uses the API key stored in SecureStore by the user (via AI Settings panel).
  */
+import * as SecureStore from 'expo-secure-store';
+import { AI_STORAGE_KEYS } from '@/config/ai';
+
 export async function transcribeAudio(fileUri: string): Promise<string> {
-  const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+  const apiKey = await SecureStore.getItemAsync(AI_STORAGE_KEYS.apiKey);
   if (!apiKey) {
     throw new Error(
-      'Voice transcription is not configured. Add EXPO_PUBLIC_OPENAI_API_KEY to your .env.local file.'
+      'Voice transcription requires an API key. Go to the AI tab → Settings and enter your OpenAI API key.'
     );
   }
 

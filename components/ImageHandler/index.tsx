@@ -11,7 +11,7 @@ import {
   StyleSheet,
   Modal,
 } from 'react-native';
-import { Camera, Globe, Trash2 } from 'lucide-react-native';
+import { Camera, Globe, Images, Trash2 } from 'lucide-react-native';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
@@ -234,17 +234,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         );
       }
     },
-    [bucketName]
+    [bucketName, isGuest, images.length, maxImages]
   );
 
   const handleAddWebImageUrl = useCallback(async () => {
-    const trimmedUrl = webImageUrlInput.trim();
-    console.log('[ImageHandler] Add URL pressed, value:', trimmedUrl || '(empty)');
-    
-    if (!trimmedUrl) {
+    const raw = webImageUrlInput.trim();
+    console.log('[ImageHandler] Add URL pressed, value:', raw || '(empty)');
+
+    if (!raw) {
       Alert.alert('Invalid URL', 'Please enter a valid web URL for the image.');
       return;
     }
+
+    // Support multiple URLs separated by newlines or commas
+    const urlLines = raw
+      .split(/[\n,]+/)
+      .map((u) => u.trim())
+      .filter(Boolean);
 
     if (images.length >= maxImages) {
       Alert.alert(
@@ -254,64 +260,64 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       return;
     }
 
-    // Local device URIs (file://, content://) — route through the upload flow
-    if (trimmedUrl.startsWith('file://') || trimmedUrl.startsWith('content://')) {
-      await handleLocalImageSelected(trimmedUrl);
-      setWebImageUrlInput('');
-      return;
-    }
-
-    if (
-      !trimmedUrl.startsWith('http://') &&
-      !trimmedUrl.startsWith('https://')
-    ) {
-      Alert.alert(
-        'Invalid URL',
-        'Please enter a valid URL starting with http:// or https://'
-      );
-      return;
-    }
-
-    const imageId = uuidv4();
-    const newImageEntry: Imageinfo = {
-      id: imageId,
-      type: 'url',
-      url: '',
-      localUri: trimmedUrl,
-      isLoading: true,
-    };
-    
-    setImages((prevImages) => {
-      // Only replace all if every existing image is a known stock/placeholder URL
-      const isPlaceholder = (img: Imageinfo) =>
-        img.url && (
-          img.url.includes('unsplash.com') ||
-          img.url.includes('pexels.com') ||
-          img.url.includes('pixabay.com') ||
-          img.url.includes('butterfly-pea-blue')
-        );
-      const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
-      return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
-    });
-
-    // For all external http/https URLs, store the URL directly.
-    // Fetching and re-uploading to Supabase fails for most sites due to
-    // CORS / mobile network restrictions, and offers no benefit for public URLs.
-    setImages((prevImages) =>
-      prevImages.map((img) =>
-        img.id === imageId
-          ? {
-              ...img,
-              url: trimmedUrl,
-              type: 'url',
-              isLoading: false,
-              localUri: undefined,
-            }
-          : img
-      )
-    );
+    const urlsToProcess = urlLines.slice(0, maxImages - images.length);
     setWebImageUrlInput('');
-  }, [bucketName, webImageUrlInput, handleLocalImageSelected]);
+
+    for (const trimmedUrl of urlsToProcess) {
+      // Local device URIs (file://, content://) — route through the upload flow
+      if (trimmedUrl.startsWith('file://') || trimmedUrl.startsWith('content://')) {
+        await handleLocalImageSelected(trimmedUrl);
+        continue;
+      }
+
+      if (
+        !trimmedUrl.startsWith('http://') &&
+        !trimmedUrl.startsWith('https://')
+      ) {
+        Alert.alert(
+          'Invalid URL',
+          `Skipped "${trimmedUrl}" — URLs must start with http:// or https://`
+        );
+        continue;
+      }
+
+      const imageId = uuidv4();
+      const newImageEntry: Imageinfo = {
+        id: imageId,
+        type: 'url',
+        url: '',
+        localUri: trimmedUrl,
+        isLoading: true,
+      };
+
+      setImages((prevImages) => {
+        // Only replace all if every existing image is a known stock/placeholder URL
+        const isPlaceholder = (img: Imageinfo) =>
+          !!img.url && (
+            img.url.includes('unsplash.com') ||
+            img.url.includes('pexels.com') ||
+            img.url.includes('pixabay.com') ||
+            img.url.includes('butterfly-pea-blue')
+          );
+        const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
+        return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
+      });
+
+      setImages((prevImages) =>
+        prevImages.map((img) =>
+          img.id === imageId
+            ? {
+                ...img,
+                url: trimmedUrl,
+                type: 'url',
+                isLoading: false,
+                localUri: undefined,
+              }
+            : img
+        )
+      );
+    }
+  }, [webImageUrlInput, handleLocalImageSelected, images.length, maxImages]);
 
   const handleRemoveImage = useCallback(
     async (imageIdToRemove: string) => {
@@ -323,18 +329,23 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
 
       if (imageToRemove?.type === 'supabase' && imageToRemove.url) {
         try {
-          const filename = imageToRemove.url.split('/').pop();
-          if (filename) {
+          // Extract the storage path: URLs are formatted as
+          // .../storage/v1/object/public/{bucket}/{userId}/{filename}
+          // We need everything after the bucket name as the file path.
+          const urlObj = new URL(imageToRemove.url.split('?')[0]);
+          const pathParts = urlObj.pathname.split('/');
+          const bucketIdx = pathParts.indexOf(bucketName);
+          const filePath = bucketIdx !== -1
+            ? pathParts.slice(bucketIdx + 1).join('/')
+            : pathParts[pathParts.length - 1]; // fallback: filename only
+
+          if (filePath) {
             const { error } = await supabase.storage
-              .from(bucketName) // Use bucketName prop
-              .remove([filename]);
+              .from(bucketName)
+              .remove([filePath]);
 
             if (error) {
               console.error('Error deleting from Supabase:', error);
-              Alert.alert(
-                'Delete Error',
-                'Failed to delete image from Supabase.'
-              );
             }
           }
         } catch (err) {
@@ -387,24 +398,76 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         return;
       }
 
-      // Use Expo ImagePicker or any other library to select an image
-      // Example using Expo ImagePicker:
+      // Launch library picker with multi-select enabled
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
+        allowsMultipleSelection: true,
+        quality: 0.85,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const localUri = result.assets[0].uri;
-        handleLocalImageSelected(localUri);
+        const remaining = maxImages - images.length;
+        if (remaining <= 0) {
+          Alert.alert(
+            'Image Limit Reached',
+            `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${
+              maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''
+            }`
+          );
+          return;
+        }
+        const assetsToProcess = result.assets.slice(0, remaining);
+        if (assetsToProcess.length < result.assets.length) {
+          Alert.alert(
+            'Partial Import',
+            `Only ${assetsToProcess.length} of ${result.assets.length} photos will be added — you have ${remaining} slot${remaining === 1 ? '' : 's'} remaining.`
+          );
+        }
+        for (const asset of assetsToProcess) {
+          await handleLocalImageSelected(asset.uri);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick an image.');
     }
-  }, [handleLocalImageSelected, bucketName]);
+  }, [handleLocalImageSelected, bucketName, images.length, maxImages, isGuest]);
+
+  const handleCameraCapture = useCallback(async () => {
+    if (isGuest) {
+      Alert.alert(
+        'Account Required',
+        'Create a free account to upload photos from your device. You can still add images by URL.'
+      );
+      return;
+    }
+    if (images.length >= maxImages) {
+      Alert.alert(
+        'Image Limit Reached',
+        `You can add up to ${maxImages} image${maxImages === 1 ? '' : 's'} per seed.${
+          maxImages < 6 ? ' Upgrade to a premium plan to add up to 6.' : ''
+        }`
+      );
+      return;
+    }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is required to take photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        await handleLocalImageSelected(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo.');
+    }
+  }, [isGuest, images.length, maxImages, handleLocalImageSelected]);
 
   // Directly add an image from a URL string (used by paste handler for URL-type clipboard content)
   const handlePastedImageUrl = useCallback((url: string) => {
@@ -468,7 +531,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       };
       reader.readAsDataURL(file);
     },
-    [handleLocalImageSelected]
+    [handleLocalImageSelected, images.length, maxImages]
   );
 
   const triggerWebFilePicker = useCallback(() => {
@@ -482,11 +545,15 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       input.type = 'file';
       input.accept = 'image/jpeg,image/png,image/gif,image/webp,image/avif,.jpg,.jpeg,.png,.gif,.webp,.avif';
       input.style.display = 'none';
+      input.multiple = true;
       input.onchange = (event) => {
         const target = event.target as HTMLInputElement;
-        const file = target.files?.[0];
-        if (file) {
-          handleWebFileSelected(file);
+        const files = target.files;
+        if (files && files.length > 0) {
+          const remaining = maxImages - images.length;
+          Array.from(files).slice(0, Math.max(0, remaining)).forEach((file) =>
+            handleWebFileSelected(file)
+          );
         }
         target.value = '';
       };
@@ -495,7 +562,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     }
 
     fileInputRef.current.click();
-  }, [handleImagePicker, handleWebFileSelected]);
+  }, [handleImagePicker, handleWebFileSelected, images.length, maxImages]);
 
   const handleWebDrop = useCallback(
     (event: any) => {
@@ -506,12 +573,14 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       dragDepthRef.current = 0;
 
       const fileList = event?.dataTransfer?.files;
-      const file = fileList && fileList.length > 0 ? fileList[0] : null;
-      if (file) {
-        handleWebFileSelected(file);
+      if (fileList && fileList.length > 0) {
+        const remaining = maxImages - images.length;
+        Array.from(fileList).slice(0, Math.max(0, remaining)).forEach((file) =>
+          handleWebFileSelected(file as globalThis.File)
+        );
       }
     },
-    [handleWebFileSelected]
+    [handleWebFileSelected, images.length, maxImages]
   );
 
   const handleWebDragOver = useCallback((event: any) => {
@@ -544,28 +613,38 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       const cd = event.clipboardData;
       if (!cd) return;
 
-      // 1. Check items for a binary image (most browsers: "Copy Image")
+      // 1. Check items for binary images (most browsers: "Copy Image") — collect all
       const items = cd.items;
       if (items) {
+        const imageFiles: globalThis.File[] = [];
         for (let i = 0; i < items.length; i += 1) {
           const item = items[i];
           if (item.type.startsWith('image/')) {
             const file = item.getAsFile();
-            if (file) {
-              event.preventDefault();
-              handleWebFileSelected(file);
-              return;
-            }
+            if (file) imageFiles.push(file);
           }
+        }
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          const remaining = maxImages - images.length;
+          imageFiles.slice(0, Math.max(0, remaining)).forEach((file) =>
+            handleWebFileSelected(file)
+          );
+          return;
         }
       }
 
       // 2. Check files array (Edge / some Chromium builds put images here)
       if (cd.files && cd.files.length > 0) {
-        const file = cd.files[0];
-        if (file.type.startsWith('image/')) {
+        const imageFiles = Array.from(cd.files).filter((f) =>
+          f.type.startsWith('image/')
+        );
+        if (imageFiles.length > 0) {
           event.preventDefault();
-          handleWebFileSelected(file);
+          const remaining = maxImages - images.length;
+          imageFiles.slice(0, Math.max(0, remaining)).forEach((file) =>
+            handleWebFileSelected(file)
+          );
           return;
         }
       }
@@ -600,7 +679,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
     return () => {
       window.removeEventListener('paste', onPaste);
     };
-  }, [handleWebFileSelected, handlePastedImageUrl]);
+  }, [handleWebFileSelected, handlePastedImageUrl, images.length, maxImages]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -639,9 +718,12 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       setIsGlobalDragOver(false);
       dragDepthRef.current = 0;
 
-      const file = event.dataTransfer?.files?.[0];
-      if (file) {
-        handleWebFileSelected(file);
+      const files = event.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const remaining = maxImages - images.length;
+        Array.from(files).slice(0, Math.max(0, remaining)).forEach((file) =>
+          handleWebFileSelected(file as globalThis.File)
+        );
       }
     };
 
@@ -656,7 +738,7 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
       window.removeEventListener('dragleave', onDragLeave);
       window.removeEventListener('drop', onDrop);
     };
-  }, [handleWebFileSelected, hasImageFiles, isGlobalDragOver]);
+  }, [handleWebFileSelected, hasImageFiles, isGlobalDragOver, images.length, maxImages]);
 
   useEffect(() => {
     return () => {
@@ -873,11 +955,13 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
             borderColor: colors.inputBorder,
             color: colors.inputText,
           }]}
-          placeholder="Paste image URL (e.g., https://...)"
+          placeholder="Paste one or more image URLs (one per line)"
           placeholderTextColor={colors.textSecondary}
           value={webImageUrlInput}
           onChangeText={setWebImageUrlInput}
           keyboardType="url"
+          multiline
+          numberOfLines={2}
         />
         <Pressable style={[styles.urlButton, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]} onPress={handleAddWebImageUrl}>
           <Globe size={24} color={colors.primary} />
@@ -885,19 +969,42 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         </Pressable>
       </View>
       {Platform.OS === 'web' && (
-        <Text style={[styles.webHint, { color: colors.textSecondary }]}>Tip: paste an image with Ctrl+V, or upload from Windows Explorer.</Text>
+        <Text style={[styles.webHint, { color: colors.textSecondary }]}>Tip: paste images with Ctrl+V, drag-and-drop multiple files, or paste multiple URLs (one per line).</Text>
       )}
       {/* Capture/Pick Local Image */}
       <View style={styles.imageButtonContainer}>
-        <Pressable
-          style={[styles.imageButton, { borderColor: colors.primary }]}
-          onPress={Platform.OS === 'web' ? triggerWebFilePicker : handleImagePicker}
-        >
-          <Camera size={24} color={colors.primary} />
-          <Text style={[styles.imageButtonText, { color: colors.primary }]}>
-            {Platform.OS === 'web' ? 'Upload Image' : 'Capture Image'}
-          </Text>
-        </Pressable>
+        {Platform.OS === 'web' ? (
+          <Pressable
+            style={[styles.imageButton, { borderColor: colors.primary }]}
+            onPress={triggerWebFilePicker}
+          >
+            <Images size={24} color={colors.primary} />
+            <Text style={[styles.imageButtonText, { color: colors.primary }]}>
+              Upload Photos
+            </Text>
+          </Pressable>
+        ) : (
+          <>
+            <Pressable
+              style={[styles.imageButton, { borderColor: colors.primary }]}
+              onPress={handleCameraCapture}
+            >
+              <Camera size={24} color={colors.primary} />
+              <Text style={[styles.imageButtonText, { color: colors.primary }]}>
+                Take Photo
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.imageButton, { borderColor: colors.primary }]}
+              onPress={handleImagePicker}
+            >
+              <Images size={24} color={colors.primary} />
+              <Text style={[styles.imageButtonText, { color: colors.primary }]}>
+                Pick Photos
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
     </View>
   );

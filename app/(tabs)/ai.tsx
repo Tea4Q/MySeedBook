@@ -15,8 +15,10 @@ import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
 import { VoiceNotes } from '@/components/VoiceNotes';
 import AISettingsPanel from '@/components/AISettingsPanel';
 import PremiumModal from '@/components/PremiumModal';
+import AISetupModal from '@/components/AISetupModal';
 import { Seed, Supplier } from '@/types/database';
 import { getAIFeatures } from '@/config/ai';
+import { useAIConfigured } from '@/hooks/useAIConfigured';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
 import { PRICING_COPY } from '@/lib/pricingCopy';
@@ -34,6 +36,8 @@ export default function AIScreen() {
   const [loading, setLoading] = useState(true);
   const [voiceText, setVoiceText] = useState('');
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const { isConfigured, recheck } = useAIConfigured();
   const [aiFeatures, setAIFeatures] = useState({
     voice_notes: false,
     ai_chat: false,
@@ -96,7 +100,10 @@ export default function AIScreen() {
     Alert.alert(
       `Upgrade for ${featureName}`,
       PRICING_COPY.upgradePromptForAIFeature(featureName),
-      [{ text: 'Not Now', style: 'cancel' }]
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Upgrade', onPress: () => setShowPremiumModal(true) },
+      ]
     );
   };
 
@@ -113,11 +120,15 @@ export default function AIScreen() {
   };
 
   const handleFeatureNavigation = (viewId: ActiveView, featureName: keyof typeof aiFeatures, displayName: string) => {
-    if (aiFeatures[featureName]) {
-      setActiveView(viewId);
-    } else {
+    if (!aiFeatures[featureName]) {
       showAIUpgradePrompt(displayName);
+      return;
     }
+    if (isConfigured === false && viewId !== 'settings') {
+      setShowSetupModal(true);
+      return;
+    }
+    setActiveView(viewId);
   };
 
   const renderFeatureCard = (
@@ -383,7 +394,7 @@ export default function AIScreen() {
       ) : (
         <View style={[styles.navigationBar, { backgroundColor: colors.surface }]}>
           <View style={{ flex: 1 }} />
-          <Pressable style={styles.settingsButton} onPress={() => setActiveView('settings')}>
+          <Pressable style={styles.settingsButton} onPress={() => { recheck(); setActiveView('settings'); }}>
             <Settings size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -397,6 +408,12 @@ export default function AIScreen() {
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
         feature="AI Garden Assistant"
+      />
+      {/* AI Setup Modal */}
+      <AISetupModal
+        visible={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        onOpenSettings={() => { recheck(); setActiveView('settings'); }}
       />
     </View>
   );

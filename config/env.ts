@@ -42,11 +42,11 @@ export const ENV = {
     },
   },
 
-  // OpenAI Whisper — voice transcription for premium voice input
-  // Get key from: https://platform.openai.com/api-keys
-  // Add EXPO_PUBLIC_OPENAI_API_KEY to your .env.local file
+  // OpenAI-compatible AI — user must supply their own key via the AI Settings panel
+  // (Settings → AI → enter your API key). Key is stored in SecureStore on-device.
+  // No key is bundled with the app.
   openai: {
-    apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '',
+    apiKey: '',
   },
 
   // RevenueCat subscription configuration

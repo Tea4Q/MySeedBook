@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Bot, Check, ChevronDown, ChevronUp, Eye, EyeOff, Trash2 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/lib/theme';
 import { AI_STORAGE_KEYS, AIConfig } from '@/config/ai';
 
@@ -41,7 +42,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
 
   const load = useCallback(async () => {
     const [storedKey, storedUrl] = await Promise.all([
-      AsyncStorage.getItem(AI_STORAGE_KEYS.apiKey),
+      SecureStore.getItemAsync(AI_STORAGE_KEYS.apiKey),
       AsyncStorage.getItem(AI_STORAGE_KEYS.baseUrl),
     ]);
     if (storedKey) {
@@ -65,7 +66,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
-      Alert.alert('API Key Required', 'Please enter your OpenAI API key.');
+      Alert.alert('API Key Required', 'Please enter your AI API key.');
       return;
     }
     if (baseUrl === 'custom' && !customUrl.trim()) {
@@ -76,7 +77,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
     try {
       const url = effectiveBaseUrl.trim() || '';
       await Promise.all([
-        AsyncStorage.setItem(AI_STORAGE_KEYS.apiKey, apiKey.trim()),
+        SecureStore.setItemAsync(AI_STORAGE_KEYS.apiKey, apiKey.trim()),
         url
           ? AsyncStorage.setItem(AI_STORAGE_KEYS.baseUrl, url)
           : AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
@@ -129,7 +130,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
           style: 'destructive',
           onPress: async () => {
             await Promise.all([
-              AsyncStorage.removeItem(AI_STORAGE_KEYS.apiKey),
+              SecureStore.deleteItemAsync(AI_STORAGE_KEYS.apiKey),
               AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
             ]);
             setApiKey('');
@@ -155,17 +156,16 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
       </View>
 
       {/* API Key */}
-      <Text style={s.label}>OpenAI API Key</Text>
+      <Text style={s.label}>AI API Key</Text>
       <Text style={s.hint}>
-        Get yours at{' '}
-        <Text style={{ color: colors.primary }}>platform.openai.com/api-keys</Text>
+        Enter the API key for your chosen AI provider. Stored securely on-device.
       </Text>
       <View style={s.row}>
         <TextInput
           style={[s.input, s.flex, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
           value={apiKey}
           onChangeText={setApiKey}
-          placeholder="sk-…"
+          placeholder="sk-… or your provider key"
           placeholderTextColor={colors.textSecondary}
           secureTextEntry={!showKey}
           autoCapitalize="none"
@@ -179,9 +179,9 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
       </View>
 
       {/* Backend */}
-      <Text style={[s.label, { marginTop: 20 }]}>AI Backend</Text>
+      <Text style={[s.label, { marginTop: 20 }]}>AI Backend / Provider</Text>
       <Text style={s.hint}>
-        Use OpenAI by default, or point to any OpenAI-compatible endpoint (Ollama, LM Studio, etc.)
+        Use OpenAI by default, or point to any OpenAI-compatible endpoint (Ollama, LM Studio, Anthropic proxy, etc.)
       </Text>
 
       {/* Preset picker */}

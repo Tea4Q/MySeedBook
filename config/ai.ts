@@ -3,10 +3,11 @@ import { Platform } from 'react-native';
 import OpenAI from 'openai';
 import { premiumManager } from '@/utils/premiumManager';
 
-// AsyncStorage keys used across components for AI credentials
+// Storage keys for AI credentials.
+// API key is kept in SecureStore (encrypted); base URL is non-sensitive so AsyncStorage is fine.
 export const AI_STORAGE_KEYS = {
-  apiKey: 'openai_api_key',
-  baseUrl: 'openai_base_url',
+  apiKey: 'ai_api_key',       // SecureStore
+  baseUrl: 'ai_base_url',     // AsyncStorage
 } as const;
 
 // OpenAI Configuration
