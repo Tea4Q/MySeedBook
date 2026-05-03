@@ -501,19 +501,15 @@ export default function AddOrEditSeedScreen() {
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     
     const imagesToSave = imageArray
-      .filter((img) => {
-        // Include images that have a URL (successful upload) and are not currently loading
-        // Allow images with development-related errors since they were uploaded successfully
-        const hasValidUrl = !!(img.url && img.url.trim() !== '');
-        const notLoading = !img.isLoading;
-        const isUploadError = img.error && !img.error.includes('Using local preview');
-        
-        return hasValidUrl && notLoading && !isUploadError;
-      })
-      .map((img) => ({
-        type: img.type,
-        url: img.url,
-      }));
+  .filter((img) => {
+    const hasValidUrl = !!(img.url && img.url.trim() !== '');
+    const notLoading = !img.isLoading;
+    return hasValidUrl && notLoading;
+  })
+  .map((img) => ({
+    type: img.type,
+    url: img.url,
+  }));
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
