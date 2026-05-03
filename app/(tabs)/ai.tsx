@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Alert,
   View,
   Text,
   StyleSheet,
@@ -21,14 +20,13 @@ import { getAIFeatures } from '@/config/ai';
 import { useAIConfigured } from '@/hooks/useAIConfigured';
 import { supabase } from '@/lib/supabase';
 import { guestDataManager } from '@/utils/guestDataManager';
-import { PRICING_COPY } from '@/lib/pricingCopy';
 
 type ActiveView = 'overview' | 'chat' | 'shopping' | 'voice' | 'settings';
 
 export default function AIScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
-  const { isPremium, showUpgradePrompt } = usePremiumFeature();
+  const { isPremium } = usePremiumFeature();
   
   const [activeView, setActiveView] = useState<ActiveView>('overview');
   const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
@@ -96,15 +94,8 @@ export default function AIScreen() {
     loadAIFeatures();
   }, [loadUserData, loadAIFeatures]);
 
-  const showAIUpgradePrompt = (featureName: string) => {
-    Alert.alert(
-      `Upgrade for ${featureName}`,
-      PRICING_COPY.upgradePromptForAIFeature(featureName),
-      [
-        { text: 'Not Now', style: 'cancel' },
-        { text: 'Upgrade', onPress: () => setShowPremiumModal(true) },
-      ]
-    );
+  const showAIUpgradePrompt = (_featureName: string) => {
+    setShowPremiumModal(true);
   };
 
   const handleVoiceTextExtracted = (text: string) => {

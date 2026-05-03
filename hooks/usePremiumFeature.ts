@@ -9,7 +9,7 @@ interface UsePremiumFeatureResult {
   checkFeature: (feature: keyof import('../utils/premiumManager').PremiumFeatures) => boolean;
   checkLimit: (action: 'seed' | 'supplier' | 'photo' | 'search') => Promise<{ allowed: boolean; limit: number; current: number }>;
   trackUsage: (action: 'seed' | 'supplier' | 'photo' | 'search') => Promise<void>;
-  showUpgradePrompt: (feature?: string) => void;
+  showUpgradePrompt: (feature?: string, onUpgrade?: () => void) => void;
   subscription: import('../utils/premiumManager').UserSubscription;
 }
 
@@ -50,15 +50,19 @@ export function usePremiumFeature(): UsePremiumFeatureResult {
     }
   };
 
-  const showUpgradePrompt = (feature?: string) => {
+  const showUpgradePrompt = (feature?: string, onUpgrade?: () => void) => {
     const title = feature ? `Upgrade for ${feature}` : 'Choose a Garden Plan';
     const message = feature
       ? PRICING_COPY.upgradePromptForFeature(feature)
       : PRICING_COPY.upgradePromptDefault;
 
-    Alert.alert(title, message, [
+    const buttons: any[] = [
       { text: 'Not Now', style: 'cancel' },
-    ]);
+    ];
+    if (onUpgrade) {
+      buttons.unshift({ text: 'Upgrade', onPress: onUpgrade });
+    }
+    Alert.alert(title, message, buttons);
   };
 
   return {

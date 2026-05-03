@@ -133,7 +133,7 @@ export default function AddOrEditSeedScreen() {
   const { colors } = useTheme(); // Add theme colors
   const { user, isGuest, refreshGuestUsage } = useAuth(); // Add auth context
   const { isPremium } = useGlobalSubscription();
-  const { checkFeature, showUpgradePrompt } = usePremiumFeature();
+  const { checkFeature } = usePremiumFeature();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false); // Synchronous guard against double-submit
@@ -1781,7 +1781,7 @@ export default function AddOrEditSeedScreen() {
                       backgroundColor: colors.warning + '20',
                       borderColor: colors.warning 
                     }]}
-                    onPress={() => showUpgradePrompt('Voice Notes')}
+                    onPress={() => setShowPremiumModal(true)}
                   >
                     <Text style={[styles.upgradePromptText, { color: colors.warning }]}>
                       🎤 Upgrade to Premium for hands-free voice notes

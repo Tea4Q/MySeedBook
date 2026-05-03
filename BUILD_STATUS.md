@@ -1,44 +1,43 @@
 # Production Build Status - MySeedBook Catalogue
 
-## Current Snapshot (March 26, 2026)
+## Current Snapshot (May 3, 2026)
 
-- Branch: release/v1.3.0-pre-ai
-- App runtime: Expo dev server starts successfully (`npx expo start`)
-- Build artifacts in workspace: multiple Android AAB files present
-- Focus of this branch: pre-AI submission stability and reviewer-safe feature scope
+- Branch: release/v1.3.1-with-ai
+- Version: 1.3.1
+- Latest production build: Build 25 (submitted via `eas build --profile production --platform all --auto-submit`)
+- OTA update channel: production
 
-## What Changed Recently
+## What Changed in This Build Cycle
 
-- Voice and AI purchase messaging is hidden/demoted for this branch
-- Calendar modal reopen issue was fixed for tab-switch/remount behavior
-- Web image ingestion now supports picker, paste, and drag-and-drop
-- Full-page drag overlay added for clearer upload UX
-- Add Seed and Edit Supplier now include unsaved-changes guards and draft restore
+- **EAS env var fix**: 4 wrong account-scoped PUBLIC vars deleted; correct project-scoped secrets now used for all builds
+- **RevenueCat keys**: iOS `appl_CojCuJUsWqzJiOxzCyhUDQlfLQj` and Android `goog_IIVsFNrpglrinwijYBbvkajOwZK` correctly bundled in Build 25
+- **Supabase keys**: Correct project URL and anon key bundled in Build 25
+- Build 24 (previous) had wrong keys from a different project — do not use Build 24 for production
+
+## OTA Updates Pushed to Production Channel
+
+All of the following were delivered as OTA updates (no store re-submission needed):
+
+1. Fix crash on Add/Edit Seed screen
+2. Fix camera photo upload on mobile (expo-file-system arrayBuffer)
+3. Fix AI upgrade button going to dead-end Alert
+4. Fix Voice Notes showing wrong price ($7.99 → $9.99)
+5. Fix URL image paste showing unhelpful error
+6. Truncate long supplier names on seed card
 
 ## Validation Notes
 
-- Targeted checks on modified files passed after implementation
-- Project-wide TypeScript still contains pre-existing unrelated Supabase typing errors
-- Those broader type errors were explicitly deprioritized for this update stream
+- RevenueCat Voice & AI entitlement confirmed working after linking product in RevenueCat dashboard
+- Upgrade flow confirmed working from TestFlight (App Store purchase sheet opens correctly)
+- Camera upload confirmed working on iOS and Android after expo-file-system fix
+- TypeScript project-wide pre-existing Supabase typing errors are deprioritized and do not affect runtime
 
-## Release Guidance
-
-1. Generate fresh Android and iOS production builds from this branch before submission.
-2. Run focused smoke tests on:
-   - Add Seed and Edit Supplier draft restore/leave prompts
-   - Calendar add-event launch flow after tab switches
-   - Web image upload methods (picker, paste, drag-and-drop)
-3. Confirm store metadata and in-app copy match pre-AI scope.
-
-## Suggested Build Commands
+## Build Commands
 
 ```bash
-# Android AAB
-eas build --platform android --profile production
+# Both platforms (production, auto-submit to stores)
+eas build --profile production --platform all --auto-submit
 
-# iOS
-eas build --platform ios --profile production
-
-# Both
-eas build --platform all --profile production
+# OTA update only
+eas update --channel production --message "Description of change"
 ```

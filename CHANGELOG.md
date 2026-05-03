@@ -1,3 +1,26 @@
+# May 2026
+
+## v1.3.1 — Voice & AI Launch + Post-Release Fixes
+
+### New Features
+- Voice & AI subscription tier now fully live in production
+- AI Garden Assistant and Voice Notes features accessible to Voice & AI subscribers
+
+### Bug Fixes
+- **RevenueCat entitlement** — Voice & AI product was not linked to an entitlement in the RevenueCat dashboard; adding it resolved all silent upgrade failures for the Voice & AI tier
+- **EAS environment variables** — Deleted 4 incorrect account-scoped PUBLIC vars that were overriding correct project-scoped secrets; all API keys (Supabase URL, Supabase anon key, RevenueCat iOS key, RevenueCat Android key) are now project-scoped secrets only
+- **Upgrade button dead-end** — AI screen and Voice Notes upgrade buttons now go directly to the paywall modal instead of an Alert with only "Not Now"
+- **Voice Notes price** — Upgrade prompt now correctly shows $9.99/month for Voice & AI features (was showing $7.99 Essential price)
+- **Camera/gallery upload on mobile** — Fixed "Network request failed" error on native by switching from `fetch(uri).blob()` to `expo-file-system` `File.arrayBuffer()` for reading file:// and content:// URIs
+- **URL image paste** — Pasting a webpage URL (not a direct image link) now shows an Alert with guidance to long-press the image and copy the image address, instead of silently showing "Failed to load image"
+- **Seed card supplier overflow** — Long supplier names (e.g. "Southern Exposure Seed Exchange") no longer extend beyond the card edge; truncated with ellipsis
+
+### Infrastructure
+- New production build (Build 25) triggered with correct API keys after EAS var cleanup
+- Multiple OTA updates pushed to production channel for above fixes
+
+---
+
 # March 2026
 
 - Release-prep update for `release/v1.3.0-pre-ai` to keep Apple review scope on stable features

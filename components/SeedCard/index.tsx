@@ -206,7 +206,11 @@ export function SeedCard({
                 <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: fontFamily.medium }]}>
                   Supplier:
                 </Text>
-                <Text style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]}>
+                <Text
+                  style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {seed.suppliers.supplier_name}
                 </Text>
               </View>
@@ -360,6 +364,8 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: fontSize.sm,
     marginLeft: 'auto',
+    flex: 1,
+    textAlign: 'right',
   },
   seasonRow: {
     flexDirection: 'row',

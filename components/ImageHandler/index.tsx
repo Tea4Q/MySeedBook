@@ -15,7 +15,7 @@ import { Camera, Globe, Images, Trash2 } from 'lucide-react-native';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase'; // Adjust path if needed
 import * as ImagePicker from 'expo-image-picker';
-import { File } from 'expo-file-system';
+import { File as ExpoFile } from 'expo-file-system';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 
@@ -161,17 +161,20 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         // Organize files in user-specific folders for better security
         const filePath = `${user.id}/${fileName}`;
 
-        // On web, expo-file-system's File class is not supported — use fetch/blob instead
+        // Upload the file
         let fileToUpload: any;
         let contentType = `image/${extensionToUse}`;
         if (Platform.OS === 'web') {
+          // Web: fetch the object URL as a blob
           const fetchResult = await fetch(localUri);
           fileToUpload = await fetchResult.blob();
           if (fileToUpload.type?.startsWith('image/')) {
             contentType = fileToUpload.type;
           }
         } else {
-          fileToUpload = new File(localUri);
+          // Native: use expo-file-system File.arrayBuffer() to read file:// and content:// URIs
+          // Avoids "Network request failed" from fetch() on Android content:// URIs
+          fileToUpload = await new ExpoFile(localUri).arrayBuffer();
         }
 
         const { error: uploadError } = await supabase.storage
@@ -281,41 +284,52 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
         continue;
       }
 
-      const imageId = uuidv4();
-      const newImageEntry: Imageinfo = {
-        id: imageId,
-        type: 'url',
-        url: '',
-        localUri: trimmedUrl,
-        isLoading: true,
+      // Warn if the URL doesn't look like a direct image file
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|avif|bmp|svg|tiff?)(\?.*)?$/i;
+      const looksLikeImageUrl = imageExtensions.test(trimmedUrl);
+
+      const addUrlEntry = (url: string) => {
+        const imageId = uuidv4();
+        const newImageEntry: Imageinfo = {
+          id: imageId,
+          type: 'url',
+          url: '',
+          localUri: url,
+          isLoading: true,
+        };
+        setImages((prevImages) => {
+          const isPlaceholder = (img: Imageinfo) =>
+            !!img.url && (
+              img.url.includes('unsplash.com') ||
+              img.url.includes('pexels.com') ||
+              img.url.includes('pixabay.com') ||
+              img.url.includes('butterfly-pea-blue')
+            );
+          const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
+          return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
+        });
+        setImages((prevImages) =>
+          prevImages.map((img) =>
+            img.id === imageId
+              ? { ...img, url, type: 'url', isLoading: false, localUri: undefined }
+              : img
+          )
+        );
       };
 
-      setImages((prevImages) => {
-        // Only replace all if every existing image is a known stock/placeholder URL
-        const isPlaceholder = (img: Imageinfo) =>
-          !!img.url && (
-            img.url.includes('unsplash.com') ||
-            img.url.includes('pexels.com') ||
-            img.url.includes('pixabay.com') ||
-            img.url.includes('butterfly-pea-blue')
-          );
-        const shouldReplaceAll = prevImages.length > 0 && prevImages.every(isPlaceholder);
-        return shouldReplaceAll ? [newImageEntry] : [...prevImages, newImageEntry];
-      });
+      if (!looksLikeImageUrl) {
+        Alert.alert(
+          'Not a Direct Image URL',
+          'This looks like a webpage URL, not a direct image link.\n\nTo get a direct image URL:\n• On mobile: long-press the image → "Copy image address"\n• On desktop: right-click the image → "Copy image address"',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Try Anyway', onPress: () => addUrlEntry(trimmedUrl) },
+          ]
+        );
+        continue;
+      }
 
-      setImages((prevImages) =>
-        prevImages.map((img) =>
-          img.id === imageId
-            ? {
-                ...img,
-                url: trimmedUrl,
-                type: 'url',
-                isLoading: false,
-                localUri: undefined,
-              }
-            : img
-        )
-      );
+      addUrlEntry(trimmedUrl);
     }
   }, [webImageUrlInput, handleLocalImageSelected, images.length, maxImages]);
 
@@ -827,10 +841,15 @@ const ImageHandler: React.FC<ImageHandlerProps> = ({
                       return;
                     }
 
+                    // URL-type images that fail are usually webpage URLs, not direct image links
+                    const isUrlType = image.type === 'url' && !image.localUri;
+                    const errorMsg = isUrlType
+                      ? 'Not a direct image URL. Long-press the image on the website → "Copy image address", then paste that URL.'
+                      : 'Failed to load image';
                     setImages((prevImages) =>
                       prevImages.map((img) =>
                         img.id === image.id
-                          ? { ...img, error: 'Failed to load image' }
+                          ? { ...img, error: errorMsg }
                           : img
                       )
                     );

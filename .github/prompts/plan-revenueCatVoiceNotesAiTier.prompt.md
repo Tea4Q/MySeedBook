@@ -1,7 +1,7 @@
 # Plan: Revenue Cat + Voice Notes Cloud + AI Tier Roadmap
 
 ## TL;DR
-Wire RevenueCat SDK into premiumManager.ts, fold cloud voice notes sync (Supabase) into Premium tier, fix the activateSubscription bug that omits AI/voice features, then plan v1.3.2 as the OpenAI AI-assistant upgrade path. Two tiers: Premium ($5.99/mo or $49.99/yr) and Premium AI ($9.99/mo or $79.99/yr in v1.3.2).
+Wire RevenueCat SDK into premiumManager.ts, fold cloud voice notes sync (Supabase) into Premium tier, fix the activateSubscription bug that omits AI/voice features, then plan v1.3.2 as the OpenAI AI-assistant upgrade path. Two tiers: Premium ($7.99/mo or $45.99/yr) and Premium AI ($9.99/mo or $79.99/yr in v1.3.2).
 
 ---
 
@@ -34,8 +34,8 @@ Wire RevenueCat SDK into premiumManager.ts, fold cloud voice notes sync (Supabas
 | Tier | Monthly | Yearly | Notes |
 |---|---|---|---|
 | **Free** | $0 | $0 | Barcode scanner, local voice notes (device only), 3 seeds, 2 suppliers |
-| **Premium** | $9.99/mo | $99.99/yr | Unlimited + weather + cloud voice notes (Supabase sync, any-device playback) + data export + priority support |
-| **Premium AI** *(v1.3.2)* | $12.99/mo | $129.99/yr | Everything in Premium + AI Garden Assistant (GPT-4o mini) + Smart Shopping + real Whisper transcription |
+| **Premium** | $7.99/mo | $49.99/yr | Unlimited + weather + cloud voice notes (Supabase sync, any-device playback) + data export + priority support |
+| **Premium AI** *(v1.3.2)* | $9.99/mo | $79.99/yr | Everything in Premium + AI Garden Assistant (GPT-4o mini) + Smart Shopping + real Whisper transcription |
 
 Yearly saves: Premium = 17% off, Premium AI = 16% off. The AI tier is a $3/mo or $30/yr add-on to Premium, which seems reasonable given the added value of AI features.
 

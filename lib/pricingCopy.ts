@@ -17,8 +17,12 @@ export const PRICING_COPY = {
   essentialStartingPrice: `Essential starts at ${PRICING.essential.monthlyAmount}.`,
   modalHeroSub: `Essential starts at ${PRICING.essential.monthlyAmount}.`,
   upgradePromptDefault: `MySeedBook Essential unlocks unlimited seeds, weather integration, and cloud sync at ${PRICING.essential.monthlyAmount}/month.`,
-  upgradePromptForFeature: (feature: string) =>
-    `Unlock ${feature} with MySeedBook Essential at ${PRICING.essential.monthlyAmount} - unlimited seeds, weather integration, and cloud sync.`,
+  upgradePromptForFeature: (feature: string) => {
+    const isVoiceFeature = /voice|ai|chat|whisper/i.test(feature);
+    return isVoiceFeature
+      ? `Unlock ${feature} with the Voice & AI plan at ${PRICING.voice.monthlyAmount}/month — includes AI garden chat, smart shopping, and voice notes.`
+      : `Unlock ${feature} with MySeedBook Essential at ${PRICING.essential.monthlyAmount}/month - unlimited seeds, weather integration, and cloud sync.`;
+  },
   upgradePromptForAIFeature: (feature: string) =>
     `Unlock ${feature} with the Voice & AI plan at ${PRICING.voice.monthlyAmount}/month — includes AI garden chat, smart shopping, and voice notes.`,
 } as const;

@@ -373,7 +373,9 @@ export default function GlobalSubscriptionModal({
           ) : offersError ? (
             <View style={styles.loadingRow}>
               <Text style={[styles.loadingText, { color: textSecondary, textAlign: 'center', marginBottom: 12 }]}>
-                Unable to load live store plans. You can still review pricing below.
+                {globalRevenueCat.isReady
+                  ? 'RevenueCat connected but no products loaded. Check dashboard product/offering configuration.'
+                  : `RevenueCat not initialized. API key: "${(process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '').substring(0, 12)}…" — rebuild required if empty/wrong.`}
               </Text>
               <Pressable style={[styles.retryBtn, { borderColor: colors.primary }]} onPress={handleRetry}>
                 <RefreshCw size={16} color={colors.primary} />

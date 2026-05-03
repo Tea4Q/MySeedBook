@@ -1,12 +1,36 @@
 # Project Status Summary
 
-## 🚀 PRODUCTION READY - PRE-AI RELEASE BRANCH
+## 🚀 PRODUCTION READY - v1.3.1 AI RELEASE BRANCH
 
-**Status**: Application is hardened for pre-AI release validation and production deployment
+**Status**: Voice & AI features live in production. All known launch blockers resolved.
 
-**Current Version**: 1.3.0 (pre-AI submission branch)  
-**Branch**: release/v1.3.0-pre-ai  
-**Last Updated**: March 26, 2026
+**Current Version**: 1.3.1  
+**Branch**: release/v1.3.1-with-ai  
+**Last Updated**: May 3, 2026
+
+### Recent Completion: v1.3.1 Voice & AI Launch + Bug Fixes (May 2026)
+- ✅ **Voice & AI subscription tier live**
+  - Voice & AI product linked to RevenueCat entitlement (root cause of silent upgrade failures)
+  - Upgrade buttons on AI screen and Voice Notes go directly to paywall (no dead-end Alert)
+  - Voice Notes price correctly shows $9.99/month (was showing Essential $7.99 price)
+  - Users can open the App Store purchase sheet from TestFlight — confirmed working
+
+- ✅ **EAS environment variable cleanup**
+  - Deleted 4 wrong account-scoped PUBLIC vars that were overriding correct project secrets
+  - All 4 keys (Supabase URL, Supabase anon key, RevenueCat iOS key, RevenueCat Android key) now live as project-scoped secrets only
+  - New production build triggered with correct keys bundled
+
+- ✅ **Camera & gallery upload fix (mobile)**
+  - Replaced broken `fetch(localUri).blob()` approach with `expo-file-system` `File.arrayBuffer()` for native file:// and content:// URIs
+  - Upload now works on both iOS and Android
+
+- ✅ **URL image paste UX improvement**
+  - Detects when a pasted URL is a webpage (not a direct image link) and shows an Alert with guidance
+  - Error message updated from generic "Failed to load image" to actionable instructions to copy the image address
+
+- ✅ **Seed card supplier name truncation**
+  - Long supplier names (e.g. "Southern Exposure Seed Exchange") no longer overflow the card edge
+  - Truncated with ellipsis to fit within the card bounds
 
 ### Recent Completion: Pre-AI Submission Hardening & Web UX Stability (March 2026)
 - ✅ **Pre-AI release gating**
