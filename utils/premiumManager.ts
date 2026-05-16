@@ -28,6 +28,22 @@ export interface PremiumFeatures {
   plant_health_diagnostics: boolean;
   smart_planting_calendar: boolean;
   harvest_prediction: boolean;
+  // v1.4.0 — Free tier
+  push_notifications: boolean;
+  low_stock_alerts: boolean;
+  advanced_search_filters: boolean;
+  // v1.4.0 — Essential tier
+  harvest_yield_tracking: boolean;
+  spending_tracker: boolean;
+  reorder_point_alerts: boolean;
+  // v1.4.0 — Voice & AI tier
+  weather_planting_suggestions: boolean;
+  plant_disease_detection: boolean;
+  // v1.4.1 — Essential tier (garden layout UI ships v1.5.0)
+  garden_layout: boolean;
+  care_tracking: boolean;
+  // v1.4.1 — Voice & AI tier (MCP integration)
+  mcp_integration: boolean;
 }
 
 export interface UserSubscription {
@@ -177,6 +193,22 @@ class PremiumManager {
         plant_health_diagnostics: false,
         smart_planting_calendar: false,
         harvest_prediction: false,
+        // v1.4.0 — Free tier
+        push_notifications: true,
+        low_stock_alerts: true,
+        advanced_search_filters: true,
+        // v1.4.0 — Essential tier
+        harvest_yield_tracking: false,
+        spending_tracker: false,
+        reorder_point_alerts: false,
+        // v1.4.0 — Voice & AI tier
+        weather_planting_suggestions: false,
+        plant_disease_detection: false,
+        // v1.4.1 — Essential tier
+        garden_layout: false,
+        care_tracking: false,
+        // v1.4.1 — Voice & AI tier
+        mcp_integration: false,
       }
     };
   }
@@ -243,7 +275,22 @@ class PremiumManager {
           voice_notes: true,
           plant_health_diagnostics: true,
           smart_planting_calendar: true,
-          harvest_prediction: true
+          harvest_prediction: true,
+          // v1.4.0 — Free tier
+          push_notifications: true,
+          low_stock_alerts: true,
+          advanced_search_filters: true,
+          // v1.4.0 — Essential tier
+          harvest_yield_tracking: true,
+          spending_tracker: true,
+          reorder_point_alerts: true,
+          // v1.4.0 — Voice & AI tier
+          weather_planting_suggestions: true,
+          plant_disease_detection: true,
+          // v1.4.1 — Essential/Voice & AI tier
+          garden_layout: true,
+          care_tracking: true,
+          mcp_integration: true,
         }
       };
 

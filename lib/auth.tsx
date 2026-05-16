@@ -189,26 +189,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       logger.error('Sign in error:', error);
+
+      // CORS or opaque network failure — Supabase returns an unparseable response,
+      // error.message ends up as '{}' or is empty.
+      const msg: string = error.message ?? '';
+      if (!msg || msg === '{}' || msg === 'undefined') {
+        throw new Error('Unable to reach the server. Check your internet connection, or ensure this app is allowed in your Supabase URL configuration.');
+      }
       
       // Handle different types of network errors
       if (error.name === 'AuthRetryableFetchError' || 
-          error.message?.includes('NetworkError when attempting to fetch resource') ||
-          error.message?.includes('Network request failed') ||
-          error.message?.includes('fetch')) {
+          msg.includes('NetworkError when attempting to fetch resource') ||
+          msg.includes('Network request failed') ||
+          msg.includes('fetch')) {
         throw new Error('Network connection issue. Please check your internet connection and try again, or continue as a guest to explore the app.');
       }
       
       // Handle auth-specific errors
-      if (error.message?.includes('Invalid login credentials')) {
+      if (msg.includes('Invalid login credentials')) {
         throw new Error('Invalid email or password. Please check your credentials and try again.');
       }
       
-      if (error.message?.includes('Email not confirmed')) {
+      if (msg.includes('Email not confirmed')) {
         throw new Error('Please check your email and click the confirmation link before signing in.');
       }
       
       // Generic fallback
-      throw new Error(error.message || 'Unable to sign in. Please try again or continue as a guest.');
+      throw new Error(msg || 'Unable to sign in. Please try again or continue as a guest.');
     }
   };
 
@@ -234,30 +241,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       logger.error('Sign up error:', error);
+
+      const msg: string = error.message ?? '';
+      if (!msg || msg === '{}' || msg === 'undefined') {
+        throw new Error('Unable to reach the server. Check your internet connection, or ensure this app is allowed in your Supabase URL configuration.');
+      }
       
       // Handle different types of network errors
       if (error.name === 'AuthRetryableFetchError' || 
-          error.message?.includes('NetworkError when attempting to fetch resource') ||
-          error.message?.includes('Network request failed') ||
-          error.message?.includes('fetch')) {
+          msg.includes('NetworkError when attempting to fetch resource') ||
+          msg.includes('Network request failed') ||
+          msg.includes('fetch')) {
         throw new Error('Network connection issue. Please check your internet connection and try again, or continue as a guest to explore the app.');
       }
       
       // Handle other auth-specific errors
-      if (error.message?.includes('Invalid login credentials')) {
+      if (msg.includes('Invalid login credentials')) {
         throw new Error('Invalid email or password. Please check your credentials and try again.');
       }
       
-      if (error.message?.includes('User already registered')) {
+      if (msg.includes('User already registered')) {
         throw new Error('An account with this email already exists. Please sign in instead.');
       }
       
-      if (error.message?.includes('Password should be at least')) {
+      if (msg.includes('Password should be at least')) {
         throw new Error('Password must be at least 6 characters long.');
       }
       
       // Generic fallback
-      throw new Error(error.message || 'Unable to create account. Please try again or continue as a guest.');
+      throw new Error(msg || 'Unable to create account. Please try again or continue as a guest.');
     }
   };
 

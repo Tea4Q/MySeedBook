@@ -1,6 +1,42 @@
 # Project Status Summary
 
-## 🚀 PRODUCTION READY - v1.3.1 AI RELEASE BRANCH
+## � IN DEVELOPMENT — v1.4.0 / v1.4.1 Phase 1
+
+**Status**: Phase 1 foundation complete. UI screens to follow.
+
+**Current Branch**: `feature/v1.4.0-v1.4.1-phase1` (based on `release/v1.3.1-with-ai`)
+**Last Updated**: May 15, 2026
+
+### v1.4.0 / v1.4.1 Phase 1 — Foundation (May 15, 2026)
+
+- ✅ **Feature branch created** from `release/v1.3.1-with-ai` (not `main` — main is behind; all v1.3.x work lives on the release branch)
+
+- ✅ **3 Supabase migrations** (pending deployment via Supabase Dashboard SQL Editor):
+  - `20260515000000` — `mcp_tokens` table + `create_mcp_token` / `revoke_mcp_token` RPCs (v1.4.1 BYOAI auth)
+  - `20260515000001` — `gardens` → `garden_plots` → `seed_locations` hierarchy + `watering_logs`, `fertilizer_logs`, `planting_logs` (v1.5.0 UI schema ready now)
+  - `20260515000002` — `harvest_yields`, `notification_preferences`, `seeds.low_stock_threshold`, `upsert_notification_preferences` RPC
+
+- ✅ **TypeScript types** — 10 new interfaces in `types/database.ts`: `Garden`, `GardenPlot`, `SeedLocation`, `WateringLog`, `FertilizerLog`, `PlantingLog`, `HarvestYield`, `NotificationPreferences`, `McpToken`, `McpScope`
+
+- ✅ **Feature flags** — 11 new flags in `utils/premiumManager.ts` spanning all three tiers (free/essential/voice)
+
+- ✅ **`hooks/useNotifications.ts`** — Push notification hook: `requestPermission`, `schedulePlantingReminder`, `scheduleLowStockAlert`, `cancelNotification`; gated behind free-tier flags
+
+- ✅ **`expo-notifications`** installed; `app.json` updated with plugin, iOS background modes, Android permissions
+
+- ✅ **`config/env.ts`** — `ENV.mcp.endpoint` added for future MCP server
+
+- ✅ **`lib/auth.tsx`** — CORS/empty-response guard: `{}` error from Supabase now shows a readable message
+
+### What's next
+- [ ] Apply 3 migrations in Supabase Dashboard SQL Editor
+- [ ] Harvest yield tracking UI screen (Essential tier)
+- [ ] Notification settings screen (free tier)
+- [ ] Get Vercel subscription → begin MCP server (Phase 2)
+
+---
+
+## 🚀 PRODUCTION — v1.3.1 AI RELEASE BRANCH
 
 **Status**: Voice & AI features live in production. All known launch blockers resolved.
 

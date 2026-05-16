@@ -23,7 +23,8 @@
         "NSCameraUsageDescription": "This app uses the camera to capture photos of your seeds and plants for your garden catalogue.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images of your seeds and plants.",
         "NSMicrophoneUsageDescription": "This app uses the microphone for premium voice input when entering seeds, suppliers, and calendar events.",
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate weather information for your gardening activities."
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide accurate weather information for your gardening activities.",
+        "UIBackgroundModes": ["remote-notification"]
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -42,7 +43,10 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -71,7 +75,15 @@
       ],
       "expo-web-browser",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon1.png",
+          "color": "#336633",
+          "iosDisplayInForeground": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -69,6 +69,11 @@ export const ENV = {
     essentialEntitlement: 'essential',
     voiceEntitlement: 'voice',
   },
+
+  // MCP server endpoint — override via EXPO_PUBLIC_MCP_ENDPOINT for staging
+  mcp: {
+    endpoint: process.env.EXPO_PUBLIC_MCP_ENDPOINT ?? 'https://mcp.myseedbook.app',
+  },
 };
 
 // Helper functions

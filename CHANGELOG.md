@@ -1,5 +1,37 @@
 # May 2026
 
+## v1.4.0 / v1.4.1 — Phase 1 Foundation (May 15, 2026)
+
+*Feature branch: `feature/v1.4.0-v1.4.1-phase1` based on `release/v1.3.1-with-ai`*
+
+### Database Migrations (3 new, not yet deployed)
+- **`20260515000000_create_mcp_tokens.sql`** — MCP token table for BYOAI integration (v1.4.1): `mcp_tokens` with `create_mcp_token` and `revoke_mcp_token` RPCs; SHA-256 hash storage, prefix display, per-token scopes (`read`/`write`), soft-revoke pattern
+- **`20260515000001_create_garden_layout_and_care_tables.sql`** — Garden layout schema (UI ships v1.5.0): `gardens` (named outdoor spaces) → `garden_plots` (named beds/raised beds with grid dimensions) → `seed_locations` (per-grid-cell seed placement); plus `watering_logs`, `fertilizer_logs`, `planting_logs` append-only care tracking tables
+- **`20260515000002_v1400_harvest_yields_and_notification_prefs.sql`** — `harvest_yields` (weight + quantity per season per seed), `seeds.low_stock_threshold` column, `notification_preferences` table with `upsert_notification_preferences` RPC
+
+### New Types (`types/database.ts`)
+- Added 10 new interfaces: `Garden`, `GardenPlot`, `SeedLocation`, `WateringLog`, `FertilizerLog`, `PlantingLog`, `HarvestYield`, `NotificationPreferences`, `McpToken`, `McpScope`
+- All added to `Database` generic with Row/Insert/Update variants
+
+### New Feature Flags (`utils/premiumManager.ts`)
+- Free tier: `push_notifications`, `low_stock_alerts`, `advanced_search_filters`
+- Essential tier: `harvest_yield_tracking`, `spending_tracker`, `reorder_point_alerts`, `garden_layout`, `care_tracking`
+- Voice & AI tier: `weather_planting_suggestions`, `plant_disease_detection`, `mcp_integration`
+
+### New Hook (`hooks/useNotifications.ts`)
+- `requestPermission()` — requests push notification permission, saves `push_enabled` to Supabase
+- `schedulePlantingReminder(seed, daysBeforeDate)` — local notification before `indoor_sow_date`
+- `scheduleLowStockAlert(seed, quantity, threshold)` — immediate notification when stock is low
+- `cancelNotification(id)` — cancel a scheduled notification
+- All gated behind `push_notifications` / `low_stock_alerts` feature flags (free tier)
+
+### Infrastructure
+- **`app.json`** — `expo-notifications` plugin added; iOS `UIBackgroundModes: ["remote-notification"]`; Android `RECEIVE_BOOT_COMPLETED`, `VIBRATE`, `POST_NOTIFICATIONS` permissions
+- **`config/env.ts`** — `ENV.mcp.endpoint` added (defaults to `https://mcp.myseedbook.app`, overridable via `EXPO_PUBLIC_MCP_ENDPOINT`)
+- **`lib/auth.tsx`** — CORS/empty-error guard in `signIn` and `signUp` catch blocks; Supabase returning `{}` or empty message now surfaces a readable error instead of `Error: {}`
+
+---
+
 ## v1.3.1 — Voice & AI Launch + Post-Release Fixes
 
 ### New Features
