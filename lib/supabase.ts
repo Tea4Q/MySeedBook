@@ -1,6 +1,12 @@
-import * as SecureStore from 'expo-secure-store';
 import 'react-native-url-polyfill/auto';
 import { Platform } from 'react-native';
+
+// Lazy-load expo-secure-store only on native — the web build does not ship the
+// native ExpoSecureStore module, so a top-level import throws
+// "ExpoSecureStore.default.getValueWithKeyAsync is not a function" on web.
+const SecureStore = Platform.OS !== 'web'
+  ? (require('expo-secure-store') as typeof import('expo-secure-store'))
+  : (null as unknown as typeof import('expo-secure-store'));
 
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
