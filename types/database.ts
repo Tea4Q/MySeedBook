@@ -64,7 +64,8 @@ export interface CalendarEvent {
   seed_id: string;
   seed_name: string;
   event_date: Date;
-  category: 'sow' | 'purchase' | 'harvest' | 'germination';
+  event_end_date?: Date;
+  category: 'sow' | 'purchase' | 'harvest' | 'germination' | 'transplant';
   notes?: string;
   created_at: Date;
   updated_at: Date;

@@ -28,7 +28,11 @@ import {
   startOfWeek,
   endOfWeek,
   isSameMonth,
-  isToday,
+  isSameDay,
+  isWithinInterval,
+  startOfDay,
+  endOfDay,
+  subDays,
 } from 'date-fns';
 import {
   ChevronLeft,
@@ -76,6 +80,7 @@ type EventCategory =
 interface PlantingEvent {
   id: string;
   date: Date;
+  endDate?: Date;
   seedName: string;
   seedId?: string;
   category: EventCategory;
@@ -100,18 +105,21 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const parseDays = (daysString: string): number => {
+const parseDays = (daysString: string): { start: number; end: number } => {
   const trimmed = daysString.trim();
   if (trimmed.includes('-')) {
     const parts = trimmed.split('-');
     if (parts.length === 2) {
       const min = parseInt(parts[0].trim(), 10);
       const max = parseInt(parts[1].trim(), 10);
-      if (!isNaN(min) && !isNaN(max)) return Math.round((min + max) / 2);
+      if (!isNaN(min) && !isNaN(max)) {
+        return { start: Math.min(min, max), end: Math.max(min, max) };
+      }
     }
   }
   const single = parseInt(trimmed, 10);
-  return isNaN(single) ? 7 : single;
+  const days = isNaN(single) ? 7 : single;
+  return { start: days, end: days };
 };
 
 // ─── Legend ───────────────────────────────────────────────────────────────────
@@ -273,6 +281,13 @@ function DayPanel({
               >
                 {event.seedName}
               </Text>
+              <Text style={[panelStyles.dateRange, { color: colors.textSecondary }]}>
+                {event.endDate
+                  ? event.date.getFullYear() === event.endDate.getFullYear()
+                    ? `${format(event.date, 'MMM d')} – ${format(event.endDate, 'MMM d')}`
+                    : `${format(event.date, 'MMM d, yyyy')} – ${format(event.endDate, 'MMM d, yyyy')}`
+                  : format(event.date, 'MMM d, yyyy')}
+              </Text>
               {event.notes ? (
                 <Text
                   style={[panelStyles.noteText, { color: colors.textSecondary }]}
@@ -371,6 +386,10 @@ const panelStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  dateRange: {
+    fontSize: 11,
+    marginTop: 2,
+  },
   noteText: {
     fontSize: 11,
     marginTop: 1,
@@ -464,6 +483,7 @@ export default function CalendarScreen() {
         (data || []).map((e: any) => ({
           id: e.id,
           date: new Date(e.event_date),
+          endDate: e.event_end_date ? new Date(e.event_end_date) : undefined,
           seedName: e.seed_name,
           seedId: e.seed_id,
           category: e.category as EventCategory,
@@ -491,13 +511,14 @@ export default function CalendarScreen() {
         .from('calendar_events')
         .select('*')
         .eq('user_id', user.id)
-        .gte('event_date', startOfMonth(date).toISOString())
+        .gte('event_date', subDays(startOfMonth(date), 30).toISOString())
         .lte('event_date', endOfMonth(date).toISOString());
       if (error) throw error;
       setEvents(
         (data || []).map((e: any) => ({
           id: e.id,
           date: new Date(e.event_date),
+          endDate: e.event_end_date ? new Date(e.event_end_date) : undefined,
           seedName: e.seed_name,
           seedId: e.seed_id,
           category: e.category as EventCategory,
@@ -613,12 +634,15 @@ export default function CalendarScreen() {
   const previousMonth = () => setCurrentDate(addMonths(currentDate, -1));
 
   const getEventsForDate = (date: Date) =>
-    events.filter(
-      (e) =>
-        e.date.getDate() === date.getDate() &&
-        e.date.getMonth() === date.getMonth() &&
-        e.date.getFullYear() === date.getFullYear()
-    );
+    events.filter((e) => {
+      if (!e.endDate) {
+        return isSameDay(e.date, date);
+      }
+      return isWithinInterval(startOfDay(date), {
+        start: startOfDay(e.date),
+        end: endOfDay(e.endDate),
+      });
+    });
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
   const handleAddEvent = async () => {
@@ -652,29 +676,51 @@ export default function CalendarScreen() {
       }
 
       if (newEvent.category === 'sow') {
-        const germDate = addDays(
-          new Date(newEvent.date),
-          parseDays(daysToGerminate)
-        );
+        const germRange = parseDays(daysToGerminate);
+        const germStartDate = addDays(new Date(newEvent.date), germRange.start);
+        const germEndDate =
+          germRange.end > germRange.start
+            ? addDays(new Date(newEvent.date), germRange.end)
+            : null;
         await (supabase.from('calendar_events') as any).insert({
           seed_id: newEvent.seedId,
           seed_name: newEvent.seedName,
-          event_date: germDate.toISOString(),
+          event_date: germStartDate.toISOString(),
+          event_end_date: germEndDate ? germEndDate.toISOString() : null,
           category: 'germination',
           notes: `Expected germination for ${newEvent.seedName}`,
+          user_id: user.id,
+        });
+
+        const harvestRange = parseDays(daysToHarvest);
+        const harvestStartDate = addDays(new Date(newEvent.date), harvestRange.start);
+        const harvestEndDate =
+          harvestRange.end > harvestRange.start
+            ? addDays(new Date(newEvent.date), harvestRange.end)
+            : null;
+        await (supabase.from('calendar_events') as any).insert({
+          seed_id: newEvent.seedId,
+          seed_name: newEvent.seedName,
+          event_date: harvestStartDate.toISOString(),
+          event_end_date: harvestEndDate ? harvestEndDate.toISOString() : null,
+          category: 'harvest',
+          notes: `Expected harvest for ${newEvent.seedName}`,
           user_id: user.id,
         });
       }
 
       if (newEvent.category === 'transplant') {
-        const harvestDate = addDays(
-          new Date(newEvent.date),
-          parseDays(daysToHarvest)
-        );
+        const harvestRange = parseDays(daysToHarvest);
+        const harvestStartDate = addDays(new Date(newEvent.date), harvestRange.start);
+        const harvestEndDate =
+          harvestRange.end > harvestRange.start
+            ? addDays(new Date(newEvent.date), harvestRange.end)
+            : null;
         await (supabase.from('calendar_events') as any).insert({
           seed_id: newEvent.seedId,
           seed_name: newEvent.seedName,
-          event_date: harvestDate.toISOString(),
+          event_date: harvestStartDate.toISOString(),
+          event_end_date: harvestEndDate ? harvestEndDate.toISOString() : null,
           category: 'harvest',
           notes: `Expected harvest for ${newEvent.seedName} (transplanted)`,
           user_id: user.id,

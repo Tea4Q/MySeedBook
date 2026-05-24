@@ -10,7 +10,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SmartImage } from '@/components/SmartImage';
 import { useTheme } from '@/lib/theme';
@@ -67,6 +67,15 @@ export default function SeedImageCarousel({
     [images.length, width]
   );
 
+  const goTo = React.useCallback(
+    (index: number) => {
+      const safeIndex = Math.max(0, Math.min(index, images.length - 1));
+      setCurrentIndex(safeIndex);
+      flatListRef.current?.scrollToIndex({ index: safeIndex, animated: true });
+    },
+    [images.length]
+  );
+
   if (!images.length) {
     return null;
   }
@@ -119,30 +128,60 @@ export default function SeedImageCarousel({
             </Pressable>
           </View>
 
-          <FlatList
-            ref={flatListRef}
-            data={images}
-            keyExtractor={(item, index) => `${item}-${index}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleMomentumScrollEnd}
-            getItemLayout={(_, index) => ({
-              length: width,
-              offset: width * index,
-              index,
-            })}
-            renderItem={({ item }) => (
-              <View style={[styles.slide, { width, height: Math.max(height - 140, 320) }]}>
-                <SmartImage
-                  uri={item}
-                  style={styles.slideImage}
-                  contentFit="contain"
-                  fallbackUri="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&h=1200&fit=crop&crop=center&auto=format&q=60"
-                />
+          <View style={styles.imageContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={images}
+              keyExtractor={(item, index) => `${item}-${index}`}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleMomentumScrollEnd}
+              getItemLayout={(_, index) => ({
+                length: width,
+                offset: width * index,
+                index,
+              })}
+              renderItem={({ item }) => (
+                <View style={[styles.slide, { width, height: Math.max(height - 140, 320) }]}>
+                  <SmartImage
+                    uri={item}
+                    style={styles.slideImage}
+                    contentFit="contain"
+                    fallbackUri="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&h=1200&fit=crop&crop=center&auto=format&q=60"
+                  />
+                </View>
+              )}
+            />
+            {images.length > 1 && (
+              <View style={styles.arrowOverlay} pointerEvents="box-none">
+                {currentIndex > 0 ? (
+                  <Pressable
+                    style={styles.arrowBtn}
+                    onPress={() => goTo(currentIndex - 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous image"
+                  >
+                    <ChevronLeft size={28} color="#FFFFFF" />
+                  </Pressable>
+                ) : (
+                  <View style={styles.arrowPlaceholder} />
+                )}
+                {currentIndex < images.length - 1 ? (
+                  <Pressable
+                    style={styles.arrowBtn}
+                    onPress={() => goTo(currentIndex + 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Next image"
+                  >
+                    <ChevronRight size={28} color="#FFFFFF" />
+                  </Pressable>
+                ) : (
+                  <View style={styles.arrowPlaceholder} />
+                )}
               </View>
             )}
-          />
+          </View>
 
           {images.length > 1 && (
             <View
@@ -203,6 +242,31 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageContainer: {
+    flex: 1,
+  },
+  arrowOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+  },
+  arrowBtn: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: radius.full,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowPlaceholder: {
+    width: 44,
   },
   slide: {
     alignItems: 'center',

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/lib/theme';
 import { AI_STORAGE_KEYS, AIConfig } from '@/config/ai';
+
+// expo-secure-store is not available on web — fall back to localStorage
+const secureGet = (key: string): Promise<string | null> =>
+  Platform.OS === 'web'
+    ? Promise.resolve(localStorage.getItem(key))
+    : SecureStore.getItemAsync(key);
+
+const secureSet = (key: string, value: string): Promise<void> =>
+  Platform.OS === 'web'
+    ? Promise.resolve(void localStorage.setItem(key, value))
+    : SecureStore.setItemAsync(key, value);
+
+const secureDelete = (key: string): Promise<void> =>
+  Platform.OS === 'web'
+    ? Promise.resolve(void localStorage.removeItem(key))
+    : SecureStore.deleteItemAsync(key);
 
 interface AISettingsPanelProps {
   onConfigured?: () => void;
@@ -42,7 +59,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
 
   const load = useCallback(async () => {
     const [storedKey, storedUrl] = await Promise.all([
-      SecureStore.getItemAsync(AI_STORAGE_KEYS.apiKey),
+      secureGet(AI_STORAGE_KEYS.apiKey),
       AsyncStorage.getItem(AI_STORAGE_KEYS.baseUrl),
     ]);
     if (storedKey) {
@@ -77,7 +94,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
     try {
       const url = effectiveBaseUrl.trim() || '';
       await Promise.all([
-        SecureStore.setItemAsync(AI_STORAGE_KEYS.apiKey, apiKey.trim()),
+        secureSet(AI_STORAGE_KEYS.apiKey, apiKey.trim()),
         url
           ? AsyncStorage.setItem(AI_STORAGE_KEYS.baseUrl, url)
           : AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
@@ -130,7 +147,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
           style: 'destructive',
           onPress: async () => {
             await Promise.all([
-              SecureStore.deleteItemAsync(AI_STORAGE_KEYS.apiKey),
+              secureDelete(AI_STORAGE_KEYS.apiKey),
               AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
             ]);
             setApiKey('');
