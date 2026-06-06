@@ -1,19 +1,27 @@
-# App Store Descriptions - MySeedBook Catalogue
+# App Store Descriptions - MySeedBook Catalogue v1.3.0
 
 ## 📱 **Short Description** (80 characters max)
 ```
-Organize your garden seeds, suppliers, and planting schedule in one app.
+Garden organization with smart weather integration for better growing results.
 ```
 
 ## 🌟 **App Store Description** (4000 characters max)
 
 ### Main Description
 ```
-🌱 Transform Your Gardening Experience with MySeedBook Catalogue
+🌱 Transform Your Gardening Experience with Weather Intelligence
 
-Take control of your garden with the ultimate seed organization and supplier management app. Whether you're a beginner gardener or a seasoned green thumb, MySeedBook Catalogue helps you track your seed collection, manage supplier relationships, and plan your planting seasons with ease.
+Take control of your garden with the ultimate seed organization and supplier management app, now featuring smart weather integration! Whether you're a beginner gardener or a seasoned green thumb, MySeedBook Catalogue helps you track your seed collection, manage supplier relationships, plan your planting seasons, and make weather-informed gardening decisions.
 
-🎯 KEY FEATURES
+🌤️ NEW! WEATHER INTEGRATION (Premium Feature)
+• Real-time weather data displayed in your planting calendar
+• 7-day detailed forecasts with gardening-specific insights
+• Frost warnings and protection alerts
+• Optimal planting timing recommendations based on weather
+• Personalized gardening tips based on current conditions
+• Animated weather icons with authentic Basmilius design
+
+🎯 CORE FEATURES
 
 📦 COMPREHENSIVE SEED MANAGEMENT
 • Catalog your entire seed collection with photos
@@ -28,10 +36,10 @@ Take control of your garden with the ultimate seed organization and supplier man
 • Quick access to reorder your favorite varieties
 
 📅 SMART PLANNING CALENDAR
-• Visual calendar for planning planting schedules
+• Visual calendar for planning planting schedules with weather overlay
 • Track important gardening dates and milestones
 • Set reminders for seasonal tasks
-• Plan ahead for optimal garden timing
+• Weather-informed planning for optimal garden timing
 
 📸 VISUAL DOCUMENTATION
 • Capture photos of seeds, seedlings, and harvests
@@ -46,7 +54,8 @@ Take control of your garden with the ultimate seed organization and supplier man
 • Secure cloud sync keeps your data safe
 
 🌍 PERFECT FOR:
-• Home gardeners managing seed collections
+• Home gardeners managing seed collections with weather awareness
+• Urban gardeners maximizing small spaces with optimal timing
 • Urban gardeners maximizing small spaces
 • Gardening enthusiasts tracking varieties
 • Anyone wanting to organize their growing season
@@ -57,6 +66,9 @@ Built by gardeners, for gardeners. We understand the challenges of keeping track
 Start your organized gardening journey today! Download MySeedBook Catalogue and watch your garden flourish with better planning and organization.
 
 🌱 Your seeds deserve the best care - give them the organization they need to thrive!
+
+Privacy Policy: https://myseedbook.app/privacy-policy
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 ```
 
 ## 🍎 **Apple App Store Promotional Text** (170 characters max)

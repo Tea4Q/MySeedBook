@@ -3,29 +3,36 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemeProvider } from '@/lib/theme';
+import { GlobalSubscriptionProvider } from '@/lib/globalSubscriptionManager';
 import React, { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Platform, Linking } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { supabase } from '@/lib/supabase';
 
 // Keep the splash screen visible
 SplashScreen.preventAutoHideAsync();
 
 
 function RootLayoutNav() {
-  const { session, initialized } = useAuth();
+  const { session, initialized, isGuest } = useAuth();
+  const userId = session?.user?.id ?? null;
   const router = useRouter(); // Get router instance
   const insets = useSafeAreaInsets();
   const [fontsLoaded, fontError] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins/Poppins-Bold.ttf'),
+    'Poppins-SemiBold': require('@/assets/fonts/Poppins/Poppins-SemiBold.ttf'),
+    'Poppins-Medium': require('@/assets/fonts/Poppins/Poppins-Medium.ttf'),
+    'Poppins-Regular': require('@/assets/fonts/Poppins/Poppins-Regular.ttf'),
   });
 
   // Determine if the app is ready (auth checked AND fonts loaded/failed)
   const isAppReady = (fontsLoaded || fontError) && initialized;
-  // Only authenticate with valid session (no bypass flags in production)
-  const isAuthenticated = !!session;
+  // Authenticate with valid session OR guest mode
+  const isAuthenticated = !!session || isGuest;
 
 
   useEffect(() => {
@@ -47,79 +54,72 @@ function RootLayoutNav() {
     
     if (!isAppReady) return;
 
-    // Get current path (web only)
-    let currentPath = '';
-    if (Platform.OS === 'web') {
-      currentPath = window.location.pathname + window.location.search;
-    }
+    // Hide splash screen
+    SplashScreen.hideAsync();
 
-    // Helper: Save last route to localStorage
-    const saveLastRoute = (route: string) => {
-      if (Platform.OS === 'web' && route && route !== '/auth' && route !== '/auth/reset-password') {
-        window.localStorage.setItem('lastRoute', route);
-      }
-    };
-
-    // Helper: Restore last route from localStorage
-    const getLastRoute = () => {
-      if (Platform.OS === 'web') {
-        return window.localStorage.getItem('lastRoute') || '/(tabs)';
-      }
-      return '/(tabs)';
-    };
-
-    if (Platform.OS === 'web') {
-      // Check if this is a password reset link
-      const urlParams = new URLSearchParams(window.location.search);
-      const accessToken = urlParams.get('access_token');
-      const type = urlParams.get('type');
-      const isPasswordReset = accessToken && type === 'recovery';
-
-      // If it's a password reset link, navigate to reset password page
-      if (isPasswordReset) {
-        setTimeout(() => {
-          SplashScreen.hideAsync();
-        }, 1200);
-        router.replace('/auth/reset-password');
-        return;
-      }
-
-      // GUARD: If already on /auth/reset-password, do not redirect away
-      if (currentPath.startsWith('/auth/reset-password')) {
-        SplashScreen.hideAsync();
-        return;
-      }
-
-      // Save the last route if authenticated and not on auth screens
-      if (isAuthenticated && currentPath && !currentPath.startsWith('/auth')) {
-        saveLastRoute(currentPath);
-      }
-
-      setTimeout(() => {
-        SplashScreen.hideAsync();
-        if (isAuthenticated) {
-          // Restore last route if not already there
-          const lastRoute = getLastRoute();
-          if (currentPath !== lastRoute) {
-            router.replace(lastRoute as any);
-          }
-        } else {
-          router.replace('/auth');
-        }
-      }, 100);
+    // Handle navigation based on auth state
+    if (!isAuthenticated) {
+      // User is not authenticated and not a guest - redirect to auth
+      console.log('🔄 Redirecting to auth screen - user not authenticated');
+      router.replace('/auth');
     } else {
-      // Mobile: Navigate to main app when authenticated, auth screen when not
-      SplashScreen.hideAsync();
-      if (isAuthenticated) {
-        setTimeout(() => {
-          SplashScreen.hideAsync();
-          router.replace('/(tabs)');
-        }, 500);
-      } else {
-        router.replace('/auth');
-      }
+      // User is authenticated - ensure they land on the main tabs
+      router.replace('/(tabs)');
     }
-  }, [isAppReady, isAuthenticated, router, session]);
+  }, [isAppReady, isAuthenticated, router]);
+
+  // Parse hash fragment tokens from deep links (email confirmation, password reset)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const handleDeepLink = async (url: string) => {
+      try {
+        const hashIndex = url.indexOf('#');
+        if (hashIndex === -1) return;
+        const hash = url.slice(hashIndex + 1);
+        const params: Record<string, string> = {};
+        hash.split('&').forEach(part => {
+          const eqIndex = part.indexOf('=');
+          if (eqIndex === -1) return;
+          const key = decodeURIComponent(part.slice(0, eqIndex));
+          const value = decodeURIComponent(part.slice(eqIndex + 1));
+          params[key] = value;
+        });
+
+        if (!params.access_token || !params.refresh_token) return;
+
+        const { error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
+
+        if (error) {
+          console.warn('Deep link setSession error:', error.message);
+          return;
+        }
+
+        // For password reset links, navigate to the reset screen
+        if (params.type === 'recovery') {
+          router.replace('/auth/reset-password');
+        }
+        // For signup/email confirmation, onAuthStateChange SIGNED_IN handles navigation
+      } catch (err) {
+        console.warn('Deep link handling error:', err);
+      }
+    };
+
+    // App opened cold via deep link
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink(url);
+    });
+
+    // App already running, deep link arrives
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   // Return null while loading (splash screen is visible)
   if (!isAppReady) {
@@ -129,7 +129,7 @@ function RootLayoutNav() {
   // Always render the Stack navigator once ready.
   // Include all possible screens that can be navigated to directly.
   return (
-    <>
+    <GlobalSubscriptionProvider userId={userId}>
       {/* Status bar background */}
       <View 
         style={{ 
@@ -148,25 +148,30 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add-seed" />
         <Stack.Screen name="edit-supplier/[id]" />
+        <Stack.Screen name="feedback" />
         <Stack.Screen name="auth" />
-        <Stack.Screen name="splash-test" />
+        <Stack.Screen name="global-profile" />
         {/* Add signup if needed */}
         {/* <Stack.Screen name="auth/signup" /> */}
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" />
-    </>
+    </GlobalSubscriptionProvider>
   );
 }
 
 export default function RootLayout() {
   // Conditionally wrap with GestureHandlerRootView only on mobile platforms
   const AppContent = (
-    <ThemeProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <AuthProvider>
+            <RootLayoutNav />
+          </AuthProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 
   if (Platform.OS === 'web') {

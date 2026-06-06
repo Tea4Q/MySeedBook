@@ -15,17 +15,26 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 - **Rich Descriptions**: Scrollable text areas with detailed growing information
 - **Visual Organization**: Color-coded seed types with intuitive icons
 - **Search & Filter**: Quick discovery of seeds in your collection
+- **Barcode Scanner** (Premium): Scan seed package barcodes for quick inventory entry
+- **Flexible Web Image Input**: Add images by file picker, clipboard paste, or drag-and-drop
+- **Broad Image Format Support**: JPG, PNG, GIF, WebP, and AVIF on web flows
 
 ### 📅 Garden Planning
 - **Planting Calendar**: Schedule and track planting activities
 - **Season Management**: Track planting and harvest seasons
 - **Quick Navigation**: Double-tap seeds to create calendar events
+- **Weather Integration** (Premium): 5-day forecast with animated icons and gardening insights
 
 ### 🎨 Modern Interface
 - **Responsive Grid**: Optimized 2-column layout for larger screens
 - **Touch-Friendly**: Swipe gestures on mobile, action buttons on web
 - **Smooth Scrolling**: Enhanced description areas with proper scroll handling
 - **Platform-Aware**: Interface adapts to each platform's conventions
+
+### 💎 Subscription Plans
+- **Free**: Limited inventory for trying the app
+- **Essential**: $7.99/month or $63.99/year for unlimited seeds, weather integration, and cloud sync across devices
+- **Voice & AI**: Planned for a future release (v1.3.1+) and intentionally hidden in the pre-AI release branch
 
 ## 🚀 Get Started
 
@@ -72,6 +81,7 @@ In the terminal output, you'll find options to open the app in:
 - **[Development Notes](docs/DEVELOPMENT_NOTES.md)**: Technical improvements and ideas
 - **[Theme System](docs/THEME_SYSTEM.md)**: Color schemes and theming
 - **[Build Configuration](docs/EAS_BUILD_FIXES.md)**: Production build setup
+- **[RevenueCat Setup](docs/REVENUECAT_SETUP.md)**: Subscription setup for Apple, Google Play, and RevenueCat
 
 ### Project Status
 - **[Project Status](PROJECT_STATUS.md)**: Current implementation status

@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +7,8 @@ import {
   Image,
   Platform,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -18,7 +19,7 @@ import {
   Check,
   Image as ImageIcon,
 } from 'lucide-react-native';
-import { FlipType, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 interface ImageCaptureProps {
   onImageCaptured: (uri: string | null) => void;
@@ -44,7 +45,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       );
 
       return processedResult.uri;
-    } catch (err) {
+    } catch {
       throw new Error('Failed to process image');
     } finally {
       setIsProcessing(false);
@@ -57,15 +58,27 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       setError(null);
 
       if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
+          if (!canAskAgain) {
+            setError('Camera access is blocked. Enable it in Settings.');
+            Alert.alert(
+              'Camera Access Blocked',
+              'Please enable camera permission in Settings to continue.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+            return;
+          }
           setError('Camera permission is required');
           return;
         }
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -73,6 +86,8 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
 
       if (!result.canceled && result.assets[0]) {
         setSelectedImage(result.assets[0].uri);
+      } else if (!result.canceled) {
+        setError('Camera did not return an image. Please try again.');
       }
     } catch (err) {
       setError('Failed to capture photo');
@@ -88,7 +103,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       setError(null);
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         // mediaTypes: [ImagePicker.MediaType.IMAGE, ImagePicker.MediaType.VIDEO],
         allowsEditing: true,
         aspect: [4, 3],
@@ -114,7 +129,7 @@ export default function ImageCapture({ onImageCaptured }: ImageCaptureProps) {
       const processedUri = await processImage(selectedImage);
       onImageCaptured(processedUri);
       setSelectedImage(null);
-    } catch (err) {
+    } catch {
       setError('Failed to process image');
     }
   };

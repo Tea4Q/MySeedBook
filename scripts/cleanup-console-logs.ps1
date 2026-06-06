@@ -18,8 +18,7 @@ $filesToClean = @(
     "components\ImageHandler\index.tsx",
     "components\PhotoButtons.tsx",
     "components\SupplierSelect\index.tsx",
-    "lib\theme.tsx",
-    "utils\auth-test-fix.ts"
+    "lib\theme.tsx"
 )
 
 Write-Host "🧹 Starting console log cleanup for production build..." -ForegroundColor Yellow

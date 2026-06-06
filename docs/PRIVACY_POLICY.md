@@ -1,13 +1,14 @@
 # Privacy Policy - MySeedBook Catalogue
 
-**Effective Date:** [Insert Date]  
-**Last Updated:** [Insert Date]
+**Effective Date:** 03/18/2026  
+**Last Updated:** 03/18/2026
 
 ## Introduction
 
 Welcome to MySeedBook Catalogue ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our mobile application and related services.
 
 ## Information We Collect
+- **Account Information**: Email address, username, and password for account creation
 
 ### Information You Provide Directly
 - **Account Information**: Email address, username, and password for account creation
@@ -109,9 +110,9 @@ We may update this Privacy Policy to reflect changes in our practices or for leg
 
 If you have questions about this Privacy Policy or our data practices, please contact us:
 
-- **Email**: [Insert Support Email]
+- **Email**: ChandraS@chandraskinner.com
 - **App**: Use the "Contact Support" feature in app settings
-- **Mail**: [Insert Physical Address if required]
+
 
 ## Consent
 

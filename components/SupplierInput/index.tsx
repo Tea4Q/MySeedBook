@@ -11,15 +11,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {
-  Search,
   Plus,
   X,
   Check,
   Building2,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
+import { guestDataManager } from '@/utils/guestDataManager';
 import type { Supplier } from '@/types/database';
-import { debounce } from '@/utils/debounce';
 import AddSupplierForm from '../AddSupplierForm';
 
 interface SupplierInputProps {
@@ -33,6 +34,8 @@ export function SupplierInput({
   selectedSupplier,
   placeholder = 'Type supplier name...',
 }: SupplierInputProps) {
+  const { isGuest } = useAuth();
+  const { colors } = useTheme();
   const [inputValue, setInputValue] = useState(selectedSupplier?.supplier_name || '');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
@@ -40,11 +43,6 @@ export function SupplierInput({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const isSelectingRef = useRef(false);
-
-  // Load suppliers on mount
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
 
   // Update input when selectedSupplier changes
   useEffect(() => {
@@ -55,6 +53,15 @@ export function SupplierInput({
   const loadSuppliers = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (isGuest) {
+        // Load sample + demo data for guests
+        console.log('👤 Loading suppliers for guest user in SupplierInput');
+        const guestSuppliers = await guestDataManager.getAllSuppliers();
+        setSuppliers(guestSuppliers);
+        return;
+      }
+
+      // Regular user - load from Supabase
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
@@ -68,29 +75,31 @@ export function SupplierInput({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isGuest]);
+
+  // Load suppliers on mount
+  useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   // Debounced search function
-  const filterSuppliers = useCallback(
-    debounce((query: string) => {
-      if (!query.trim()) {
-        setFilteredSuppliers([]);
-        setShowDropdown(false);
-        return;
-      }
+  const filterSuppliers = useCallback((query: string) => {
+    if (!query.trim()) {
+      setFilteredSuppliers([]);
+      setShowDropdown(false);
+      return;
+    }
 
-      const searchTerms = query.toLowerCase().split(' ');
-      const filtered = suppliers.filter((supplier) =>
-        searchTerms.every((term) =>
-          supplier.supplier_name?.toLowerCase().includes(term)
-        )
-      );
-      
-      setFilteredSuppliers(filtered);
-      setShowDropdown(true);
-    }, 300),
-    [suppliers]
-  );
+    const searchTerms = query.toLowerCase().split(' ');
+    const filtered = suppliers.filter((supplier) =>
+      searchTerms.every((term) =>
+        supplier.supplier_name?.toLowerCase().includes(term)
+      )
+    );
+    
+    setFilteredSuppliers(filtered);
+    setShowDropdown(true);
+  }, [suppliers]);
 
   const handleInputChange = (text: string) => {
     setInputValue(text);
@@ -145,11 +154,11 @@ export function SupplierInput({
     <>
       <View style={styles.container}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
           value={inputValue}
           onChangeText={handleInputChange}
           placeholder={placeholder}
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textSecondary}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           blurOnSubmit={false}
@@ -157,13 +166,13 @@ export function SupplierInput({
 
         {showDropdown && (
           <View 
-            style={styles.dropdown}
+            style={[styles.dropdown, { backgroundColor: colors.card, borderColor: colors.border }]}
             pointerEvents="box-none"
           >
             {isLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#2d7a3a" />
-                <Text style={styles.loadingText}>Loading suppliers...</Text>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading suppliers...</Text>
               </View>
             ) : (
               <View pointerEvents="auto">
@@ -176,26 +185,26 @@ export function SupplierInput({
                   {filteredSuppliers.map((supplier) => (
                     <TouchableOpacity
                       key={supplier.id}
-                      style={styles.dropdownItem}
+                      style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
                       onPress={() => handleSelectSupplier(supplier)}
                       activeOpacity={0.7}
                     >
-                      <Building2 size={20} color="#2d7a3a" />
-                      <Text style={styles.supplierName}>{supplier.supplier_name}</Text>
-                      <Check size={16} color="#2d7a3a" />
+                      <Building2 size={20} color={colors.primary} />
+                      <Text style={[styles.supplierName, { color: colors.text }]}>{supplier.supplier_name}</Text>
+                      <Check size={16} color={colors.primary} />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
                 
                 {showAddNewOption && (
                   <TouchableOpacity
-                    style={styles.addNewItem}
+                    style={[styles.addNewItem, { backgroundColor: colors.primary }]}
                     onPress={handleAddNewSupplier}
                     activeOpacity={0.8}
                   >
-                    <Plus size={20} color="#ffffff" />
+                    <Plus size={20} color={colors.buttonText} />
                     <Text style={styles.addNewText}>
-                      Add "{inputValue}" as new supplier
+                      Add &quot;{inputValue}&quot; as new supplier
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -222,11 +231,11 @@ export function SupplierInput({
         onRequestClose={handleCancelAdd}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Supplier</Text>
-              <Pressable style={styles.closeButton} onPress={handleCancelAdd}>
-                <X size={24} color="#666666" />
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Supplier</Text>
+                <Pressable style={styles.closeButton} onPress={handleCancelAdd}>
+                  <X size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
             <AddSupplierForm
@@ -248,23 +257,18 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderTopWidth: 0,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
@@ -284,13 +288,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
     gap: 8,
   },
   supplierName: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -300,19 +302,16 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#666666',
   },
   addNewItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#2d7a3a',
     gap: 8,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
   addNewText: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -322,7 +321,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
@@ -333,12 +331,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#212529',
   },
   closeButton: {
     padding: 8,

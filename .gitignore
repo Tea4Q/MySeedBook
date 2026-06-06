@@ -19,6 +19,11 @@ ios/
 *.key
 *.mobileprovision
 
+# build artifacts
+*.apk
+*.aab
+*.ipa
+
 # metro
 .metro-health-check*
 
@@ -78,3 +83,9 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+.env
+.env.local
+
+# playwright
+playwright-report/
+test-results/

@@ -1,6 +1,5 @@
-import React from 'react';
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, Alert, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Upload, Loader } from 'lucide-react-native';
 
@@ -19,8 +18,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
 
       if (Platform.OS === 'web') {
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [4, 3],
           quality: 0.8,
@@ -30,14 +28,26 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
           onImageSelected(result.assets[0].uri);
         }
       } else {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
+          if (!canAskAgain) {
+            setError('Camera access is blocked. Please enable it in Settings.');
+            Alert.alert(
+              'Camera Access Blocked',
+              'Please enable camera permission in your device Settings to take photos.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+            return;
+          }
           setError('Camera permission is required to take photos');
           return;
         }
 
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [4, 3],
           quality: 0.8,
@@ -45,6 +55,8 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
 
         if (!result.canceled && result.assets[0]) {
           onImageSelected(result.assets[0].uri);
+        } else if (!result.canceled) {
+          setError('Camera did not return an image. Please try again.');
         }
       }
     } catch (err) {
@@ -61,7 +73,7 @@ export default function PhotoButtons({ onImageSelected }: PhotoButtonsProps) {
       setError(null);
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,

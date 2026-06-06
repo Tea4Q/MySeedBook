@@ -1,9 +1,10 @@
 import {
   useRouter,
   useLocalSearchParams,
+  useFocusEffect,
+  useNavigation,
 } from 'expo-router';
 import React, {
-  useMemo,
   useState,
   useEffect,
   useCallback,
@@ -18,11 +19,16 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  BackHandler,
+  findNodeHandle,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   ArrowLeft,
   Calendar,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   Droplets,
   Sun,
   Ruler,
@@ -32,21 +38,66 @@ import {
   FlaskRound as Flask,
   CircleAlert as AlertCircle,
 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageHandler from '@/components/ImageHandler'; // Adjust path if needed
 import { SupplierInput } from '@/components/SupplierInput';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { VoiceNotes } from '@/components/VoiceNotes';
+import { usePremiumFeature } from '@/hooks/usePremiumFeature';
+import PremiumModal from '@/components/PremiumModal';
 import 'react-native-get-random-values'; // For uuidv4
 import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed
+// VoiceMicButton and parseVoiceCommand available in this v1.3.1 Voice & AI build
 
 import type { Supplier, Seed } from '@/types/database'; // Assuming types are defined
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { useGuestLimits } from '@/hooks/useGuestLimits';
+import GuestStatusBanner from '@/components/GuestStatusBanner';
+import { useAuth } from '@/lib/auth';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
+import { FREE_LIMITS } from '@/utils/premiumManager';
+import { guestDataManager } from '@/utils/guestDataManager';
+import { addDays } from 'date-fns';
 
 // Utility function to validate UUID format
 const isValidUUID = (uuid: string): boolean => {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidPattern.test(uuid);
 };
+const parseSeedDays = (days: string | number | undefined): number => {
+  if (!days) return 0;
+  const str = String(days).trim();
+  if (str.includes('-')) {
+    const [a, b] = str.split('-');
+    const min = parseInt(a, 10), max = parseInt(b, 10);
+    if (!isNaN(min) && !isNaN(max)) return Math.round((min + max) / 2);
+  }
+  const n = parseInt(str, 10);
+  return isNaN(n) ? 0 : n;
+};
+
+const stripNullCharacters = (value: string): string => value.replace(/\u0000/g, '');
+
+const sanitizeForPostgres = <T,>(value: T): T => {
+  if (typeof value === 'string') {
+    return stripNullCharacters(value) as T;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeForPostgres(item)) as T;
+  }
+
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const sanitizedEntries = Object.entries(value as Record<string, unknown>).map(
+      ([key, entryValue]) => [key, sanitizeForPostgres(entryValue)]
+    );
+    return Object.fromEntries(sanitizedEntries) as T;
+  }
+
+  return value;
+};
+
 
 type SeedType = {
   label: string;
@@ -55,11 +106,11 @@ type SeedType = {
 
 const seedTypes: SeedType[] = [
   { label: 'Vegetable', value: 'vegetable' },
-  { label: 'Fruit', value: 'Fruit' },
-  { label: 'Flower', value: 'Flower' },
-  { label: 'Herb', value: 'Herb' },
-  { label: 'Grain', value: 'Grain' },
-  { label: 'Other', value: 'Other' },
+  { label: 'Fruit', value: 'fruit' },
+  { label: 'Flower', value: 'flower' },
+  { label: 'Herb', value: 'herb' },
+  { label: 'Grain', value: 'grain' },
+  { label: 'Other', value: 'other' },
 ];
 
 // Define the structure for an image in our form state
@@ -72,152 +123,261 @@ interface Imageinfo {
   error?: string; // For 'supabase' type if upload fails
 }
 
+const ADD_SEED_DRAFT_STORAGE_KEY = 'add_seed_form_draft_v1';
+
+const WIZARD_STEPS = [
+  { key: 'seed', label: 'Seed Details' },
+  { key: 'supplier', label: 'Supplier' },
+  { key: 'reminders', label: 'Reminders' },
+] as const;
+
 // State for form data
 // Using useState to manage form state
 
 // Update your Seed interface for the form state if it's different from DB
 
 export default function AddOrEditSeedScreen() {
+  const router = useRouter();
+  const navigation = useNavigation();
   const { colors } = useTheme(); // Add theme colors
+  const { user, isGuest, refreshGuestUsage } = useAuth(); // Add auth context
+  const { isPremium } = useGlobalSubscription();
+  const { checkFeature } = usePremiumFeature();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false); // Synchronous guard against double-submit
+  const scrollViewRef = useRef<any>(null);
+  const imagesFieldRef = useRef<View>(null);
+  const nameFieldRef = useRef<View>(null);
+  const typeFieldRef = useRef<View>(null);
+  const quantityFieldRef = useRef<View>(null);
+  const supplierFieldRef = useRef<View>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [autoAddToCalendar] = useState(true); // New state for calendar toggle
+  const { checkAndPromptForLimit } = useGuestLimits();
+  
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+
+  // Voice input state
+  // lastVoiceTranscript reserved for Voice & AI build
 
   const params = useLocalSearchParams<{
     returnTo: string;
     newSupplierID?: string;
     newSupplierName?: string;
     reloadSuppliers?: string;
-    seed?: string; // JSON string of seed data for editing
+    id?: string; // Seed ID for editing
   }>();
 
-  const isEditing = !!params.seed; // Check if we're editing
-  // Add this before useEffect (e.g., after other useState hooks)
-  const [reloadSuppliers, setReloadSuppliers] = useState(false);
+  const isEditing = !!params.id;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') {
+        return () => {};
+      }
+
+      const backSubscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        // Prevent accidental exits from emulator right-click and hardware back.
+        // Navigation should happen only through explicit UI actions (back button/tab).
+        return true;
+      });
+
+      return () => backSubscription.remove();
+    }, [])
+  );
+
+  // Parse a fetched Seed into form state
+  const parseSeedIntoFormState = useCallback((parsed: Seed): Seed => {
+    let initialImagesData: { type: 'supabase' | 'url'; url: string }[] = [];
+    if (parsed.seed_images && Array.isArray(parsed.seed_images)) {
+      initialImagesData = parsed.seed_images as { type: 'supabase' | 'url'; url: string }[];
+    } else if (parsed.seed_images) {
+      initialImagesData = [{ type: 'url', url: parsed.seed_images as string ?? '' }];
+    }
+    if (parsed.date_purchased) {
+      parsed.date_purchased = new Date(parsed.date_purchased);
+    }
+    if (parsed.indoor_sow_date) {
+      parsed.indoor_sow_date = new Date(parsed.indoor_sow_date);
+    }
+    if (parsed.transplant_date) {
+      parsed.transplant_date = new Date(parsed.transplant_date);
+    }
+    if (parsed.supplier_id) {
+      if (!isValidUUID(parsed.supplier_id) && !parsed.supplier_id.startsWith('sample-supplier-')) {
+        parsed.supplier_id = undefined;
+      }
+    }
+    const initialImages: Imageinfo[] = initialImagesData.map((img) => ({
+      id: uuidv4(),
+      type: img.type,
+      url: img.url ?? '',
+      localUri: undefined,
+      isLoading: false,
+      error: undefined,
+    }));
+    return { ...parsed, seed_images: initialImages };
+  }, []);
+
+  // Fetch seed by ID when editing
+  const [isLoadingEdit, setIsLoadingEdit] = useState(isEditing);
 
   useEffect(() => {
-    if (params.newSupplierID && params.newSupplierName) {
-      // If a new supplier ID is provided, set it as the selected supplier
-      setSeedPackage((prev) => ({
-        ...prev,
-        supplier_id: params.newSupplierID, // Set the supplier_id to the newSupplierID
-      }));
-      // Fetch the full supplier object from the database to satisfy the Supplier type
-      (async () => {
-        try {
-          const { data: supplier, error } = await supabase
-            .from('suppliers')
+    if (!params.id) return;
+    const fetchSeed = async () => {
+      try {
+        let fetched: Seed | null = null;
+        if (isGuest) {
+          fetched = await guestDataManager.getSeedById(params.id!);
+        } else {
+          const { data, error } = await supabase
+            .from('seeds')
             .select('*')
-            .eq('id', params.newSupplierID)
+            .eq('id', params.id!)
             .single();
-          if (error) {
-            console.error('Error fetching supplier:', error);
-            setSelectedSupplier(null);
-          } else {
-            setSelectedSupplier(supplier as Supplier);
-          }
-        } catch (error) {
-          console.error('Error fetching supplier:', error);
-          setSelectedSupplier(null);
-        }
-      })();
-    }
-    if (params.reloadSuppliers === 'true') {
-      setReloadSuppliers(true); // Set reloadSuppliers to true if specified;
-    }
-  }, [params.newSupplierID, params.newSupplierName, params.reloadSuppliers]);
+          if (error) throw error;
 
-  // Parse editingSeed data safely
-  const editingSeed = useMemo(() => {
-    if (!params.seed) return null;
-    try {
-      const parsed = JSON.parse(params.seed as string) as Seed; // Adjust type as needed
-      //Convert date strings to Date objects
-      let initialImagesData: { type: 'supabase' | 'url'; url: string }[] = [];
-      if (parsed.seed_images && Array.isArray(parsed.seed_images)) {
-        // New structure: { images: [{ type, url }, ...] }
-        initialImagesData = parsed.seed_images as {
-          type: 'supabase' | 'url';
-          url: string;
-        }[]; // Ensure it's an array of objects with type and url
-      } else if (parsed.seed_images) {
-        // Old structure: { seed_image: "some_url" } - assume it's an external URL
-        initialImagesData = [
-          {
-            type: 'url',
-            url: (parsed.seed_images as string) ?? '',
-          },
-        ];
-      }
-      if (parsed.date_purchased) {
-        parsed.date_purchased = new Date(parsed.date_purchased);
-      }
-      
-      // Validate and clean supplier_id
-      if (parsed.supplier_id) {
-        if (!isValidUUID(parsed.supplier_id)) {
-          console.warn('Invalid supplier_id found in seed data:', parsed.supplier_id);
-          parsed.supplier_id = undefined; // Clear invalid supplier_id
+          let hydratedSeed = data as Seed;
+          if (hydratedSeed?.supplier_id) {
+            const { data: supplierData, error: supplierError } = await supabase
+              .from('suppliers')
+              .select('*')
+              .eq('id', hydratedSeed.supplier_id)
+              .maybeSingle();
+
+            if (supplierError) throw supplierError;
+
+            hydratedSeed = {
+              ...hydratedSeed,
+              suppliers: supplierData ?? undefined,
+            } as Seed;
+          }
+
+          fetched = hydratedSeed;
         }
+        if (!fetched) throw new Error('Seed not found');
+        const parsed = parseSeedIntoFormState(fetched);
+        setSeedPackage(parsed);
+      } catch (err: any) {
+        console.error('Error loading seed for editing:', err);
+        Alert.alert('Error', 'Could not load seed data for editing.');
+      } finally {
+        setIsLoadingEdit(false);
       }
-      
-      // Transform old seed_image or existing images array into Imageinfo[]
-      const initialImages: Imageinfo[] = initialImagesData.map((img) => ({
-        id: uuidv4(), // Assign new client ID
-        type: img.type,
-        url: img.url ?? '', // Ensure url is always a string
-        localUri: undefined, // Use the url as the localUri for preview
-        isLoading: false, // Not loading since it's already uploaded
-        error: undefined, // No error initially
-      }));
-      return { ...parsed, seed_images: initialImages } as Seed & {
-        seed_images: Imageinfo[];
-      };
-    } catch (error) {
-      console.error('Error parsing seed data for editing:', error);
-      Alert.alert('Error', 'Could not load seed data for editing.');
-      return null;
-    }
-  }, [params.seed]);
+    };
+    fetchSeed();
+  }, [params.id, isGuest, parseSeedIntoFormState]);
 
   // Initialize form state using the imported Seed type (Partial allows optional fields)
   const [seedPackage, setSeedPackage] = useState<Seed>(
-    isEditing && editingSeed
-      ? editingSeed
-      : ({
-          id: 'uuid',
-          user_id: '',
-          seed_images: [],
-          seed_name: '',
-          type: '',
-          description: '',
-          quantity: 0,
-          quantity_unit: 'seeds',
-          supplier_id: '',
-          date_purchased: undefined,
-          seed_price: 0.0,
-          planting_depth: '',
-          spacing: '',
-          watering_requirements: '',
-          sunlight_requirements: '',
-          soil_type: '',
-          storage_location: '',
-          storage_requirements: '',
-          germination_rate: 0,
-          fertilizer_requirements: '',
-          days_to_germinate: '',
-          days_to_harvest: '',
-          planting_season: '',
-          harvest_season: '',
-          notes: '',
-        } as Seed) // Explicitly cast as Seed to satisfy TypeScript
+    {
+      id: 'uuid',
+      user_id: '',
+      seed_images: [],
+      seed_name: '',
+      type: '',
+      description: '',
+      quantity: 0,
+      quantity_unit: 'seeds',
+      supplier_id: '',
+      date_purchased: undefined,
+      indoor_sow_date: undefined,
+      transplant_date: undefined,
+      seed_price: 0.0,
+      planting_depth: '',
+      spacing: '',
+      watering_requirements: '',
+      sunlight_requirements: '',
+      soil_type: '',
+      storage_location: '',
+      storage_requirements: '',
+      germination_rate: 0,
+      fertilizer_requirements: '',
+      days_to_germinate: '',
+      days_to_harvest: '',
+      planting_season: '',
+      harvest_season: '',
+      notes: '',
+    } as Seed
   );
+
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+
+  const deserializeDraftSeed = useCallback((raw: any): Seed => {
+    const toDateOrUndefined = (value: any) => {
+      if (!value) return undefined;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    };
+
+    const restoredImages: Imageinfo[] = Array.isArray(raw?.seed_images)
+      ? raw.seed_images.map((img: any) => ({
+          id: img?.id || uuidv4(),
+          type: img?.type === 'supabase' ? 'supabase' : 'url',
+          url: img?.url || '',
+          localUri: img?.localUri,
+          isLoading: false,
+          error: undefined,
+        }))
+      : [];
+
+    return {
+      ...raw,
+      seed_images: restoredImages,
+      date_purchased: toDateOrUndefined(raw?.date_purchased),
+      indoor_sow_date: toDateOrUndefined(raw?.indoor_sow_date),
+      transplant_date: toDateOrUndefined(raw?.transplant_date),
+    } as Seed;
+  }, []);
+
+  useEffect(() => {
+    // Do not restore drafts when editing an existing seed.
+    if (isEditing) {
+      setHasRestoredDraft(true);
+      return;
+    }
+
+    let isMounted = true;
+
+    const restoreDraft = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ADD_SEED_DRAFT_STORAGE_KEY);
+        if (!raw || !isMounted) {
+          setHasRestoredDraft(true);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        const restoredSeed = deserializeDraftSeed(parsed?.seedPackage || parsed);
+
+        if (isMounted) {
+          setSeedPackage(restoredSeed);
+          if (restoredSeed.seed_price) {
+            const numericPrice = Number(restoredSeed.seed_price);
+            setPriceInput(Number.isFinite(numericPrice) && numericPrice > 0 ? `$${numericPrice.toFixed(2)}` : '');
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to restore Add Seed draft:', error);
+      } finally {
+        if (isMounted) setHasRestoredDraft(true);
+      }
+    };
+
+    restoreDraft();
+    return () => {
+      isMounted = false;
+    };
+  }, [deserializeDraftSeed, isEditing]);
 
   const handleImagesChange = useCallback((newImages: Imageinfo[]) => {
    
     setSeedPackage((prev) => ({ ...prev, seed_images: newImages }));
   }, []);
+
+  // handleVoiceTranscript — reserved for Voice & AI build
 
   const clearForm = () => {
     setSeedPackage({
@@ -231,6 +391,8 @@ export default function AddOrEditSeedScreen() {
       quantity_unit: 'seeds',
       supplier_id: '',
       date_purchased: undefined,
+      indoor_sow_date: undefined,
+      transplant_date: undefined,
       seed_price: 0.0,
       planting_depth: '',
       spacing: '',
@@ -250,87 +412,115 @@ export default function AddOrEditSeedScreen() {
     setErrors({});
     setSelectedSupplier(null);
     setPriceInput(''); // Reset price input display
+    setWizardStep(1);
+    AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
+      // Non-fatal cleanup failure
+    });
   };
 
-  const router = useRouter();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
+  const allowExitRef = useRef(false);
 
-  // --- Navigation State and Ref ---
-  // NavigationTarget is a string (route) or null
-  const [navigationTarget, setNavigationTarget] = useState<string | null>(null); // Use string | null for navigation target
-  const routerReadyRef = useRef(false); // Track router readiness
+  // Track one-way navigation after save to avoid accidental duplicate redirects.
+  const hasNavigatedAfterSaveRef = useRef(false);
 
-  // --- Set routerReadyRef to true after component mounts ---
+  const hasMeaningfulChanges = useCallback(() => {
+    const hasImages = Array.isArray(seedPackage.seed_images) && seedPackage.seed_images.length > 0;
+    return Boolean(
+      seedPackage.seed_name?.trim() ||
+      seedPackage.type?.trim() ||
+      seedPackage.description?.trim() ||
+      Number(seedPackage.quantity) > 0 ||
+      Number(seedPackage.seed_price) > 0 ||
+      seedPackage.supplier_id ||
+      seedPackage.date_purchased ||
+      seedPackage.indoor_sow_date ||
+      seedPackage.transplant_date ||
+      seedPackage.days_to_germinate ||
+      seedPackage.days_to_harvest ||
+      seedPackage.notes?.trim() ||
+      hasImages ||
+      selectedSupplier
+    );
+  }, [seedPackage, selectedSupplier]);
+
   useEffect(() => {
-    routerReadyRef.current = true;
-  }, []);
+    const unsubscribe = navigation.addListener('beforeRemove', (event: any) => {
+      if (allowExitRef.current || !hasMeaningfulChanges()) {
+        return;
+      }
+
+      event.preventDefault();
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved seed details. Stay here to keep editing, or discard and leave.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Discard & Leave',
+            style: 'destructive',
+            onPress: () => {
+              allowExitRef.current = true;
+              navigation.dispatch(event.data.action);
+            },
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [hasMeaningfulChanges, navigation]);
 
   // --- Submit Handler ---
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-    if (!validateForm()) return;
+    if (isSubmittingRef.current) return; // synchronous check prevents race condition
+    isSubmittingRef.current = true;
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      isSubmittingRef.current = false;
+      scrollToFirstError(formErrors);
+      return;
+    }
 
-    // --- FREEMIUM LOGIC: Prevent adding more than 10 seeds ---
+    // Check guest limits for new seeds
     if (!isEditing) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          Alert.alert('Error', 'User not authenticated.');
-          return;
-        }
-        // Count seeds for this user
-        const { count, error: countError } = await supabase
-          .from('seeds')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        if (countError) {
-          console.error('Error counting seeds:', countError);
-        } else if (typeof count === 'number' && count >= 10) {
-          Alert.alert(
-            'Free Plan Limit',
-            'You have reached the free plan limit of 10 seeds. Upgrade to add more.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Upgrade', style: 'default', onPress: () => {
-                  // Navigate to upgrade screen (adjust route as needed)
-                  if (router && typeof router.push === 'function') {
-                    router.push('/upgrade');
-                  }
-                }
-              },
-            ]
-          );
-          return;
-        }
-      } catch (err) {
-        console.error('Error enforcing freemium limit:', err);
-        Alert.alert('Error', 'Could not verify seed limit. Please try again.');
+      const canProceed = await checkAndPromptForLimit('seed');
+      if (!canProceed) {
+        return;
+      }
+    }
+
+    // Check free-account seed limit for authenticated non-premium users
+    if (!isEditing && !isGuest && user && !isPremium) {
+      const { count: exactCount } = await supabase
+        .from('seeds')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      if ((exactCount ?? 0) >= FREE_LIMITS.seeds) {
+        setShowPremiumModal(true);
         return;
       }
     }
 
     setIsSubmitting(true);
-    setErrors({}); // Clear previous submit errors    
+    setErrors({}); // Clear previous submit errors
     
     // Prepare images array for saving (strip client-only fields and only include successfully uploaded images)
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     
     const imagesToSave = imageArray
-      .filter((img) => {
-        // Include images that have a URL (successful upload) and are not currently loading
-        // Allow images with development-related errors since they were uploaded successfully
-        const hasValidUrl = !!(img.url && img.url.trim() !== '');
-        const notLoading = !img.isLoading;
-        const isUploadError = img.error && !img.error.includes('Using local preview');
-        
-        return hasValidUrl && notLoading && !isUploadError;
-      })
-      .map((img) => ({
-        type: img.type,
-        url: img.url,
-      }));
+  .filter((img) => {
+    const hasValidUrl = !!(img.url && img.url.trim() !== '');
+    const notLoading = !img.isLoading;
+    return hasValidUrl && notLoading;
+  })
+  .map((img) => ({
+    type: img.type,
+    url: img.url,
+  }));
 
     // Prepare payload, ensuring correct types for DB
     const payload: any = {
@@ -344,17 +534,26 @@ export default function AddOrEditSeedScreen() {
       date_purchased: seedPackage.date_purchased
         ? seedPackage.date_purchased.toISOString()
         : null,
-      // Validate supplier_id is valid UUID or set to null
-      supplier_id: seedPackage.supplier_id && isValidUUID(seedPackage.supplier_id) 
+      indoor_sow_date: seedPackage.indoor_sow_date
+        ? seedPackage.indoor_sow_date.toISOString()
+        : null,
+      transplant_date: seedPackage.transplant_date
+        ? seedPackage.transplant_date.toISOString()
+        : null,
+      // Validate supplier_id - allow sample IDs for guest users or valid UUIDs
+      supplier_id: seedPackage.supplier_id && 
+        (isValidUUID(seedPackage.supplier_id) || seedPackage.supplier_id.startsWith('sample-supplier-'))
         ? seedPackage.supplier_id 
         : null,
     };
 
+    const sanitizedPayload = sanitizeForPostgres(payload);
+
     // Remove client-side only fields or fields not directly in 'seeds' table
-    delete payload.suppliers; // Remove joined supplier data - not a column in seeds table
+    delete sanitizedPayload.suppliers; // Remove joined supplier data - not a column in seeds table
 
     if (!isEditing) {
-      delete payload.id; // Remove ID for new seed creation
+      delete sanitizedPayload.id; // Remove ID for new seed creation
     }
 
     try {
@@ -364,54 +563,210 @@ export default function AddOrEditSeedScreen() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user && !isEditing)
-        throw new Error('User not authenticated for new seed.');
-
-      if (isEditing && editingSeed && editingSeed.id) {
-        // Update existing seed
-        const { error } = await supabase
-          .from('seeds')
-          .update(payload) // Pass prepared payload
-          .eq('id', editingSeed.id); // Use the ID from the original seedPackage state
-        responseError = error;
-        savedSeedId = editingSeed.id;
+      
+      if (isGuest) {
+        // Guest user - persist seed to AsyncStorage via guestDataManager
+        if (isEditing && seedPackage.id) {
+          // Update existing demo seed
+          await guestDataManager.updateDemoSeed(seedPackage.id, sanitizedPayload);
+          savedSeedId = seedPackage.id;
+        } else {
+          const savedDemoSeed = await guestDataManager.addDemoSeed(sanitizedPayload);
+          savedSeedId = savedDemoSeed.id;
+        }
+        responseError = null;
       } else {
-        // Add a new seed
-        const { data: newSeedData, error } = await supabase.from('seeds').insert({
-          ...payload,
-          user_id: user?.id, // Add user_id for new seeds
-        }).select('id').single();
-        responseError = error;
-        if (newSeedData) {
-          savedSeedId = newSeedData.id;
+        // Authenticated user - save to Supabase
+        if (isEditing && seedPackage.id && isValidUUID(seedPackage.id)) {
+          // Update existing seed
+          const { error } = await (supabase
+            .from('seeds') as any)
+            .update(sanitizedPayload)
+            .eq('id', seedPackage.id);
+          responseError = error;
+          savedSeedId = seedPackage.id;
+        } else {
+          // Add a new seed
+          const { data: newSeedData, error } = await (supabase.from('seeds') as any).insert({
+            ...sanitizedPayload,
+            user_id: user?.id, // Add user_id for new seeds
+          }).select('id').single();
+          responseError = error;
+          if (newSeedData) {
+            savedSeedId = (newSeedData as { id: string }).id;
+          }
         }
       }
 
       if (responseError) throw responseError;
 
+      const upsertAutoCalendarEvent = async (eventPayload: {
+        seed_id: string | null;
+        seed_name: string;
+        event_date: string;
+        category: 'purchase' | 'sow' | 'germination' | 'transplant' | 'harvest';
+        notes: string;
+        user_id: string;
+      }) => {
+        const cleanEventPayload = sanitizeForPostgres(eventPayload);
+
+        const { data: existingRows, error: lookupError } = await (supabase
+          .from('calendar_events') as any)
+          .select('id')
+          .eq('user_id', cleanEventPayload.user_id)
+          .eq('seed_id', cleanEventPayload.seed_id)
+          .eq('category', cleanEventPayload.category)
+          .eq('notes', cleanEventPayload.notes);
+
+        if (lookupError) {
+          throw lookupError;
+        }
+
+        const existing = (existingRows || []) as { id: string }[];
+        if (existing.length > 0) {
+          const keepId = existing[0].id;
+          const { error: updateError } = await (supabase
+            .from('calendar_events') as any)
+            .update(cleanEventPayload)
+            .eq('id', keepId)
+            .eq('user_id', cleanEventPayload.user_id);
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          // If older duplicates already exist, remove extras and keep one canonical row.
+          if (existing.length > 1) {
+            const duplicateIds = existing.slice(1).map((row) => row.id);
+            const { error: deleteDupesError } = await (supabase
+              .from('calendar_events') as any)
+              .delete()
+              .in('id', duplicateIds)
+              .eq('user_id', cleanEventPayload.user_id);
+
+            if (deleteDupesError) {
+              throw deleteDupesError;
+            }
+          }
+
+          return;
+        }
+
+        const { error } = await (supabase
+          .from('calendar_events') as any)
+          .insert(cleanEventPayload);
+
+        if (error) {
+          throw error;
+        }
+      };
+
       // Automatically add purchase date to calendar if date is provided and user wants it
-      if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name) {
+      if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && user) {
         try {
-          await supabase
-            .from('calendar_events')
-            .insert({
-              seed_id: savedSeedId,
-              seed_name: seedPackage.seed_name,
-              event_date: seedPackage.date_purchased.toISOString(),
-              category: 'purchase',
-              notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
-              user_id: user?.id, // Add user_id for RLS
-            });
+          await upsertAutoCalendarEvent({
+            seed_id: savedSeedId,
+            seed_name: seedPackage.seed_name,
+            event_date: seedPackage.date_purchased.toISOString(),
+            category: 'purchase',
+            notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
+            user_id: user.id,
+          });
         } catch (calendarError) {
           console.error('Error adding purchase date to calendar:', calendarError);
           // Don't fail the seed creation if calendar addition fails
+        }
+      } else if (autoAddToCalendar && savedSeedId && seedPackage.date_purchased && seedPackage.seed_name && isGuest) {
+        // Guest user - simulate calendar addition
+        console.log('Guest mode: Simulating calendar event addition', {
+          seed_id: savedSeedId,
+          seed_name: seedPackage.seed_name,
+          event_date: seedPackage.date_purchased.toISOString(),
+          category: 'purchase',
+          notes: `Purchased ${seedPackage.seed_name}${selectedSupplier ? ` from ${selectedSupplier.supplier_name}` : ''}`,
+        });
+      }
+
+      // Auto-add sow indoors date + derived germination event
+      if (autoAddToCalendar && savedSeedId && seedPackage.indoor_sow_date && seedPackage.seed_name && user) {
+        try {
+          const sowDate = seedPackage.indoor_sow_date instanceof Date
+            ? seedPackage.indoor_sow_date
+            : new Date(seedPackage.indoor_sow_date);
+          await upsertAutoCalendarEvent({
+            seed_id: savedSeedId,
+            seed_name: seedPackage.seed_name,
+            event_date: sowDate.toISOString(),
+            category: 'sow',
+            notes: `Sow indoors: ${seedPackage.seed_name}`,
+            user_id: user.id,
+          });
+          const germDays = parseSeedDays(seedPackage.days_to_germinate);
+          if (germDays > 0) {
+            await upsertAutoCalendarEvent({
+              seed_id: savedSeedId,
+              seed_name: seedPackage.seed_name,
+              event_date: addDays(sowDate, germDays).toISOString(),
+              category: 'germination',
+              notes: `Expected germination for ${seedPackage.seed_name}`,
+              user_id: user.id,
+            });
+          }
+        } catch (calendarError) {
+          console.error('Error adding sow/germination dates to calendar:', calendarError);
+        }
+      }
+
+      // Auto-add transplant date + derived harvest event
+      if (autoAddToCalendar && savedSeedId && seedPackage.transplant_date && seedPackage.seed_name && user) {
+        try {
+          const transplantDate = seedPackage.transplant_date instanceof Date
+            ? seedPackage.transplant_date
+            : new Date(seedPackage.transplant_date);
+          await upsertAutoCalendarEvent({
+            seed_id: savedSeedId,
+            seed_name: seedPackage.seed_name,
+            event_date: transplantDate.toISOString(),
+            category: 'transplant',
+            notes: `Transplant outdoors: ${seedPackage.seed_name}`,
+            user_id: user.id,
+          });
+          const harvestDays = parseSeedDays(seedPackage.days_to_harvest);
+          if (harvestDays > 0) {
+            await upsertAutoCalendarEvent({
+              seed_id: savedSeedId,
+              seed_name: seedPackage.seed_name,
+              event_date: addDays(transplantDate, harvestDays).toISOString(),
+              category: 'harvest',
+              notes: `Estimated harvest for ${seedPackage.seed_name}`,
+              user_id: user.id,
+            });
+          }
+        } catch (calendarError) {
+          console.error('Error adding transplant/harvest dates to calendar:', calendarError);
         }
       }
 
       // Reset form state
       setShowSuccess(true);
-      if (!isEditing) clearForm(); // Clear form only if adding new seed
-      setNavigationTarget(params.returnTo || '/(tabs)'); // Set navigation target
+
+      // Refresh guest usage so the banner count updates immediately
+      if (isGuest && !isEditing) {
+        await refreshGuestUsage();
+      }
+      
+      if (!isEditing) {
+        clearForm(); // Clear form only if adding new seed
+      }
+      
+      if (!hasNavigatedAfterSaveRef.current) {
+        hasNavigatedAfterSaveRef.current = true;
+        allowExitRef.current = true;
+        await AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
+          // Ignore cleanup failures.
+        });
+        router.replace((params.returnTo || '/(tabs)') as any);
+      }
     } catch (error: any) {
       console.error('Error saving seed:', error);
       
@@ -422,6 +777,8 @@ export default function AddOrEditSeedScreen() {
           errorMessage = 'Invalid supplier selection. Please select a valid supplier and try again.';
           // Log the problematic data for debugging
           console.error('UUID validation error. Supplier ID:', seedPackage.supplier_id);
+        } else if (error.code === '22P05' || error.message.includes('unsupported Unicode escape sequence')) {
+          errorMessage = 'One of the text fields contains an unsupported control character. Please edit the text and try again.';
         } else if (error.message.includes('violates foreign key constraint')) {
           errorMessage = 'The selected supplier no longer exists. Please select a different supplier.';
         } else if (error.message.includes('violates not-null constraint')) {
@@ -434,11 +791,15 @@ export default function AddOrEditSeedScreen() {
       setErrors({ submit: errorMessage });
       setShowSuccess(false); // Hide success message on error
     } finally {
+      hasNavigatedAfterSaveRef.current = false;
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activeDateField, setActiveDateField] = useState<
+    'date_purchased' | 'indoor_sow_date' | 'transplant_date' | null
+  >(null);
 
   // Helper function to format price with dollar sign
   const formatPriceForDisplay = useCallback((price: number | string): string => {
@@ -449,32 +810,84 @@ export default function AddOrEditSeedScreen() {
   }, []);
 
   const [priceInput, setPriceInput] = useState<string>(
-    formatPriceForDisplay(editingSeed?.seed_price ?? seedPackage.seed_price ?? 0)
+    formatPriceForDisplay(seedPackage.seed_price ?? 0)
   );
+
+  useEffect(() => {
+    // Persist in-progress form so browser/app tab switches do not lose work.
+    if (isEditing || !hasRestoredDraft || isLoadingEdit) return;
+
+    const timer = setTimeout(() => {
+      const serializableSeed = {
+        ...seedPackage,
+        date_purchased: seedPackage.date_purchased
+          ? seedPackage.date_purchased.toISOString()
+          : null,
+        indoor_sow_date: seedPackage.indoor_sow_date
+          ? seedPackage.indoor_sow_date.toISOString()
+          : null,
+        transplant_date: seedPackage.transplant_date
+          ? seedPackage.transplant_date.toISOString()
+          : null,
+      };
+
+      AsyncStorage.setItem(
+        ADD_SEED_DRAFT_STORAGE_KEY,
+        JSON.stringify({ seedPackage: serializableSeed })
+      ).catch((error) => {
+        console.warn('Failed to persist Add Seed draft:', error);
+      });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [seedPackage, isEditing, hasRestoredDraft, isLoadingEdit]);
   // --- Supplier Fetching Logic ---
 
   useEffect(() => {
     if (params.newSupplierID) {
       const fetchNewSupplier = async () => {
         try {
-          const { data: supplier, error } = await supabase
-            .from('suppliers')
-            .select('*') // Fetch all fields for Supplier
-            .eq('id', params.newSupplierID)
-            .single();
+          let supplier = null;
+          
+          if (!isGuest && user) {
+            // Authenticated user - fetch from Supabase
+            const { data, error } = await supabase
+              .from('suppliers')
+              .select('*')
+              .eq('id', params.newSupplierID!)
+              .single();
 
-          if (error) {
-            console.error('Error fetching new supplier:', error);
-            Alert.alert(
-              'Error',
-              'Failed to load new supplier details. Please try again.'
-            );
-          } else if (supplier) {
+            if (error) {
+              console.error('Error fetching new supplier:', error);
+              Alert.alert(
+                'Error',
+                'Failed to load new supplier details. Please try again.'
+              );
+              return;
+            }
+            supplier = data;
+          } else {
+            // Guest user - get from sample/demo data
+            console.log('Guest mode: Loading supplier from sample data');
+            const allSuppliers = await guestDataManager.getAllSuppliers();
+            supplier = allSuppliers.find(s => s.id === params.newSupplierID);
+            
+            if (!supplier) {
+              console.log('Supplier not found in guest data:', params.newSupplierID);
+              Alert.alert(
+                'Error',
+                'Selected supplier not found. Please try selecting again.'
+              );
+              return;
+            }
+          }
+
+          if (supplier) {
             setSeedPackage((prev) => ({
               ...prev,
               supplier_id: supplier.id,
             }));
-            setSelectedSupplier(supplier as Supplier); // Update selectedSupplier
+            setSelectedSupplier(supplier as Supplier);
           }
         } catch (error: any) {
           console.error('Error fetching new supplier:', error);
@@ -486,10 +899,7 @@ export default function AddOrEditSeedScreen() {
       };
       fetchNewSupplier();
     }
-    if (params.reloadSuppliers === 'true') {
-      setReloadSuppliers(true);
-    }
-  }, [params.newSupplierID, params.reloadSuppliers]);
+  }, [params.newSupplierID, params.reloadSuppliers, user, isGuest]);
 
   // Fetch supplier details when seedPackage.supplier_id changes
   useEffect(() => {
@@ -498,14 +908,33 @@ export default function AddOrEditSeedScreen() {
         setSelectedSupplier(null);
         return;
       }
+      
       try {
-        const { data: supplier, error } = await supabase
-          .from('suppliers') // Ensure this matches your table name
-          .select('*') // Fetch all fields for Supplier
-          .eq('id', seedPackage.supplier_id) //Filter for the current supplier_id
-          .single(); // Expect a single object, not an array
-        // Check for errors
-        if (error) throw error;
+        let supplier = null;
+        
+        if (!isGuest && user) {
+          // Authenticated user - fetch from Supabase
+          const { data, error } = await supabase
+            .from('suppliers')
+            .select('*')
+            .eq('id', seedPackage.supplier_id)
+            .single();
+          
+          if (error) throw error;
+          supplier = data;
+        } else {
+          // Guest user - get from sample/demo data
+          console.log('Guest mode: Loading supplier details from sample data', seedPackage.supplier_id);
+          const allSuppliers = await guestDataManager.getAllSuppliers();
+          supplier = allSuppliers.find(s => s.id === seedPackage.supplier_id);
+          
+          if (!supplier) {
+            console.log('Supplier not found in guest data:', seedPackage.supplier_id);
+            setSelectedSupplier(null);
+            return;
+          }
+        }
+
         if (supplier) {
           // Ensure supplier is an object with expected properties
           if (
@@ -514,8 +943,7 @@ export default function AddOrEditSeedScreen() {
             'id' in supplier &&
             'supplier_name' in supplier
           ) {
-            // Check if supplier has the expected properties
-            setSelectedSupplier(supplier as Supplier); // Cast to Supplier type
+            setSelectedSupplier(supplier as Supplier);
           } else {
             console.error('Invalid supplier data:', supplier);
             Alert.alert(
@@ -525,19 +953,22 @@ export default function AddOrEditSeedScreen() {
             setSelectedSupplier(null);
           }
         } else {
-          setSelectedSupplier(null); // Reset if no supplier found
+          setSelectedSupplier(null);
         }
       } catch (error: any) {
         console.error('Error fetching supplier details:', error);
-        Alert.alert(
-          'Error',
-          `Failed to load supplier details: ${error.message || error}`
-        );
-        setSelectedSupplier(null); // Reset if error occurs
+        if (user) {
+          // Only show error for authenticated users making real requests
+          Alert.alert(
+            'Error',
+            `Failed to load supplier details: ${error.message || error}`
+          );
+        }
+        setSelectedSupplier(null);
       }
     };
     fetchSupplierDetails();
-  }, [seedPackage.supplier_id]);
+  }, [seedPackage.supplier_id, user, isGuest]);
 
   // Add useEffect to sync input state if seedPackage.seed_price changes externally
   // (Important for initial load when editing)
@@ -554,39 +985,120 @@ export default function AddOrEditSeedScreen() {
     // Dependency array ensures this runs when the numeric value changes
   }, [seedPackage.seed_price, priceInput, formatPriceForDisplay]);
 
-  // --- Navigation useEffect ---
-  useEffect(() => {
-    if (navigationTarget && routerReadyRef.current) {
-      // Navigate only if router is ready and there's a target
-      router.replace(navigationTarget as any); // Navigate
-      setNavigationTarget(null); // Clear target after navigation
-    }
-  }, [navigationTarget, router]);
-
   // --- Validation ---
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (!seedPackage.seed_name?.trim()) errors.name = 'Seed name is required';
+  const validateForm = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.seed_name?.trim()) newErrors.name = 'Seed name is required';
     if (!seedPackage.quantity || seedPackage.quantity <= 0)
-      errors.quantity = 'Quantity must be greater than 0';
-    if (!seedPackage.type) errors.type = 'Seed type is required';
-    if (!seedPackage.supplier_id) errors.supplier = 'Supplier is required';
+      newErrors.quantity = 'Quantity must be greater than 0';
+    if (!seedPackage.type) newErrors.type = 'Seed type is required';
+    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
     
-    // Validate supplier_id is a valid UUID format (basic check)
-    if (seedPackage.supplier_id && !isValidUUID(seedPackage.supplier_id)) {
-      errors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+    // Validate supplier_id format - allow sample IDs for guest users
+    if (seedPackage.supplier_id) {
+      const isSampleId = seedPackage.supplier_id.startsWith('sample-supplier-');
+      const isValidFormat = isValidUUID(seedPackage.supplier_id) || isSampleId;
+      
+      if (!isValidFormat) {
+        newErrors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+      }
     }
     
     // Check if any images are still loading
     const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
     const loadingImages = imageArray.filter(img => img.isLoading);
     if (loadingImages.length > 0) {
-      errors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
+      newErrors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
     }
     
-    // Add more validation rules as needed
-    setErrors(errors);
-    return Object.keys(errors).length === 0;
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const scrollToFirstError = useCallback((formErrors: Record<string, string>) => {
+    const priority = ['images', 'name', 'type', 'quantity', 'supplier'];
+    const firstKey = priority.find(k => formErrors[k]);
+    if (!firstKey || !scrollViewRef.current) return;
+    const refMap: Record<string, React.RefObject<any>> = {
+      images: imagesFieldRef,
+      name: nameFieldRef,
+      type: typeFieldRef,
+      quantity: quantityFieldRef,
+      supplier: supplierFieldRef,
+    };
+    const target = refMap[firstKey]?.current;
+    if (!target) return;
+    setTimeout(() => {
+      try {
+        const node = findNodeHandle(scrollViewRef.current);
+        if (node == null) return;
+        target.measureLayout(
+          node,
+          (_x: number, y: number) => {
+            scrollViewRef.current?.scrollTo?.({ x: 0, y: Math.max(0, y - 20), animated: true });
+          },
+          () => {}
+        );
+      } catch {
+        // ignore
+      }
+    }, 100);
+  }, []);
+
+  // --- Wizard Step Validation ---
+  const validateStep1 = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.seed_name?.trim()) newErrors.name = 'Seed name is required';
+    if (!seedPackage.quantity || seedPackage.quantity <= 0)
+      newErrors.quantity = 'Quantity must be greater than 0';
+    if (!seedPackage.type) newErrors.type = 'Seed type is required';
+    const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
+    const loadingImages = imageArray.filter(img => img.isLoading);
+    if (loadingImages.length > 0) {
+      newErrors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
+    }
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const validateStep2 = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
+    if (seedPackage.supplier_id) {
+      const isSampleId = seedPackage.supplier_id.startsWith('sample-supplier-');
+      if (!isValidUUID(seedPackage.supplier_id) && !isSampleId) {
+        newErrors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+      }
+    }
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const handleWizardNext = () => {
+    setErrors({});
+    if (wizardStep === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) {
+        scrollToFirstError(errs);
+        return;
+      }
+      setWizardStep(2);
+      scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+    } else if (wizardStep === 2) {
+      const errs = validateStep2();
+      if (Object.keys(errs).length > 0) return;
+      setWizardStep(3);
+      scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleWizardBack = () => {
+    setErrors({});
+    if (wizardStep === 2) setWizardStep(1);
+    else if (wizardStep === 3) setWizardStep(2);
+    scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
   };
 
   // --- Supplier Select Handler ---
@@ -599,19 +1111,36 @@ export default function AddOrEditSeedScreen() {
   };
 
   // --- Date Change Handler - Make sure to handle both web and mobile date pickers ---
-  const handleDateChange = (date: Date) => {
+  const handleDateChange = (
+    field: 'date_purchased' | 'indoor_sow_date' | 'transplant_date',
+    date: Date
+  ) => {
     setSeedPackage((prev: Seed) => ({
       ...prev,
-      date_purchased: date,
+      [field]: date,
     }));
-    setShowDatePicker(false);
+    setActiveDateField(null);
   };
 
   // --- Render the component ---
+  if (isLoadingEdit) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Guest Status Banner */}
+      <GuestStatusBanner />
+      
       {/* Back Button - Floating Style */}
-      <Pressable onPress={() => router.back()} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
+      <Pressable onPress={() => {
+        allowExitRef.current = true;
+        router.back();
+      }} style={[styles.floatingBackButton, { backgroundColor: colors.surface }]}>
         <ArrowLeft size={24} color={colors.text} />
       </Pressable>
       
@@ -632,6 +1161,7 @@ export default function AddOrEditSeedScreen() {
         </View>
       )}
       <KeyboardAwareScrollView 
+        ref={scrollViewRef}
         style={styles.content} 
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -639,22 +1169,68 @@ export default function AddOrEditSeedScreen() {
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Wizard Step Indicator */}
+        {!isEditing && (
+          <View style={styles.wizardStepIndicator}>
+            {WIZARD_STEPS.map((step, index) => (
+              <React.Fragment key={step.key}>
+                {index > 0 && (
+                  <View style={[styles.wizardConnector, {
+                    backgroundColor: index < wizardStep ? colors.primary : colors.border,
+                  }]} />
+                )}
+                <View style={styles.wizardStepItem}>
+                  <View style={[
+                    styles.wizardStepCircle,
+                    {
+                      backgroundColor: index + 1 <= wizardStep ? colors.primary : colors.surface,
+                      borderColor: index + 1 <= wizardStep ? colors.primary : colors.border,
+                    },
+                  ]}>
+                    {index + 1 < wizardStep ? (
+                      <Check size={12} color={colors.primaryText} />
+                    ) : (
+                      <Text style={[styles.wizardStepNumber, {
+                        color: index + 1 === wizardStep ? colors.primaryText : colors.textSecondary,
+                      }]}>
+                        {index + 1}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.wizardStepLabel, {
+                    color: index + 1 === wizardStep ? colors.primary : colors.textSecondary,
+                    fontWeight: (index + 1 === wizardStep ? '700' : '400') as '700' | '400',
+                  }]}>
+                    {step.label}
+                  </Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+
         {/* Image Section */}
-        <View style={styles.imageContainer}>
+        {(isEditing || wizardStep === 1) && (
+        <View ref={imagesFieldRef} style={[styles.imageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <ImageHandler
             initialImages={seedPackage.seed_images as Imageinfo[]}
             onImagesChange={handleImagesChange}
             bucketName="seed-images"
+            maxImages={isPremium ? 6 : 3}
           />
           {/* Show image loading error if any */}
           {errors.images && (
-            <Text style={styles.errorText}>{errors.images}</Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.images}</Text>
           )}
         </View>
+        )}
         {/* Form Section */}
         <View style={styles.formSection}>
+          {/* Voice Input Row — enabled in Voice & AI build */}
+          {(isEditing || wizardStep === 1) && (<>
+
           {/* Seed Name */}
-          <View style={styles.inputGroup}>
+          <View ref={nameFieldRef} style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Seed Name *</Text>
             <TextInput
               style={[
@@ -677,7 +1253,7 @@ export default function AddOrEditSeedScreen() {
           </View>
 
           {/* Seed Type */}
-          <View style={styles.inputGroup}>
+          <View ref={typeFieldRef} style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Seed Type *</Text>
             <View style={styles.typeContainer}>
               {seedTypes.map((type) => (
@@ -721,9 +1297,9 @@ export default function AddOrEditSeedScreen() {
             <Text style={[styles.label, { color: colors.text }]}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea, { 
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                color: colors.text 
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+                color: colors.inputText 
               }]}
               value={seedPackage.description || ''}
               onChangeText={(text: string) =>
@@ -739,13 +1315,13 @@ export default function AddOrEditSeedScreen() {
           {/* Quantity and Price Row */}
           <View style={styles.quantityPriceRow}>
             {/* Quantity Input */}
-            <View style={[styles.inputGroup, styles.quantityInput]}>
+            <View ref={quantityFieldRef} style={[styles.inputGroup, styles.quantityInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Quantity *</Text>
               <TextInput
                 style={[styles.input, errors.quantity && styles.inputError, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText 
                 }]}
                 value={String(seedPackage.quantity || '')} // Ensure string value
                 onChangeText={(text: string) => {
@@ -769,9 +1345,9 @@ export default function AddOrEditSeedScreen() {
               <Text style={[styles.label, { color: colors.text }]}>Price</Text>
               <TextInput
                 style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText 
                 }]}
                 value={priceInput}
                 onChangeText={(text: string) => {
@@ -806,44 +1382,41 @@ export default function AddOrEditSeedScreen() {
               />
             </View>
           </View>
+          </>)}
 
-          {/* Date and Supplier Row */}
-          <View style={styles.dateSupplierRow}>
-            {/* Date Purchased Input */}
-            <View style={[styles.inputGroup, styles.dateInput]}>
+          {/* Step 3: Seed Schedule — planting reminders */}
+          {(isEditing || wizardStep === 3) && (
+          <View style={[styles.scheduleSection, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Seed Schedule</Text>
+
+            <View style={styles.scheduleRow}>
+              <View style={[styles.inputGroup, styles.scheduleInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Purchase Date</Text>
               <Text style={[styles.helpText, { color: colors.textSecondary }]}>
                 💡 Added to calendar
               </Text>
               {/* Web Date Picker */}
               {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  className="date-input"
-                  style={{
-                    background: colors.inputBackground,
-                    borderRadius: 12,
-                    padding: 16,
-                    fontSize: 16,
-                    color: colors.inputText,
-                    borderWidth: 1,
-                    borderColor: colors.inputBorder,
-                    height: 56,
-                    boxSizing: 'border-box',
-                    width: '100%',
-                  } as any}
-                  value={
-                    seedPackage.date_purchased
-                      ? seedPackage.date_purchased.toISOString().split('T')[0]
-                      : ''
-                  }
-                  onChange={(e: any) => {
-                    const date = new Date(e.target.value + 'T00:00:00');
-                    if (!isNaN(date.getTime())) handleDateChange(date);
-                  }}
-                  placeholder="Select a date"
-                  title="Select event date"
-                />
+                <>
+                  <input
+                    type="date"
+                    className="date-input"
+                    value={
+                      seedPackage.date_purchased
+                        ? seedPackage.date_purchased.toISOString().split('T')[0]
+                        : ''
+                    }
+                    onChange={(e: any) => {
+                      const date = new Date(e.target.value + 'T00:00:00');
+                      if (!isNaN(date.getTime())) handleDateChange('date_purchased', date);
+                    }}
+                    placeholder="Select a date"
+                    title="Select event date"
+                  />
+                </>
               ) : (
                 <>
                   <Pressable
@@ -854,7 +1427,7 @@ export default function AddOrEditSeedScreen() {
                         borderColor: colors.inputBorder,
                       }
                     ]}
-                    onPress={() => setShowDatePicker(true)}
+                    onPress={() => setActiveDateField('date_purchased')}
                   >
                     <Text style={[styles.dateText, { color: colors.inputText }]}>
                       {seedPackage.date_purchased
@@ -869,26 +1442,163 @@ export default function AddOrEditSeedScreen() {
                         : 'Select a date'}
                     </Text>
                     <Calendar size={20} color={colors.primary} />
-                    {showDatePicker && (
+                    {activeDateField === 'date_purchased' && (
                       <DateTimePicker
                         value={seedPackage.date_purchased || new Date()}
                         mode="date"
                         display="default"
                         onChange={(event: any, selectedDate?: Date) => {
                           if (selectedDate) {
-                            handleDateChange(selectedDate);
+                            handleDateChange('date_purchased', selectedDate);
                           }
-                          setShowDatePicker(false);
+                          setActiveDateField(null);
                         }}
                       ></DateTimePicker>
                     )}
                   </Pressable>
                 </>
               )}
+              </View>
+
+              <View style={[styles.inputGroup, styles.scheduleInput]}>
+                <Text style={[styles.label, { color: colors.text }]}>Sow Indoors</Text>
+                <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+                  💡 Planned indoor start date
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <input
+                      type="date"
+                      className="date-input"
+                      value={
+                        seedPackage.indoor_sow_date
+                          ? seedPackage.indoor_sow_date.toISOString().split('T')[0]
+                          : ''
+                      }
+                      onChange={(e: any) => {
+                        const date = new Date(e.target.value + 'T00:00:00');
+                        if (!isNaN(date.getTime())) handleDateChange('indoor_sow_date', date);
+                      }}
+                      placeholder="Select a date"
+                      title="Select indoor sow date"
+                    />
+                  </>
+                ) : (
+                  <Pressable
+                    style={[
+                      styles.datePickerContainer,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      }
+                    ]}
+                    onPress={() => setActiveDateField('indoor_sow_date')}
+                  >
+                    <Text style={[styles.dateText, { color: colors.inputText }]}> 
+                      {seedPackage.indoor_sow_date
+                        ? seedPackage.indoor_sow_date.toLocaleDateString(
+                            'en-US',
+                            {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )
+                        : 'Select a date'}
+                    </Text>
+                    <Calendar size={20} color={colors.primary} />
+                    {activeDateField === 'indoor_sow_date' && (
+                      <DateTimePicker
+                        value={seedPackage.indoor_sow_date || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event: any, selectedDate?: Date) => {
+                          if (selectedDate) {
+                            handleDateChange('indoor_sow_date', selectedDate);
+                          }
+                          setActiveDateField(null);
+                        }}
+                      ></DateTimePicker>
+                    )}
+                  </Pressable>
+                )}
+              </View>
             </View>
 
+            <View style={styles.scheduleRow}>
+              <View style={[styles.inputGroup, styles.scheduleInput]}>
+                <Text style={[styles.label, { color: colors.text }]}>Transplant Outdoors</Text>
+                <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+                  💡 Planned garden transplant date
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <input
+                      type="date"
+                      className="date-input"
+                      value={
+                        seedPackage.transplant_date
+                          ? seedPackage.transplant_date.toISOString().split('T')[0]
+                          : ''
+                      }
+                      onChange={(e: any) => {
+                        const date = new Date(e.target.value + 'T00:00:00');
+                        if (!isNaN(date.getTime())) handleDateChange('transplant_date', date);
+                      }}
+                      placeholder="Select a date"
+                      title="Select transplant date"
+                    />
+                  </>
+                ) : (
+                  <Pressable
+                    style={[
+                      styles.datePickerContainer,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      }
+                    ]}
+                    onPress={() => setActiveDateField('transplant_date')}
+                  >
+                    <Text style={[styles.dateText, { color: colors.inputText }]}> 
+                      {seedPackage.transplant_date
+                        ? seedPackage.transplant_date.toLocaleDateString(
+                            'en-US',
+                            {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )
+                        : 'Select a date'}
+                    </Text>
+                    <Calendar size={20} color={colors.primary} />
+                    {activeDateField === 'transplant_date' && (
+                      <DateTimePicker
+                        value={seedPackage.transplant_date || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event: any, selectedDate?: Date) => {
+                          if (selectedDate) {
+                            handleDateChange('transplant_date', selectedDate);
+                          }
+                          setActiveDateField(null);
+                        }}
+                      ></DateTimePicker>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </View>
+          )}
+
+          {/* Step 2: Supplier */}
+          {(isEditing || wizardStep === 2) && (
+          <View style={styles.dateSupplierRow}>
+
             {/* Supplier Selection */}
-            <View style={[styles.inputGroup, styles.supplierInput]}>
+            <View ref={supplierFieldRef} style={[styles.inputGroup, styles.supplierInput]}>
               <Text style={[styles.label, { color: colors.text }]}>Supplier *</Text>
               <Text style={[styles.helpText, { color: colors.textSecondary }]}>
                 💡 Type to search or add new supplier
@@ -901,7 +1611,10 @@ export default function AddOrEditSeedScreen() {
               {errors.supplier && <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>}
             </View>
           </View>
+          )}
 
+          {/* Step 3: Growth Timeline + remaining detail sections */}
+          {(isEditing || wizardStep === 3) && (<>
           {/* Growth Timeline Section */}
           <View style={[styles.timingSection, { 
             backgroundColor: colors.surface,
@@ -914,9 +1627,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.timelineLabel, { color: colors.text }]}>Days to Germinate</Text>
                 <TextInput
                   style={[styles.timelineInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={
                     seedPackage.days_to_germinate
@@ -940,9 +1653,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.timelineLabel, { color: colors.text }]}>Days to Harvest</Text>
                 <TextInput
                   style={[styles.timelineInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={
                     seedPackage.days_to_harvest
@@ -976,9 +1689,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.instructionLabel, { color: colors.text }]}>Planting Depth</Text>
                 <TextInput
                   style={[styles.instructionInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.planting_depth || ''}
                   onChangeText={(text: string) =>
@@ -1000,9 +1713,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.instructionLabel, { color: colors.text }]}>Spacing</Text>
                 <TextInput
                   style={[styles.instructionInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.spacing || ''}
                   onChangeText={(text: string) =>
@@ -1019,9 +1732,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.instructionLabel, { color: colors.text }]}>Watering</Text>
                 <TextInput
                   style={[styles.instructionInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.watering_requirements || ''}
                   onChangeText={(text: string) =>
@@ -1039,9 +1752,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.instructionLabel, { color: colors.text }]}>Sunlight</Text>
                 <TextInput
                   style={[styles.instructionInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.sunlight_requirements || ''}
                   onChangeText={(text: string) =>
@@ -1069,9 +1782,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.soilLabel, { color: colors.text }]}>Soil Type</Text>
                 <TextInput
                   style={[styles.soilInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.soil_type || ''}
                   onChangeText={(text: string) =>
@@ -1086,9 +1799,9 @@ export default function AddOrEditSeedScreen() {
                 <Text style={[styles.soilLabel, { color: colors.text }]}>Fertilizer</Text>
                 <TextInput
                   style={[styles.soilInput, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text 
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText 
                   }]}
                   value={seedPackage.fertilizer_requirements || ''}
                   onChangeText={(text: string) =>
@@ -1110,9 +1823,9 @@ export default function AddOrEditSeedScreen() {
               <Text style={[styles.label, { color: colors.text }]}>Planting Season</Text>
               <TextInput
                 style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText 
                 }]}
                 value={seedPackage.planting_season || ''}
                 onChangeText={(text: string) =>
@@ -1126,9 +1839,9 @@ export default function AddOrEditSeedScreen() {
               <Text style={[styles.label, { color: colors.text }]}>Harvest Season</Text>
               <TextInput
                 style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText 
                 }]}
                 value={seedPackage.harvest_season || ''}
                 onChangeText={(text: string) =>
@@ -1145,9 +1858,9 @@ export default function AddOrEditSeedScreen() {
             <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
             <TextInput
               style={[styles.input, styles.textArea, { 
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                color: colors.text 
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+                color: colors.inputText 
               }]}
               value={seedPackage.notes || ''}
               onChangeText={(text: string) =>
@@ -1158,33 +1871,106 @@ export default function AddOrEditSeedScreen() {
               multiline
               numberOfLines={4}
             />
+            
+            {/* Voice Notes Enhancement */}
+            {Platform.OS !== 'web' && (
+              <>
+                <Text style={[styles.voiceNotesLabel, { color: colors.textSecondary }]}>
+                  {checkFeature('voice_notes') ? 'Or record a voice note:' : 'Voice notes available with Premium:'}
+                </Text>
+                {checkFeature('voice_notes') ? (
+                  <VoiceNotes
+                    onTextExtracted={(voiceText) => {
+                      const existingNotes = seedPackage.notes || '';
+                      const separator = existingNotes ? '\n\n' : '';
+                      setSeedPackage((prev) => ({ 
+                        ...prev, 
+                        notes: existingNotes + separator + '[Voice Note] ' + voiceText 
+                      }));
+                    }}
+                    placeholder="Record garden observations"
+                    maxDuration={45}
+                    allowPlayback={true}
+                  />
+                ) : (
+                  <Pressable
+                    style={[styles.upgradePromptButton, { 
+                      backgroundColor: colors.warning + '20',
+                      borderColor: colors.warning 
+                    }]}
+                    onPress={() => setShowPremiumModal(true)}
+                  >
+                    <Text style={[styles.upgradePromptText, { color: colors.warning }]}>
+                      🎤 Upgrade to Premium for hands-free voice notes
+                    </Text>
+                  </Pressable>
+                )}
+              </>
+            )}
           </View>
+          </>)}
         </View>
 
-        {/* Submit Button */}
-        <Pressable
-          style={[
-            styles.submitButton,
-            {
-              backgroundColor: colors.primary,
-            },
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.primaryText} />
-          ) : (
-            <Text style={[styles.submitButtonText, { color: colors.primaryText }]}>
-              {isEditing ? 'Save Changes' : 'Add Seed'}
-            </Text>
-          )}
-        </Pressable>
+        {/* Submit / Wizard Navigation */}
+        {isEditing ? (
+          <Pressable
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.primaryText} />
+            ) : (
+              <Text style={[styles.submitButtonText, { color: colors.primaryText }]}>
+                Save Changes
+              </Text>
+            )}
+          </Pressable>
+        ) : (
+          <View style={styles.wizardNavRow}>
+            {wizardStep > 1 && (
+              <Pressable
+                style={[styles.wizardBackButton, { borderColor: colors.border }]}
+                onPress={handleWizardBack}
+              >
+                <ChevronLeft size={20} color={colors.text} />
+                <Text style={[styles.wizardBackText, { color: colors.text }]}>Back</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={[
+                styles.wizardNextButton,
+                { backgroundColor: colors.primary },
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+              onPress={handleWizardNext}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <>
+                  <Text style={[styles.wizardNextText, { color: colors.primaryText }]}>
+                    {wizardStep === 3 ? 'Save Seed' : 'Next'}
+                  </Text>
+                  {wizardStep < 3 && <ChevronRight size={20} color={colors.primaryText} />}
+                </>
+              )}
+            </Pressable>
+          </View>
+        )}
 
-        {/* End of formSection View */}
       </KeyboardAwareScrollView>
-      {/* End of KeyboardAwareScrollView */}
+
+      {/* Premium Modal */}
+      <PremiumModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+      />
     </View>
   );
 }
@@ -1198,17 +1984,10 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     marginBottom: 16,
-    position: 'relative',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    minHeight: 120, // Ensure minimum height for ImageHandler
-    maxHeight: 280, // Reduced from 400 to prevent overflow
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    zIndex: 1, // Ensure it doesn't overlay modals
+    overflow: 'visible',
   },
   imageloadingIndicator: {
     position: 'absolute',
@@ -1222,7 +2001,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 4,
     zIndex: 3,
@@ -1239,14 +2017,11 @@ const styles = StyleSheet.create({
   },
   urlInput: {
     flex: 1,
-    backgroundColor: '#ffffff',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     marginRight: 8,
     minWidth: 0, // allow shrinking
   },
@@ -1257,19 +2032,15 @@ const styles = StyleSheet.create({
     minWidth: 90,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#e6f4ea',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2d7a3a',
   },
   urlButtonText: {
     fontSize: 16,
-    color: '#2d7a3a',
     fontWeight: '600',
     marginLeft: 8,
   },
   iconLook: {
-    color: '#2d7a3a',
     marginRight: 3,
     fontSize: 16,
   },
@@ -1340,17 +2111,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e9ecef',
     borderStyle: 'dashed',
   },
   previewImagePlaceholderText: {
     fontSize: 16,
-    color: '#666666',
   },
   imageButtonContainer: {
     flexDirection: 'row',
@@ -1368,15 +2136,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2d7a3a',
     gap: 8,
   },
   imageButtonText: {
     fontSize: 16,
-    color: '#2d7a3a',
     fontWeight: '600',
   },
   imageCaptureContainer: {
@@ -1411,34 +2176,26 @@ const styles = StyleSheet.create({
   datePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   dateText: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
   },
 
   datePicker: {
     flex: 1,
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   calendarIcon: {
     marginLeft: 8,
-    color: '#2d7a3a',
   },
   errorText: {
-    color: '#dc2626',
     fontSize: 14,
     marginTop: 4,
   },
@@ -1468,7 +2225,6 @@ const styles = StyleSheet.create({
   timingSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   timelineRow: {
@@ -1496,7 +2252,6 @@ const styles = StyleSheet.create({
   plantingSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   sectionTitle: {
@@ -1529,7 +2284,6 @@ const styles = StyleSheet.create({
   soilSection: {
     borderRadius: 16,
     padding: 16,
-    marginTop: 8,
     borderWidth: 1,
   },
   soilRow: {
@@ -1554,7 +2308,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   submitButton: {
-    backgroundColor: '#2d7a3a',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1567,23 +2320,18 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
   selectedSupplierText: {
-    // Add style for displaying selected supplier
     fontSize: 16,
-    color: '#555',
     marginTop: 4,
     marginBottom: 8,
     padding: 10,
-    backgroundColor: '#f0f0f0',
     borderRadius: 8,
   },
   // New styles for better mobile layout
   quantityPriceRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
   quantityInput: {
     flex: 1,
@@ -1596,7 +2344,21 @@ const styles = StyleSheet.create({
   seasonRow: {
     flexDirection: 'row',
     gap: 12,
+  },
+  scheduleSection: {
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginBottom: 16,
+  },
+  scheduleInput: {
+    flex: 1,
+    minWidth: 150,
   },
   seasonInput: {
     flex: 1,
@@ -1606,7 +2368,7 @@ const styles = StyleSheet.create({
   dateSupplierRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    zIndex: 100,
   },
   dateInput: {
     flex: 1,
@@ -1615,5 +2377,105 @@ const styles = StyleSheet.create({
   supplierInput: {
     flex: 1,
     minWidth: 150, // Ensure adequate space for supplier
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  voiceHint: {
+    flex: 1,
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  // Voice notes style
+  voiceNotesLabel: {
+    fontSize: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  upgradePromptButton: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  upgradePromptText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+
+  // --- Wizard styles ---
+  wizardStepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
+  wizardConnector: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 8,
+    marginBottom: 20,
+  },
+  wizardStepItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  wizardStepCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wizardStepNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  wizardStepLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    maxWidth: 70,
+  },
+  wizardNavRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 32,
+    marginBottom: 24,
+  },
+  wizardBackButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  wizardBackText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  wizardNextButton: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 6,
+  },
+  wizardNextText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

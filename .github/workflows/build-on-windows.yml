@@ -1,0 +1,21 @@
+name: Build Swift on Windows
+
+on:
+  push:
+    branches: [ "release/v1.3.0-pre-ai" ]
+  pull_request:
+    branches: [ "release/v1.3.0-pre-ai" ]
+
+jobs:
+  build-and-test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Swift
+        uses: SwiftyLab/setup-swift@v1.8.0 # Use a specific version tag
+        with:
+          swift-version: '6.0.0' # Specify the Swift version
+      - name: Disable NTFS protection (optional, may help with file ops)
+        run: git config --global core.protectNTFS false
+      - name: Run tests
+        run: swift test

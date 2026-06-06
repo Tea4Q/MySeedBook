@@ -1,10 +1,105 @@
 # Project Status Summary
 
-## 🚀 PRODUCTION READY
+## � IN DEVELOPMENT — v1.4.0 / v1.4.1 Phase 1
 
-**Status**: Application completed security cleanup and ready for production deployment testing
+**Status**: Phase 1 foundation complete. UI screens to follow.
 
-### Recent Completion: Production Security Hardening
+**Current Branch**: `feature/v1.4.0-v1.4.1-phase1` (based on `release/v1.3.1-with-ai`)
+**Last Updated**: May 15, 2026
+
+### v1.4.0 / v1.4.1 Phase 1 — Foundation (May 15, 2026)
+
+- ✅ **Feature branch created** from `release/v1.3.1-with-ai` (not `main` — main is behind; all v1.3.x work lives on the release branch)
+
+- ✅ **3 Supabase migrations** (pending deployment via Supabase Dashboard SQL Editor):
+  - `20260515000000` — `mcp_tokens` table + `create_mcp_token` / `revoke_mcp_token` RPCs (v1.4.1 BYOAI auth)
+  - `20260515000001` — `gardens` → `garden_plots` → `seed_locations` hierarchy + `watering_logs`, `fertilizer_logs`, `planting_logs` (v1.5.0 UI schema ready now)
+  - `20260515000002` — `harvest_yields`, `notification_preferences`, `seeds.low_stock_threshold`, `upsert_notification_preferences` RPC
+
+- ✅ **TypeScript types** — 10 new interfaces in `types/database.ts`: `Garden`, `GardenPlot`, `SeedLocation`, `WateringLog`, `FertilizerLog`, `PlantingLog`, `HarvestYield`, `NotificationPreferences`, `McpToken`, `McpScope`
+
+- ✅ **Feature flags** — 11 new flags in `utils/premiumManager.ts` spanning all three tiers (free/essential/voice)
+
+- ✅ **`hooks/useNotifications.ts`** — Push notification hook: `requestPermission`, `schedulePlantingReminder`, `scheduleLowStockAlert`, `cancelNotification`; gated behind free-tier flags
+
+- ✅ **`expo-notifications`** installed; `app.json` updated with plugin, iOS background modes, Android permissions
+
+- ✅ **`config/env.ts`** — `ENV.mcp.endpoint` added for future MCP server
+
+- ✅ **`lib/auth.tsx`** — CORS/empty-response guard: `{}` error from Supabase now shows a readable message
+
+### What's next
+- [ ] Apply 3 migrations in Supabase Dashboard SQL Editor
+- [ ] Harvest yield tracking UI screen (Essential tier)
+- [ ] Notification settings screen (free tier)
+- [ ] Get Vercel subscription → begin MCP server (Phase 2)
+
+---
+
+## 🚀 PRODUCTION — v1.3.1 AI RELEASE BRANCH
+
+**Status**: Voice & AI features live in production. All known launch blockers resolved.
+
+**Current Version**: 1.3.1  
+**Branch**: release/v1.3.1-with-ai  
+**Last Updated**: May 3, 2026
+
+### Recent Completion: v1.3.1 Voice & AI Launch + Bug Fixes (May 2026)
+- ✅ **Voice & AI subscription tier live**
+  - Voice & AI product linked to RevenueCat entitlement (root cause of silent upgrade failures)
+  - Upgrade buttons on AI screen and Voice Notes go directly to paywall (no dead-end Alert)
+  - Voice Notes price correctly shows $9.99/month (was showing Essential $7.99 price)
+  - Users can open the App Store purchase sheet from TestFlight — confirmed working
+
+- ✅ **EAS environment variable cleanup**
+  - Deleted 4 wrong account-scoped PUBLIC vars that were overriding correct project secrets
+  - All 4 keys (Supabase URL, Supabase anon key, RevenueCat iOS key, RevenueCat Android key) now live as project-scoped secrets only
+  - New production build triggered with correct keys bundled
+
+- ✅ **Camera & gallery upload fix (mobile)**
+  - Replaced broken `fetch(localUri).blob()` approach with `expo-file-system` `File.arrayBuffer()` for native file:// and content:// URIs
+  - Upload now works on both iOS and Android
+
+- ✅ **URL image paste UX improvement**
+  - Detects when a pasted URL is a webpage (not a direct image link) and shows an Alert with guidance
+  - Error message updated from generic "Failed to load image" to actionable instructions to copy the image address
+
+- ✅ **Seed card supplier name truncation**
+  - Long supplier names (e.g. "Southern Exposure Seed Exchange") no longer overflow the card edge
+  - Truncated with ellipsis to fit within the card bounds
+
+### Recent Completion: Pre-AI Submission Hardening & Web UX Stability (March 2026)
+- ✅ **Pre-AI release gating**
+  - Voice and AI purchase messaging hidden for this branch
+  - Premium messaging updated to indicate Voice and AI are coming in v1.3.1
+  - Reviewer-facing upgrade paths focused on stable Essential-tier features
+
+- ✅ **Web image ingestion upgrade**
+  - Added file picker support in image flow
+  - Added clipboard paste image support
+  - Added drag-and-drop support directly on image input area
+  - Added full-page drag overlay to improve drop affordance
+  - Added/validated support for JPG, PNG, GIF, WebP, and AVIF
+
+- ✅ **Navigation and modal reliability fixes**
+  - Fixed calendar add-event modal reopen behavior on tab switches/remounts by clearing one-shot params
+
+- ✅ **Unsaved changes protections + draft restore**
+  - Added guard prompts and draft autosave/restore to Add Seed
+  - Added matching guard prompts and per-supplier draft autosave/restore to Edit Supplier
+
+### Recent Completion: Weather Integration & Premium Features (November 2025)
+- ✅ **Weather Integration** - 5-day forecast with animated Meteocons icons
+- ✅ **Subscription System** - Essential ($7.99 / $63.99) and Voice & AI Entry ($9.99 / $79.99) tiers
+- ✅ **Barcode Scanner** (Premium) - Scan seed packages for quick inventory (iOS/Android)
+- ✅ **Premium Settings UI** - Test premium features toggle for development
+- ✅ **Feedback System** - User feedback collection with Supabase backend
+- ✅ **Dependency Fixes** - Resolved bundling issues with pretty-format and Lottie
+- ✅ **Web Platform Support** - Fixed Alert compatibility and bundle generation
+- ✅ **Guest Mode Enhancement** - Continue as Guest option for unauthenticated users
+- ✅ **Platform Testing** - Verified on Web and Android emulator
+
+### Previous Completion: Production Security Hardening (August 2025)
 - ✅ **Removed all authentication bypass flags** (`byPassAuthForTesting`, `byPassWebAuth`)
 - ✅ **Cleaned up debug logging** (preserved error handling)
 - ✅ **Removed development artifacts** (TODO.ts file)
@@ -14,7 +109,73 @@
 
 ## ✅ Successfully Completed
 
-### 1. Splash Screen Implementation
+### 1. Weather Integration & Monetization (November 2025)
+- ✅ **Weather forecast feature**
+  - OpenWeather API integration with One Call API 3.0
+  - 5-day forecast display with temperature and conditions
+  - Location-based weather with manual location override
+  - Animated Lottie weather icons (Meteocons)
+  - See `docs/WEATHER_INTEGRATION.md` for complete documentation
+
+- ✅ **Subscription system**
+  - Two paid standalone tiers: Essential and Voice & AI Entry
+  - Premium feature gating for weather access and barcode scanner
+  - Simulated IAP for development (ready for App Store/Play Store IAP)
+  - Web-compatible purchase flow with platform-specific alerts
+  - Subscription persistence with AsyncStorage
+  - Development toggle for testing premium features
+  - See `docs/MONETIZATION_SETUP_GUIDE.md` for IAP setup
+
+- ✅ **Barcode scanner feature** (Premium)
+  - Mobile-only barcode scanning (iOS/Android)
+  - expo-barcode-scanner integration with camera permissions
+  - Premium-gated feature with upgrade prompts
+  - Seed package brand recognition (Burpee, Ferry-Morse, etc.)
+  - Open Food Facts API integration for seed lookup
+  - Auto-fill seed information from scanned barcodes
+  - Platform-specific module loading prevents web errors
+  - Floating scan button on inventory screen
+  - Scan button on add-seed form
+  - See `docs/BARCODE_SCANNER_FEATURE.md` for complete documentation
+
+- ✅ **Feedback system**
+  - User feedback collection modal
+  - Supabase backend integration
+  - Category selection (bug, feature, other)
+  - Migration scripts for feedback table
+  - See `docs/FEEDBACK_SYSTEM.md` for details
+
+- ✅ **Dependency & bundling fixes**
+  - Fixed missing `pretty-format` dependency (required by Metro HMR)
+  - Added `@lottiefiles/dotlottie-react` for web Lottie support
+  - Resolved bundle MIME type issues on web
+  - Fixed Android emulator connection issues
+  - See `docs/DEPENDENCY_FIXES_NOV_2025.md` for troubleshooting guide
+
+### 2. Authentication System & Network Fixes
+- ✅ **Comprehensive authentication network error resolution**
+  - Fixed "TypeError: NetworkError when attempting to fetch resource" errors
+  - Fixed "AuthRetryableFetchError" during signup/signin processes
+  - Enhanced error handling with user-friendly messages and guest mode guidance
+  - Implemented robust network connectivity detection and fallback systems
+  - See `docs/AUTH_NETWORK_ERROR_FIX.md` for complete technical documentation
+
+### 3. Guest Data System Implementation 
+- ✅ **Complete offline demo experience**
+  - Professional sample data with supplier/seed relationships
+  - UUID-based data structure for consistency with production database
+  - Seamless switching between guest and authenticated modes
+  - All components updated for guest mode support (SupplierInput, add-seed, inventory)
+  - See `docs/GUEST_DATA_SYSTEM_FIXES.md` for implementation details
+
+### 3. UI/UX Improvements & Code Quality
+- ✅ **Banner system optimization**
+  - Fixed duplicate "Create Account" banners across pages
+  - Contextual banner display (GuestStatusBanner on index, DemoBanner on suppliers)
+  - Cleaned up debug console logs for production-ready experience
+  - Removed unused imports, variables, and dependencies
+
+### 4. Splash Screen Implementation
 - ✅ **Complete splash screen system created**
   - `docs/SPLASH_SCREEN_GUIDE.md` - Comprehensive implementation guide
   - `docs/CREATE_SPLASH_SCREEN.md` - Step-by-step creation instructions
@@ -22,7 +183,7 @@
   - `app/splash-test.tsx` - Test page for splash screen preview
   - `assets/splash-template.svg` - SVG template for asset creation
 
-### 2. EAS Build Configuration Fixes
+### 3. EAS Build Configuration Fixes
 - ✅ **All 15/15 expo-doctor checks now passing**
   - Removed problematic `react-native-phone-number-input` package (React 16 vs 19 conflict)
 
@@ -87,25 +248,58 @@
 
 ## 📋 Key Files Modified
 
-### Configuration Files
+### Configuration Files (November 2025)
+- `package.json` - Added `pretty-format`, `@lottiefiles/dotlottie-react`, removed barcode packages
+- `app.json` - Configured location permissions, updated version to 1.3.0
+- `.env` - Added `EXPO_PUBLIC_OPENWEATHER_API_KEY`
+
+### Configuration Files (Previous)
 - `package.json` - Removed problematic packages, updated TypeScript version
 - `.gitignore` - Added android/, ios/, .expo/ exclusions for prebuild workflow
 
-### Documentation
-- `docs/SPLASH_SCREEN_GUIDE.md` - New comprehensive guide
-- `docs/CREATE_SPLASH_SCREEN.md` - New creation instructions
-- `docs/EAS_BUILD_FIXES.md` - New troubleshooting documentation
+### Documentation (November 2025)
+- `docs/WEATHER_INTEGRATION.md` - **NEW** Complete weather feature documentation
+- `docs/DEPENDENCY_FIXES_NOV_2025.md` - **NEW** Bundling and dependency troubleshooting
+- `docs/FEEDBACK_SYSTEM.md` - User feedback system documentation
+- `docs/MONETIZATION_SETUP_GUIDE.md` - Premium subscription setup
+- `docs/README.md` - Updated with November 2025 changes
 
-### Components
-- `components/SplashScreenPreview.tsx` - New preview component
-- `app/splash-test.tsx` - New test page
-- `app/(tabs)/index.tsx` - Enhanced with responsive grid layout and improved UX
+### Documentation (Previous)
+- `docs/GUEST_DATA_SYSTEM_FIXES.md` - Comprehensive guest system documentation
+- `docs/SPLASH_SCREEN_GUIDE.md` - Comprehensive guide
+- `docs/CREATE_SPLASH_SCREEN.md` - Creation instructions
+- `docs/EAS_BUILD_FIXES.md` - Troubleshooting documentation
 
-### Utilities
-- `utils/responsive.ts` - New responsive utility system for device detection and layout optimization
+### Components (November 2025)
+- `components/PremiumModal.tsx` - **NEW** Premium subscription upgrade modal
+- `components/Weather/` - **NEW** Weather display components
+- `app/(tabs)/weather.tsx` - **NEW** Weather tab with forecast
+- `app/feedback.tsx` - **NEW** Feedback collection screen
+- `app/premium-settings.tsx` - **NEW** Premium settings management
 
-### Assets
-- `assets/splash-template.svg` - New SVG template
+### Components (Previous)
+- `components/SupplierInput/index.tsx` - Enhanced with guest mode support
+- `components/SplashScreenPreview.tsx` - Preview component
+- `app/add-seed.tsx` - Updated with guest-aware supplier handling
+- `app/splash-test.tsx` - Test page
+- `app/(tabs)/index.tsx` - Enhanced with responsive grid layout, guest data integration
+
+### Utilities (November 2025)
+- `utils/premiumManager.ts` - **NEW** Subscription management and IAP handling
+- `lib/services/feedbackService.ts` - **NEW** Feedback submission to Supabase
+- `types/feedback.ts` - **NEW** Feedback type definitions
+
+### Utilities (Previous)
+- `utils/guestDataManager.ts` - Enhanced with supplier relationship mapping
+- `utils/sampleData.ts` - Updated with UUID-based supplier identifiers
+- `utils/responsive.ts` - Responsive utility system for device detection and layout optimization
+
+### Database (November 2025)
+- `supabase/migrations/20251030_create_feedback_table.sql` - **NEW** Feedback table migration
+
+### Assets (Previous)
+- `assets/splash-template.svg` - SVG template
+- `assets/meteocons/` - **NEW** Animated weather icon JSON files
 
 ## 🛠 Technical Improvements
 
@@ -126,35 +320,65 @@
 
 ## 🚀 Next Steps Available
 
-### Immediate Actions
-1. **Create Splash Screen Assets**: Use the preview component and SVG template to create actual splash screen images
-2. **Mobile Testing**: Use the QR code to test on physical devices
-3. **EAS Build**: Run `eas build` to create production builds
+### Immediate Actions (Production Deployment)
+1. **Generate fresh production builds** from `release/v1.3.0-pre-ai` (Android + iOS)
+2. **Run focused smoke tests** on Add Seed, Edit Supplier, Calendar add-event flow, and web image upload methods
+3. **Validate store metadata** to ensure voice/AI is not advertised as currently available in this release
+4. **Finalize submission package** with updated screenshots and release notes for pre-AI scope
 
 ### Future Enhancements
-1. **Asset Pipeline**: Set up automated asset generation from SVG templates
-2. **Build Automation**: Configure GitHub Actions for automated builds
-3. **App Store Preparation**: Generate required icon sizes and store assets
+1. **Voice and AI rollout** in v1.3.1+ branch after v1.3.0 merge
+2. **App-wide form hardening** by extending draft-restore/unsaved-change guards to additional forms
+3. **Type hardening pass** to resolve pre-existing unrelated Supabase typing issues
+4. **Additional premium capabilities** (advanced weather and workflow tooling)
 
-## 🎯n Success Metrics
+## 🎯 Success Metrics
 
-- ✅ **15/15 expo-doctor checks passing**
-- ✅ **0 dependency vulnerabilities**
-- ✅ **1,272 packages installed successfully**
-- ✅ **Development server running without errors**
-- ✅ **Splash screen system fully implemented**
-- ✅ **EAS Build configuration validated**
+### Current Status (March 2026)
+- ✅ **Pre-AI reviewer-safe scope applied** on `release/v1.3.0-pre-ai`
+- ✅ **Web image ingestion expanded** (picker, paste, drop, overlay, modern formats)
+- ✅ **Calendar modal reopen regression fixed** for tab/remount behavior
+- ✅ **Add Seed and Edit Supplier form reliability hardened** with leave guards and draft restore
+- ⚠️ **Final production build + physical device pass pending** for submission gate
+
+### Technical Metrics
+- ✅ **Targeted checks on modified files passed** after implementation
+- ✅ **Dev server starts successfully** with `npx expo start`
+- ⚠️ **Project-wide TypeScript still includes unrelated pre-existing Supabase typing issues**
+- ✅ **Those broader typing issues were intentionally deprioritized for this release stream**
 
 ## 📱 MySeedBook Catalogue App Status
 
-The app is now in a **production-ready state** for builds with:
-- Complete splash screen implementation
-- Resolved dependency conflicts  
-- Valid EAS Build configuration
-- Clean development environment
-- Comprehensive documentation
+The app is in a **production-ready pre-AI state** (`release/v1.3.0-pre-ai`) with:
+- ✅ Stable core feature set for store review
+- ✅ Voice/AI purchase messaging removed from active release UX
+- ✅ Improved web image upload ergonomics and format support
+- ✅ Improved form persistence and leave-safety for critical edit/create flows
+- ✅ Updated global documentation aligned to current release scope
 
-All major technical blockers have been resolved, and the project is ready for:
-- Mobile app builds (iOS/Android)
-- App store deployment
-- Production environment setup
+### Version 1.3.0 Features
+- **Weather Integration**: 5-day forecast with animated Meteocons
+- **Paid Tier (active in this branch)**: Essential ($7.99 / $63.99)
+- **Voice & AI**: Planned for v1.3.1+ rollout branch
+- **Feedback System**: In-app user feedback collection
+- **Guest Mode**: Continue without account creation
+- **Location Services**: Weather based on device or manual location
+
+### Ready For
+- ✅ Web deployment
+- ✅ Android and iOS build preparation
+- ⚠️ Final physical-device validation pass
+- ⚠️ Final store metadata/screenshot confirmation for pre-AI scope
+
+### Pending Actions
+1. Build fresh release binaries from `release/v1.3.0-pre-ai`
+2. Complete final physical-device smoke tests
+3. Confirm store listing language/screenshots match pre-AI feature availability
+4. Submit to stores
+
+---
+
+**Branch**: release/v1.3.0-pre-ai  
+**Version**: 1.3.0  
+**Last Updated**: March 26, 2026  
+**Status**: Production Ready (pending final build validation and submission checks)

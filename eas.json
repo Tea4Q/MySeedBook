@@ -7,36 +7,79 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "node": "22.12.0",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
       "android": {
         "gradleCommand": ":app:assembleDebug"
       },
       "ios": {
         "buildConfiguration": "Debug"
-      },
-      "env": {
-        "NODE_ENV": "development"
       }
     },
     "preview": {
+      "autoIncrement": true,
       "distribution": "internal",
+      "node": "22.12.0",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
       "android": {
         "buildType": "apk"
       },
-      "env": {
-        "NODE_ENV": "staging"
-      }
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
+      "distribution": "store",
+      "node": "22.12.0",
+      "yarn": "1.22.22",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "simulator": false
+      },
+      "channel": "production"
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "premium-weather": {
+      "extends": "production",
+      "env": {
+        "FEATURE_WEATHER_INTEGRATION": "true"
       }
     }
   },
   "submit": {
-    "production": {}
+    "preview": {
+      "ios": {
+        "appleId": "Chandra@ChandraSEssentials.com",
+        "ascAppId": "6759670875",
+        "appleTeamId": "55885H9NLV"
+      }
+    },
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      },
+      "ios": {
+        "appleId": "Chandra@ChandraSEssentials.com",
+        "ascAppId": "6759670875",
+        "appleTeamId": "55885H9NLV"
+      }
+    }
   }
 }

@@ -1,75 +1,54 @@
 # MySeedBook Catalogue - Pre-Release Checklist
 
-## ✅ **Completed Items**
+## Release Context
+- Branch: `release/v1.3.0-pre-ai`
+- Release Scope: Stable/non-AI feature set for store review
+- Date: March 26, 2026
 
-### Dependencies & Configuration
-- [✅] All dependencies updated to compatible versions
-- [✅] App.json configuration cleaned (removed invalid properties)
-- [✅] ESLint configured and installed
-- [✅] Web build successful - all code compiles without errors
+## ✅ Completed
 
-### Core Features Implemented
-- [✅] **Theme System**: Complete light/dark mode with AsyncStorage persistence
-- [✅] **Authentication**: Login/signup screens with Supabase integration
-- [✅] **Supplier Management**: Full CRUD operations (Create, Read, Update, Delete)
-- [✅] **Calendar**: Complete week display with previous/next month dates
-- [✅] **Settings**: Theme controls, disabled notifications module for future updates
-- [✅] **Cross-platform Compatibility**: React Native Web optimizations completed
+### Scope & Messaging
+- [x] Voice and AI purchase messaging hidden/demoted for pre-AI release
+- [x] Upgrade copy aligned to stable reviewer-testable features
+- [x] Voice/AI marked as future release (v1.3.1+)
 
-### UI/UX Features
-- [✅] Responsive design across all screens
-- [✅] Custom confirmation modals for cross-platform delete operations
-- [✅] Theme integration across all components
-- [✅] Professional styling with proper color schemes
-- [✅] Navigation and routing working correctly
+### Core UX Stability
+- [x] Calendar one-shot params cleared after use to prevent modal reopen loops
+- [x] Add Seed unsaved-changes leave prompt implemented
+- [x] Add Seed draft autosave/restore implemented
+- [x] Edit Supplier unsaved-changes leave prompt implemented
+- [x] Edit Supplier per-record draft autosave/restore implemented
 
-## 🔄 **In Progress / Todo**
-
-### App Store Preparation
-- [✅] Icon requirements (square icon created - 1024x1024 for stores, 512x512 for app)
-- [✅] Screenshots for store listings
-- [✅] App descriptions and metadata (in separate file)
-- [✅] Privacy policy and terms of service
-
-### Build & Release
-- [✅] EAS Build configuration tested
-- [✅] Production build testing on physical devices
-- [✅] iOS build and testing
-- [✅] Android build and testing
-- [❓] Performance optimization review
-
-### Quality Assurance
-- [❓] End-to-end testing of all features
-- [❓] User acceptance testing
-- [❓] Load testing with sample data
-- [❓] Security review of Supabase configuration
+### Web Image Flow
+- [x] File picker upload support
+- [x] Clipboard paste image support
+- [x] Drag-and-drop image support
+- [x] Full-page drag overlay for drop affordance
+- [x] Accepted web formats verified: JPG, PNG, GIF, WebP, AVIF
 
 ### Documentation
-- [❓] User manual/help documentation
-- [❓] API documentation
-- [❓] Deployment instructions
+- [x] Root docs updated for March 2026 branch state
+- [x] Production/build summary files updated to current branch context
 
-## 🚀 **Next Steps for Release**
+## 🔄 Final Pre-Submission Checks
 
-1. ~~**Create Square Icon**~~ ✅ **COMPLETED**
-2. ~~**Create Store Assets**~~ ✅ **COMPLETED** (screenshots, descriptions)
-3. ~~**Test Production Builds**~~ ✅ **COMPLETED**
-4. **Final Testing Phase**
-5. **Submit to App Stores**
+### Functional Smoke Tests
+- [ ] Verify Add Seed draft restores after tab switch / refresh
+- [ ] Verify Edit Supplier draft restores for the correct supplier record
+- [ ] Verify leave/discard prompts only appear when fields changed
+- [ ] Verify calendar add-event launch does not re-open unexpectedly
+- [ ] Verify all web image input methods on latest Chrome/Safari/Edge
 
-## 📊 **App Statistics**
-- **Version**: 1.0.0
-- **Platform Support**: iOS, Android, Web
-- **Dependencies**: All up-to-date with Expo SDK 53
-- **Build Status**: ✅ Web build successful
-- **Code Quality**: ✅ ESLint configured
-- **Architecture**: React Native with Expo Router
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Themes**: Light/Dark mode support
+### Store Readiness
+- [ ] Confirm store listing text does not advertise hidden voice/AI functionality
+- [ ] Confirm screenshots match current pre-AI UX
+- [ ] Confirm privacy policy / terms links resolve correctly in app
 
-## 🔧 **Technical Notes**
-- Uses Expo SDK 53 with new architecture enabled
-- Cross-platform modal implementation for better web compatibility
-- Custom theme system with AsyncStorage persistence
-- Optimized for React Native Web with CSS fixes
-- Full TypeScript implementation
+### Build & Validation
+- [ ] Run fresh Android production AAB build from current branch
+- [ ] Run fresh iOS production build from current branch
+- [ ] Perform physical-device sanity pass (auth, add seed, edit supplier, calendar)
+
+## Notes
+- Project-wide TypeScript includes pre-existing unrelated Supabase typing issues.
+- Those issues were explicitly deprioritized for this release stream and should be addressed separately.

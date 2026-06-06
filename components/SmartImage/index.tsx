@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Image, ImageProps, ImageStyle, StyleProp } from 'react-native';
+import { ImageStyle, StyleProp } from 'react-native';
+import { Image, ImageProps } from 'expo-image';
 import { ENV, isSupabaseUrl } from '@/config/env';
 
 interface SmartImageProps extends Omit<ImageProps, 'source'> {
@@ -68,8 +69,10 @@ export const SmartImage: React.FC<SmartImageProps> = ({
       {...imageProps}
       source={{ uri: imageUri }}
       style={style}
+      cachePolicy="memory-disk"
+      transition={200}
       onLoadStart={handleLoadStart}
-      onLoadEnd={handleLoadEnd}
+      onLoad={handleLoadEnd}
       onError={handleError}
     />
   );

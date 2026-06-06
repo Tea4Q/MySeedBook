@@ -13,6 +13,8 @@ MySeedBook Catalogue is a mobile and web application that helps users organize t
 - Seed catalog management with photo storage
 - Supplier contact and information management
 - Garden planning and calendar features
+- Weather integration and gardening recommendations
+- Location-based weather alerts and notifications
 - Data synchronization across devices
 - Cloud storage and backup services
 

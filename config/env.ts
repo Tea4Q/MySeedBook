@@ -24,7 +24,56 @@ export const ENV = {
   api: {
     // Add any API-specific development settings here
     timeout: __DEV__ ? 10000 : 5000,
-  }
+  },
+
+  // Weather API configuration
+  weather: {
+    // OpenWeatherMap API - Free tier: 1000 calls/day, 60 calls/minute
+    apiKey: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY || 'demo-key',
+    baseUrl: 'https://api.openweathermap.org/data/2.5',
+    units: 'imperial', // Use Fahrenheit for US gardeners
+    // Frost temperature threshold (in Fahrenheit)
+    frostThreshold: 32,
+    // Gardening temperature thresholds
+    temperatures: {
+      coldSeason: 50,  // Cool season crops (lettuce, peas)
+      warmSeason: 65,  // Warm season crops (tomatoes, peppers)
+      hotSeason: 80,   // Hot season crops (okra, melons)
+    },
+  },
+
+  // OpenAI-compatible AI — user must supply their own key via the AI Settings panel
+  // (Settings → AI → enter your API key). Key is stored in SecureStore on-device.
+  // No key is bundled with the app.
+  openai: {
+    apiKey: '',
+  },
+
+  // RevenueCat subscription configuration
+  // Get API keys from: https://app.revenuecat.com → Projects → API Keys
+  revenuecat: {
+    iosKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '',
+    androidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
+    // Product IDs must match what you create in App Store Connect / Google Play:
+    //   iOS Essential: com.myseedbook.catalogue.essential.monthly
+    //                  com.myseedbook.catalogue.essential.yearly
+    //   iOS Voice:     com.myseedbook.catalogue.voice.monthly
+    //                  com.myseedbook.catalogue.voice.yearly
+    //   Android Essential: myseedbook_essential_month
+    //                      myseedbook_essential_year
+    //   Android Voice:     myseedbook_voice_monthly
+    //                      myseedbook_voice_yearly
+    // RevenueCat entitlements:
+    //   essential
+    //   voice
+    essentialEntitlement: 'essential',
+    voiceEntitlement: 'voice',
+  },
+
+  // MCP server endpoint — override via EXPO_PUBLIC_MCP_ENDPOINT for staging
+  mcp: {
+    endpoint: process.env.EXPO_PUBLIC_MCP_ENDPOINT ?? 'https://mcp.myseedbook.app',
+  },
 };
 
 // Helper functions

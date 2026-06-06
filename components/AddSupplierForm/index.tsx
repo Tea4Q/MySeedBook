@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
@@ -19,6 +21,7 @@ import {
 import ImageHandler from '@/components/ImageHandler';
 import { supabase } from '@/lib/supabase';
 import { Supplier } from '@/types/database';
+import { useTheme } from '@/lib/theme';
 
 interface Imageinfo {
   id: string;
@@ -42,6 +45,8 @@ export default function AddSupplierForm({
   onCancel,
   embedded = false,
 }: AddSupplierFormProps) {
+  const { colors } = useTheme();
+  // Removed guest limits for suppliers - now unlimited
   const [formData, setFormData] = useState<Partial<Supplier>>({
     supplier_name: initialSupplierName,
     webaddress: '',
@@ -55,6 +60,7 @@ export default function AddSupplierForm({
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const nameInputRef = useRef<import('react-native').TextInput>(null);
   
   // Phone formatting helper function
   const formatPhoneNumber = (value: string): string => {
@@ -107,6 +113,7 @@ export default function AddSupplierForm({
   const validateForm = () => {
     if (!formData.supplier_name?.trim()) {
       Alert.alert('Validation Error', 'Supplier name is required.');
+      setTimeout(() => nameInputRef.current?.focus(), 100);
       return false;
     }
     
@@ -129,6 +136,8 @@ export default function AddSupplierForm({
       setError('Invalid email address');
       return;
     }
+
+    // Guests can now add unlimited suppliers
     setIsSubmitting(true);
     setError(null);
     try {
@@ -159,6 +168,7 @@ export default function AddSupplierForm({
         return;
       }
       if (onSuccess && createdSupplier) {
+        // No longer tracking supplier actions for guests
         onSuccess(createdSupplier);
       }
     } catch (err: any) {
@@ -169,18 +179,11 @@ export default function AddSupplierForm({
     }
   };
 
-  return (
-    <View style={embedded ? styles.embeddedContainer : styles.container}>
-      <KeyboardAwareScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        enableOnAndroid={true}
-        extraScrollHeight={20}
-        keyboardShouldPersistTaps="handled"
-      >
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+  const formContent = (
+    <>
+      {error && (
+          <View style={[styles.errorContainer, { backgroundColor: colors.error + '15', borderColor: colors.error + '40' }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         )}
         <View style={styles.formSection}>
@@ -191,19 +194,21 @@ export default function AddSupplierForm({
           />
           {/* Show image loading error if any */}
           {imageError && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{imageError}</Text>
+            <View style={[styles.errorContainer, { backgroundColor: colors.error + '15', borderColor: colors.error + '40' }]}>
+              <Text style={[styles.errorText, { color: colors.error }]}>{imageError}</Text>
             </View>
           )}
           {/* Supplier Name */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Building2 size={20} color="#336633" />
-              <Text style={styles.label}>Supplier Name *</Text>
+              <Building2 size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Supplier Name *</Text>
             </View>
             <TextInput
-              style={styles.input}
+              ref={nameInputRef}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               placeholder="Enter Supplier Name"
+              placeholderTextColor={colors.textSecondary}
               value={formData.supplier_name || ''}
               onChangeText={(text) => handleInputChange('supplier_name', text)}
               editable={!isSubmitting}
@@ -212,14 +217,15 @@ export default function AddSupplierForm({
           {/* WebAddress */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <MapPinHouse size={20} color="#336633" />
-              <Text style={styles.label}>Web Address</Text>
+              <MapPinHouse size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Web Address</Text>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.webaddress || ''}
               onChangeText={(text) => handleInputChange('webaddress', text)}
               placeholder="Enter web address"
+              placeholderTextColor={colors.textSecondary}
               keyboardType="url"
               autoCapitalize="none"
               editable={!isSubmitting}
@@ -228,43 +234,45 @@ export default function AddSupplierForm({
           {/* Email Address */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Mail size={20} color="#336633" />
-              <Text style={styles.label}>Email Address</Text>
+              <Mail size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
             </View>
             <TextInput
               style={[
                 styles.input,
+                { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder },
                 !validateEmail(formData.email || '') &&
                   formData.email !== '' &&
-                  styles.inputError,
+                  { borderColor: colors.error },
               ]}
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               placeholder="Enter email address"
+              placeholderTextColor={colors.textSecondary}
               keyboardType="email-address"
               autoCapitalize="none"
             />
             {formData.email !== '' && !validateEmail(formData.email || '') && (
-              <Text style={styles.errorText}>Invalid email address</Text>
+              <Text style={[styles.errorText, { color: colors.error }]}>Invalid email address</Text>
             )}
           </View>
           {/* Phone Number */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <Phone size={20} color="#336633" />
-              <Text style={styles.label}>Phone Number</Text>
+              <Phone size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
             </View>
-            <View style={styles.phoneInputContainer}>
-              <Text style={styles.countryCode}>+1</Text>
+            <View style={[styles.phoneInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+              <Text style={[styles.countryCode, { color: colors.inputText, borderRightColor: colors.inputBorder }]}>+1</Text>
               <TextInput
-                style={styles.phoneInput}
+                style={[styles.phoneInput, { color: colors.inputText }]}
                 value={formData.phone || ''}
                 onChangeText={(text) => {
                   const formatted = formatPhoneNumber(text);
                   setFormData({ ...formData, phone: formatted });
                 }}
                 placeholder="(555) 123-4567"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="phone-pad"
                 maxLength={14} // Limit to formatted US phone length
               />
@@ -273,14 +281,15 @@ export default function AddSupplierForm({
           {/* Address */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <House size={20} color="#336633" />
-              <Text style={styles.label}>Address</Text>
+              <House size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Address</Text>
             </View>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.address}
               onChangeText={(text) => setFormData({ ...formData, address: text })}
               placeholder="Enter physical address"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={3}
             />
@@ -288,14 +297,15 @@ export default function AddSupplierForm({
           {/* Additional Notes */}
           <View style={styles.inputGroup}>
             <View style={styles.labelContainer}>
-              <FileText size={20} color="#336633" />
-              <Text style={styles.label}>Additional Notes</Text>
+              <FileText size={20} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>Additional Notes</Text>
             </View>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
               value={formData.notes}
               onChangeText={(text) => setFormData({ ...formData, notes: text })}
               placeholder="Enter any additional notes"
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={4}
             />
@@ -306,13 +316,14 @@ export default function AddSupplierForm({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }}>
           <Pressable
             style={[
-              styles.submitButton, 
+              styles.submitButton,
+              { backgroundColor: colors.primary },
               (isSubmitting || supplierData.supplier_images.some(img => img.isLoading)) && styles.submitButtonDisabled
             ]}
             onPress={handleSubmit}
             disabled={isSubmitting || supplierData.supplier_images.some(img => img.isLoading)}
           >
-            <Text style={styles.submitButtonText}>
+            <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>
               {isSubmitting 
                 ? 'Adding Supplier...' 
                 : supplierData.supplier_images.some(img => img.isLoading)
@@ -322,12 +333,35 @@ export default function AddSupplierForm({
             </Text>
           </Pressable>
           {onCancel && (
-            <Pressable style={[styles.submitButton, { backgroundColor: '#aaa' }]} onPress={onCancel}>
+            <Pressable style={[styles.submitButton, { backgroundColor: colors.textSecondary }]} onPress={onCancel}>
               <Text style={styles.submitButtonText}>Cancel</Text>
             </Pressable>
           )}
         </View>
-      </KeyboardAwareScrollView>
+    </>
+  );
+
+  return (
+    <View style={embedded ? styles.embeddedContainer : [styles.container, { backgroundColor: colors.background }]}>
+      {Platform.OS === 'web' ? (
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {formContent}
+        </ScrollView>
+      ) : (
+        <KeyboardAwareScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          keyboardShouldPersistTaps="handled"
+        >
+          {formContent}
+        </KeyboardAwareScrollView>
+      )}
     </View>
   );
 }
@@ -335,7 +369,6 @@ export default function AddSupplierForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9f0',
   },
   embeddedContainer: {
     backgroundColor: 'transparent', // No background when embedded
@@ -346,15 +379,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   errorContainer: {
-    backgroundColor: '#fef2f2',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#fee2e2',
   },
   errorText: {
-    color: '#dc2626',
     fontSize: 14,
   },
   formSection: {
@@ -371,19 +401,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a472a',
   },
   input: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  inputError: {
-    borderColor: '#dc2626',
   },
   textArea: {
     height: 100,
@@ -392,29 +415,23 @@ const styles = StyleSheet.create({
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     paddingLeft: 16,
   },
   countryCode: {
     fontSize: 16,
-    color: '#333333',
     fontWeight: '600',
     paddingRight: 8,
     borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
     marginRight: 12,
   },
   phoneInput: {
     flex: 1,
     padding: 16,
     fontSize: 16,
-    color: '#333333',
   },
   submitButton: {
-    backgroundColor: '#336633',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -427,6 +444,5 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
 });

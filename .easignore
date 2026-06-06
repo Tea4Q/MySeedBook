@@ -1,0 +1,54 @@
+# EAS Build Ignore File
+# These files won't be uploaded to EAS Build
+
+# Development and testing
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Build artifacts and logs
+.gradle
+.node_modules
+.expo
+.expo-shared/
+dist
+build
+android/app/build/
+android/build/
+android/.gradle/
+ios/build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Scripts (unless needed for build)
+scripts/
+*.ps1
+*.sh
+
+# Other
+.prettierrc
+.eslintrc.js
+eslint.config.js
+tsconfig.tsbuildinfo

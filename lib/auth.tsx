@@ -1,9 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import {  useRootNavigation } from 'expo-router';
-import { Platform } from 'react-native';
+import {  useRootNavigation, useRouter } from 'expo-router';
+import { Platform, LogBox } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { logger } from '../utils/logger';
+import { guestTracker, GuestUsage } from '../utils/guestTracker';
+import { globalRevenueCat } from './globalRevenueCat';
+import { clearSubscriptionCache } from './globalSubscriptionManager';
+
+// Suppress the Expo LogBox toast for stale/expired refresh tokens — this is
+// an expected condition after a cache clear or app reinstall and is handled
+// gracefully by the auth initialisation logic below.
+LogBox.ignoreLogs([
+  'AuthApiError: Invalid Refresh Token',
+  'Refresh Token Not Found',
+  'AuthRetryableFetchError',
+]);
 // import { isLoading } from 'expo-font';
 // import { set } from 'date-fns';
 // import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
@@ -26,23 +38,32 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   initialized: boolean;
+  isGuest: boolean;
+  guestUsage: GuestUsage | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInAsGuest: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
- 
+  resendConfirmation: (email: string) => Promise<void>;
+  updatePassword: (password: string, tokens?: { access_token: string; refresh_token: string }) => Promise<void>;
+  refreshGuestUsage: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   initialized: false,
+  isGuest: false,
+  guestUsage: null,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  signInAsGuest: async () => {},
   forgotPassword: async () => {},
+  resendConfirmation: async () => {},
   updatePassword: async () => {},
+  refreshGuestUsage: async () => {},
 });
 
 // Provider component
@@ -50,8 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestUsage, setGuestUsage] = useState<GuestUsage | null>(null);
   const rootNavigation = useRootNavigation();
-  // Profile state is managed in UI screens, not here
+  const router = useRouter();
   
 
 
@@ -67,27 +90,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        return;
     }
 
-   
-    // Check auth state and handle invalid refresh tokens
-  supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
+    // Add error handling for initialization
+    const initializeAuth = async () => {
+      try {
+        // Check auth state and handle invalid refresh tokens
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Auth initialization error:', error);
+          // If the stored refresh token is invalid/expired, clear it so the user
+          // can sign in cleanly instead of seeing a repeated error.
+          const isInvalidToken =
+            error.message?.toLowerCase().includes('refresh token') ||
+            error.message?.toLowerCase().includes('invalid token') ||
+            error.status === 400 ||
+            error.status === 401;
+          if (isInvalidToken) {
+            await supabase.auth.signOut();
+          }
+          setSession(null);
+          setUser(null);
+          setInitialized(true);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setInitialized(true);
-      })
-      .catch(() => {
+      } catch (error) {
+        console.error('Fatal auth initialization error:', error);
+        // Even on fatal error, mark as initialized to prevent infinite loading
+        // Attempt to clear any stale tokens
+        try { await supabase.auth.signOut(); } catch { /* ignore */ }
         setSession(null);
         setUser(null);
         setInitialized(true);
-      });
+      }
+    };
 
-    // Listen for auth changes
+    initializeAuth();
+
+  // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') {
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
+      } else if (event === 'TOKEN_REFRESH_FAILED' as any) {
+        // Stale/invalid refresh token — clear state and send to login
+        setSession(null);
+        setUser(null);
+        supabase.auth.signOut().catch(() => {});
+      } else if (event === 'SIGNED_IN') {
+        setSession(session);
+        setUser(session?.user ?? null);
+        // Only navigate if email is confirmed — skip for new signups awaiting confirmation
+        // so the confirmation screen in auth/index.tsx stays visible.
+        if (session?.user?.email_confirmed_at) {
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 100);
+        }
       } else {
         setSession(session);
         setUser(session?.user ?? null);
@@ -116,22 +180,97 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [initialized]);
 
   // Sign in function
-
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      logger.error('Sign in error:', error);
+
+      // CORS or opaque network failure — Supabase returns an unparseable response,
+      // error.message ends up as '{}' or is empty.
+      const msg: string = error.message ?? '';
+      if (!msg || msg === '{}' || msg === 'undefined') {
+        throw new Error('Unable to reach the server. Check your internet connection, or ensure this app is allowed in your Supabase URL configuration.');
+      }
+      
+      // Handle different types of network errors
+      if (error.name === 'AuthRetryableFetchError' || 
+          msg.includes('NetworkError when attempting to fetch resource') ||
+          msg.includes('Network request failed') ||
+          msg.includes('fetch')) {
+        throw new Error('Network connection issue. Please check your internet connection and try again, or continue as a guest to explore the app.');
+      }
+      
+      // Handle auth-specific errors
+      if (msg.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please check your credentials and try again.');
+      }
+      
+      if (msg.includes('Email not confirmed')) {
+        throw new Error('Please check your email and click the confirmation link before signing in.');
+      }
+      
+      // Generic fallback
+      throw new Error(msg || 'Unable to sign in. Please try again or continue as a guest.');
+    }
   };
 
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/callback`,
-      },
-    });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: 'myseedbook-catalogue://auth',
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+
+      // When email confirmation is ON, Supabase silently succeeds for duplicate emails
+      // (to prevent enumeration). Detect this via empty identities array.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      }
+    } catch (error: any) {
+      logger.error('Sign up error:', error);
+
+      const msg: string = error.message ?? '';
+      if (!msg || msg === '{}' || msg === 'undefined') {
+        throw new Error('Unable to reach the server. Check your internet connection, or ensure this app is allowed in your Supabase URL configuration.');
+      }
+      
+      // Handle different types of network errors
+      if (error.name === 'AuthRetryableFetchError' || 
+          msg.includes('NetworkError when attempting to fetch resource') ||
+          msg.includes('Network request failed') ||
+          msg.includes('fetch')) {
+        throw new Error('Network connection issue. Please check your internet connection and try again, or continue as a guest to explore the app.');
+      }
+      
+      // Handle other auth-specific errors
+      if (msg.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please check your credentials and try again.');
+      }
+      
+      if (msg.includes('User already registered')) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      }
+      
+      if (msg.includes('Password should be at least')) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+      
+      // Generic fallback
+      throw new Error(msg || 'Unable to create account. Please try again or continue as a guest.');
+    }
   };
 
 const signOut = async () => {
@@ -178,21 +317,109 @@ const signOut = async () => {
 
   const recoverPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${Platform.OS === 'web' ? window.location.origin : 'myseedbook-catalogue://'}auth/reset-password`,
+      redirectTo: 'myseedbook-catalogue://auth/reset-password',
     });
 
     if (error) throw error;
   };
 
-  const updatePassword = async (password: string) => {
-   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) throw new Error('Session invalid. Try resetting again.');
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: 'myseedbook-catalogue://auth' },
+    });
+    if (error) throw error;
+  };
+
+  const updatePassword = async (
+    password: string,
+    tokens?: { access_token: string; refresh_token: string }
+  ) => {
+    if (tokens) {
+      const { error: setSessionError } = await supabase.auth.setSession(tokens);
+      if (setSessionError)
+        throw new Error('Reset link is invalid or has expired. Please request a new one.');
+    } else {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session)
+        throw new Error('Session invalid. Try resetting again.');
+    }
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   };
+
+  // Guest authentication functions
+  const signInAsGuest = async () => {
+    // Clear all demo data from previous guest sessions (seeds, suppliers, usage counts)
+    await guestTracker.clearDemoData();
+    setIsGuest(true);
+    setUser(null);
+    setSession(null);
+    await refreshGuestUsage();
+    // Navigation handled by _layout.tsx when isGuest state updates
+  };
+
+  const refreshGuestUsage = async () => {
+    const usage = await guestTracker.getUsage();
+    setGuestUsage(usage);
+  };
+
+  // Enhanced signOut to handle guest state
+  const enhancedSignOut = async () => {
+    const currentUserId = user?.id;
+    await globalRevenueCat.logOut();
+    if (currentUserId) {
+      await clearSubscriptionCache(currentUserId);
+    }
+    await signOut();
+    setIsGuest(false);
+    setGuestUsage(null);
+  };
+
+  // Enhanced signIn to mark account creation for guests
+  const enhancedSignIn = async (email: string, password: string) => {
+    if (isGuest) {
+      await guestTracker.markAccountCreated();
+    }
+    await signIn(email, password);
+    setIsGuest(false);
+    setGuestUsage(null);
+  };
+
+  // Enhanced signUp to mark account creation for guests
+  const enhancedSignUp = async (email: string, password: string) => {
+    if (isGuest) {
+      await guestTracker.markAccountCreated();
+    }
+    await signUp(email, password);
+    setIsGuest(false);
+    setGuestUsage(null);
+  };
+
+  // Initialize guest usage on mount
+  useEffect(() => {
+    if (isGuest) {
+      refreshGuestUsage();
+    }
+  }, [isGuest]);
     
   return (
-  <AuthContext.Provider value={{ user, session, initialized, signIn, signUp, signOut, forgotPassword: recoverPassword, updatePassword }}>
+  <AuthContext.Provider value={{ 
+    user, 
+    session, 
+    initialized, 
+    isGuest,
+    guestUsage,
+    signIn: enhancedSignIn, 
+    signUp: enhancedSignUp, 
+    signOut: enhancedSignOut,
+    signInAsGuest,
+    forgotPassword: recoverPassword,
+    resendConfirmation,
+    updatePassword,
+    refreshGuestUsage 
+  }}>
       {children}
     </AuthContext.Provider>
   );

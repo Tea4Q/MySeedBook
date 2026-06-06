@@ -25,5 +25,8 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
+  "exclude": [
+    "_backup/**/*"
+  ],
   "extends": "expo/tsconfig.base"
 }

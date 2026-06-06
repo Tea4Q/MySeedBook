@@ -1,21 +1,54 @@
-# Marketing Copy Variations - MySeedBook Catalogue
+# Marketing Copy Variations - MySeedBook Catalogue v1.3.0
 
-## 🎯 **A/B Testing Variations**
+## �️ **NEW: Weather Integration Premium Feature**
 
-### Variation A: Feature-Focused
+### Main App Store Description
 ```
-🌱 The Complete Garden Organization App
+🌱 The Complete Garden Organization App with Weather Intelligence
 
-Organize your seed collection, manage suppliers, and plan your planting schedule with MySeedBook Catalogue. Perfect for gardeners who want to take control of their growing season.
+Organize your seed collection, manage suppliers, and plan your planting schedule with real-time weather insights. MySeedBook Catalogue combines garden organization with smart weather integration to help you grow more successfully.
 
 ✨ KEY FEATURES:
 • Photo-based seed catalog
 • Supplier contact management  
-• Interactive planting calendar
+• Interactive planting calendar with weather icons
+• Real-time weather data & 7-day forecasts
+• Personalized gardening recommendations
 • Cross-platform synchronization
 • Beautiful themes and intuitive design
 
-Transform your gardening experience today!
+🌤️ PREMIUM WEATHER INTEGRATION:
+• Live weather conditions in your calendar
+• Gardening-specific weather insights
+• Frost warnings and planting recommendations
+• Optimal timing suggestions
+• Weather-based garden tips
+
+Transform your gardening experience with smart weather intelligence!
+```
+
+## 🎯 **A/B Testing Variations**
+
+### Variation A: Weather-Focused
+```
+🌱 Garden Smarter with Weather Intelligence
+
+The only gardening app that combines seed organization with real-time weather insights. Never get caught off-guard by weather changes again!
+
+✨ WEATHER-POWERED FEATURES:
+• Live weather in your planting calendar
+• Frost warnings and protection alerts
+• Optimal planting timing recommendations
+• 7-day detailed gardening forecasts
+• Personalized weather-based tips
+
+Plus all your favorite organization tools:
+• Photo-based seed catalog
+• Supplier management
+• Interactive calendar
+• Cloud synchronization
+
+Start growing with confidence today!
 ```
 
 ### Variation B: Benefit-Focused

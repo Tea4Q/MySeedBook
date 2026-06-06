@@ -23,7 +23,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- Policy to allow authenticated users to upload images
 CREATE POLICY "Users can upload images" ON storage.objects
