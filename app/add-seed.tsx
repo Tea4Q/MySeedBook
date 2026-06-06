@@ -26,6 +26,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import {
   ArrowLeft,
   Calendar,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   Droplets,
   Sun,
   Ruler,
@@ -122,6 +125,12 @@ interface Imageinfo {
 
 const ADD_SEED_DRAFT_STORAGE_KEY = 'add_seed_form_draft_v1';
 
+const WIZARD_STEPS = [
+  { key: 'seed', label: 'Seed Details' },
+  { key: 'supplier', label: 'Supplier' },
+  { key: 'reminders', label: 'Reminders' },
+] as const;
+
 // State for form data
 // Using useState to manage form state
 
@@ -148,6 +157,7 @@ export default function AddOrEditSeedScreen() {
   const { checkAndPromptForLimit } = useGuestLimits();
   
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
 
   // Voice input state
   // lastVoiceTranscript reserved for Voice & AI build
@@ -402,6 +412,7 @@ export default function AddOrEditSeedScreen() {
     setErrors({});
     setSelectedSupplier(null);
     setPriceInput(''); // Reset price input display
+    setWizardStep(1);
     AsyncStorage.removeItem(ADD_SEED_DRAFT_STORAGE_KEY).catch(() => {
       // Non-fatal cleanup failure
     });
@@ -1034,6 +1045,62 @@ export default function AddOrEditSeedScreen() {
     }, 100);
   }, []);
 
+  // --- Wizard Step Validation ---
+  const validateStep1 = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.seed_name?.trim()) newErrors.name = 'Seed name is required';
+    if (!seedPackage.quantity || seedPackage.quantity <= 0)
+      newErrors.quantity = 'Quantity must be greater than 0';
+    if (!seedPackage.type) newErrors.type = 'Seed type is required';
+    const imageArray = Array.isArray(seedPackage.seed_images) ? seedPackage.seed_images as Imageinfo[] : [];
+    const loadingImages = imageArray.filter(img => img.isLoading);
+    if (loadingImages.length > 0) {
+      newErrors.images = `Please wait for ${loadingImages.length} image(s) to finish uploading`;
+    }
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const validateStep2 = (): Record<string, string> => {
+    const newErrors: Record<string, string> = {};
+    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
+    if (seedPackage.supplier_id) {
+      const isSampleId = seedPackage.supplier_id.startsWith('sample-supplier-');
+      if (!isValidUUID(seedPackage.supplier_id) && !isSampleId) {
+        newErrors.supplier = 'Invalid supplier selection. Please select a valid supplier.';
+      }
+    }
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const handleWizardNext = () => {
+    setErrors({});
+    if (wizardStep === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) {
+        scrollToFirstError(errs);
+        return;
+      }
+      setWizardStep(2);
+      scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+    } else if (wizardStep === 2) {
+      const errs = validateStep2();
+      if (Object.keys(errs).length > 0) return;
+      setWizardStep(3);
+      scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleWizardBack = () => {
+    setErrors({});
+    if (wizardStep === 2) setWizardStep(1);
+    else if (wizardStep === 3) setWizardStep(2);
+    scrollViewRef.current?.scrollTo?.({ x: 0, y: 0, animated: false });
+  };
+
   // --- Supplier Select Handler ---
   const handleSupplierSelect = (supplier: Supplier) => {
     setSeedPackage((prev) => ({
@@ -1102,7 +1169,48 @@ export default function AddOrEditSeedScreen() {
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Wizard Step Indicator */}
+        {!isEditing && (
+          <View style={styles.wizardStepIndicator}>
+            {WIZARD_STEPS.map((step, index) => (
+              <React.Fragment key={step.key}>
+                {index > 0 && (
+                  <View style={[styles.wizardConnector, {
+                    backgroundColor: index < wizardStep ? colors.primary : colors.border,
+                  }]} />
+                )}
+                <View style={styles.wizardStepItem}>
+                  <View style={[
+                    styles.wizardStepCircle,
+                    {
+                      backgroundColor: index + 1 <= wizardStep ? colors.primary : colors.surface,
+                      borderColor: index + 1 <= wizardStep ? colors.primary : colors.border,
+                    },
+                  ]}>
+                    {index + 1 < wizardStep ? (
+                      <Check size={12} color={colors.primaryText} />
+                    ) : (
+                      <Text style={[styles.wizardStepNumber, {
+                        color: index + 1 === wizardStep ? colors.primaryText : colors.textSecondary,
+                      }]}>
+                        {index + 1}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.wizardStepLabel, {
+                    color: index + 1 === wizardStep ? colors.primary : colors.textSecondary,
+                    fontWeight: (index + 1 === wizardStep ? '700' : '400') as '700' | '400',
+                  }]}>
+                    {step.label}
+                  </Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+
         {/* Image Section */}
+        {(isEditing || wizardStep === 1) && (
         <View ref={imagesFieldRef} style={[styles.imageContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <ImageHandler
             initialImages={seedPackage.seed_images as Imageinfo[]}
@@ -1115,9 +1223,11 @@ export default function AddOrEditSeedScreen() {
             <Text style={[styles.errorText, { color: colors.error }]}>{errors.images}</Text>
           )}
         </View>
+        )}
         {/* Form Section */}
         <View style={styles.formSection}>
           {/* Voice Input Row — enabled in Voice & AI build */}
+          {(isEditing || wizardStep === 1) && (<>
 
           {/* Seed Name */}
           <View ref={nameFieldRef} style={styles.inputGroup}>
@@ -1272,8 +1382,10 @@ export default function AddOrEditSeedScreen() {
               />
             </View>
           </View>
+          </>)}
 
-          {/* Seed Schedule Section */}
+          {/* Step 3: Seed Schedule — planting reminders */}
+          {(isEditing || wizardStep === 3) && (
           <View style={[styles.scheduleSection, {
             backgroundColor: colors.surface,
             borderColor: colors.border,
@@ -1479,8 +1591,10 @@ export default function AddOrEditSeedScreen() {
               </View>
             </View>
           </View>
+          )}
 
-          {/* Supplier Row */}
+          {/* Step 2: Supplier */}
+          {(isEditing || wizardStep === 2) && (
           <View style={styles.dateSupplierRow}>
 
             {/* Supplier Selection */}
@@ -1497,7 +1611,10 @@ export default function AddOrEditSeedScreen() {
               {errors.supplier && <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>}
             </View>
           </View>
+          )}
 
+          {/* Step 3: Growth Timeline + remaining detail sections */}
+          {(isEditing || wizardStep === 3) && (<>
           {/* Growth Timeline Section */}
           <View style={[styles.timingSection, { 
             backgroundColor: colors.surface,
@@ -1791,32 +1908,63 @@ export default function AddOrEditSeedScreen() {
               </>
             )}
           </View>
+          </>)}
         </View>
 
-        {/* Submit Button */}
-        <Pressable
-          style={[
-            styles.submitButton,
-            {
-              backgroundColor: colors.primary,
-            },
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.primaryText} />
-          ) : (
-            <Text style={[styles.submitButtonText, { color: colors.primaryText }]}>
-              {isEditing ? 'Save Changes' : 'Add Seed'}
-            </Text>
-          )}
-        </Pressable>
+        {/* Submit / Wizard Navigation */}
+        {isEditing ? (
+          <Pressable
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.primaryText} />
+            ) : (
+              <Text style={[styles.submitButtonText, { color: colors.primaryText }]}>
+                Save Changes
+              </Text>
+            )}
+          </Pressable>
+        ) : (
+          <View style={styles.wizardNavRow}>
+            {wizardStep > 1 && (
+              <Pressable
+                style={[styles.wizardBackButton, { borderColor: colors.border }]}
+                onPress={handleWizardBack}
+              >
+                <ChevronLeft size={20} color={colors.text} />
+                <Text style={[styles.wizardBackText, { color: colors.text }]}>Back</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={[
+                styles.wizardNextButton,
+                { backgroundColor: colors.primary },
+                isSubmitting && styles.submitButtonDisabled,
+              ]}
+              onPress={handleWizardNext}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <>
+                  <Text style={[styles.wizardNextText, { color: colors.primaryText }]}>
+                    {wizardStep === 3 ? 'Save Seed' : 'Next'}
+                  </Text>
+                  {wizardStep < 3 && <ChevronRight size={20} color={colors.primaryText} />}
+                </>
+              )}
+            </Pressable>
+          </View>
+        )}
 
-        {/* End of formSection View */}
       </KeyboardAwareScrollView>
-      {/* End of KeyboardAwareScrollView */}
 
       {/* Premium Modal */}
       <PremiumModal
@@ -2259,5 +2407,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',
+  },
+
+  // --- Wizard styles ---
+  wizardStepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
+  wizardConnector: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 8,
+    marginBottom: 20,
+  },
+  wizardStepItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  wizardStepCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wizardStepNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  wizardStepLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    maxWidth: 70,
+  },
+  wizardNavRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 32,
+    marginBottom: 24,
+  },
+  wizardBackButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  wizardBackText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  wizardNextButton: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 6,
+  },
+  wizardNextText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
