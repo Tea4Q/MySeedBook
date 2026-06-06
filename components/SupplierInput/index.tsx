@@ -101,6 +101,14 @@ export function SupplierInput({
     setShowDropdown(true);
   }, [suppliers]);
 
+  // Re-run filter when suppliers finish loading so results appear even if
+  // the user typed before the initial load completed (e.g. on wizard step 2).
+  useEffect(() => {
+    if (inputValue.trim()) {
+      filterSuppliers(inputValue);
+    }
+  }, [filterSuppliers]); // filterSuppliers identity changes whenever `suppliers` updates
+
   const handleInputChange = (text: string) => {
     setInputValue(text);
     filterSuppliers(text);
