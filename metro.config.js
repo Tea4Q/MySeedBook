@@ -9,6 +9,7 @@ const defaultResolveRequest = config.resolver?.resolveRequest;
 // Redirect native-only modules to web-safe stubs when bundling for web.
 const WEB_STUBS = {
   'react-native-purchases': path.resolve(__dirname, 'mocks/react-native-purchases.web.js'),
+  'expo-secure-store': path.resolve(__dirname, 'mocks/expo-secure-store.web.js'),
   'react-native/Libraries/Core/InitializeCore': path.resolve(
     __dirname,
     'mocks/react-native-initialize-core.web.js'

@@ -69,9 +69,13 @@ export default function SmartShoppingAssistant({
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('No recommendations received');
 
-      // Try to parse JSON response
+      // Try to parse JSON response — strip markdown code fences GPT often adds
       try {
-        const parsed = JSON.parse(content);
+        const cleaned = content
+          .replace(/^```(?:json)?\s*/i, '')
+          .replace(/\s*```\s*$/, '')
+          .trim();
+        const parsed = JSON.parse(cleaned);
         const recs = Array.isArray(parsed) ? parsed : parsed.recommendations || [];
         setRecommendations(recs.map((rec: any, index: number) => ({
           id: `rec-${Date.now()}-${index}`,

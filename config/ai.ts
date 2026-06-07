@@ -98,17 +98,24 @@ Format as JSON with: seed_name, supplier, reason, confidence (0-1), season_relev
 };
 
 // Premium-integrated AI features checker
-export const getAIFeatures = async () => {
+// Pass isPremium/isVoice from RevenueCat (useGlobalSubscription) as the
+// source of truth. Falls back to local premiumManager when not provided.
+export const getAIFeatures = async (rcIsPremium?: boolean, rcIsVoice?: boolean) => {
   await premiumManager.initialize();
   const subscription = premiumManager.getSubscription();
-  
+
+  // RevenueCat is canonical — if the user is premium via RC, unlock all
+  // voice-tier AI features regardless of the local subscription cache.
+  const voiceUnlocked = rcIsVoice ?? subscription?.features.voice_notes ?? false;
+  const premiumUnlocked = rcIsPremium ?? (subscription?.isActive && subscription.tier !== 'free');
+
   return {
-    voice_notes: subscription?.features.voice_notes && Platform.OS !== 'web', // Voice only on mobile
-    ai_chat: subscription?.features.ai_garden_assistant || false,
-    smart_shopping: subscription?.features.smart_shopping_assistant || false,
-    plant_identification: subscription?.features.plant_health_diagnostics || false, // Phase 2
-    disease_diagnosis: subscription?.features.plant_health_diagnostics || false, // Phase 2
-    harvest_prediction: subscription?.features.harvest_prediction || false, // Phase 3
+    voice_notes: (voiceUnlocked || (subscription?.features.voice_notes ?? false)) && Platform.OS !== 'web',
+    ai_chat: voiceUnlocked || subscription?.features.ai_garden_assistant || false,
+    smart_shopping: voiceUnlocked || subscription?.features.smart_shopping_assistant || false,
+    plant_identification: (premiumUnlocked && (subscription?.features.plant_health_diagnostics ?? false)), // Phase 2
+    disease_diagnosis: (premiumUnlocked && (subscription?.features.plant_health_diagnostics ?? false)), // Phase 2
+    harvest_prediction: (premiumUnlocked && (subscription?.features.harvest_prediction ?? false)), // Phase 3
   };
 };
 

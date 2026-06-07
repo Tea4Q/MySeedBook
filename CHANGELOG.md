@@ -1,3 +1,40 @@
+# June 2026
+
+## v1.4.1 — Phase 1 Bug Fixes & Vercel Web Deployment (June 6, 2026)
+
+*Branch: `feature/v1.4.0-v1.4.1-phase1`*
+
+### Bug Fixes
+
+#### Supplier Search — Step 2 Dropdown Stuck on "Loading suppliers..."
+- **Root cause:** `SupplierInput` mounts fresh when the wizard advances to Step 2. If the user typed before the initial `loadSuppliers()` async call resolved, `filterSuppliers` ran against an empty array and the spinner never cleared.
+- **Fix:** Added a `useEffect` in `SupplierInput/index.tsx` that re-runs `filterSuppliers(inputValue)` whenever `filterSuppliers` identity changes (i.e. when `suppliers` finishes loading). This ensures any text already entered is immediately re-evaluated once data arrives.
+
+#### AI Tab — Voice & AI Features Showing as "Premium" Despite Active Subscription
+- **Root cause:** `config/ai.ts` → `getAIFeatures()` read from `premiumManager.getSubscription()` (local AsyncStorage cache) which is never populated by a real RevenueCat entitlement. Voice transcription in `add-seed.tsx` worked because it went through `checkFeature()` which is wired to `useGlobalSubscription()` (RevenueCat). The AI tab used a separate code path that bypassed RevenueCat entirely.
+- **Fix:** `getAIFeatures()` now accepts optional `rcIsPremium` and `rcIsVoice` parameters sourced from `useGlobalSubscription()`. When the user holds a Voice & AI entitlement (`isVoice = true`), AI Chat, Smart Shopping, and Voice Notes are all unlocked immediately. `app/(tabs)/ai.tsx` passes these values and `loadAIFeatures` re-runs whenever RevenueCat subscription state changes.
+
+### Vercel Web Deployment
+
+#### `vercel.json` — Full Build Configuration
+- Added `buildCommand: "npx expo export --platform web"` and `outputDirectory: "dist"` so Vercel knows how to build the app without a framework preset.
+- Added `framework: null` to prevent Vercel auto-detecting an incompatible framework.
+- Added security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) for all routes.
+- Added long-lived cache headers for `/static/` assets (immutable hashed filenames from Expo export).
+
+#### `metro.config.js` — `expo-secure-store` Web Stub
+- Added `expo-secure-store` to the `WEB_STUBS` map so the web bundle resolves cleanly.
+- `lib/voice/transcription.ts` imports `expo-secure-store` at the module level; even though VoiceNotes is UI-gated to `Platform.OS !== 'web'`, the import would previously cause the web bundle to fail at module resolution.
+
+#### `mocks/expo-secure-store.web.js` — New File
+- localStorage-backed stub providing `getItemAsync`, `setItemAsync`, and `deleteItemAsync`.
+- Voice transcription (which calls SecureStore for the user's API key) is already unreachable on web; this stub purely satisfies the bundler.
+
+#### `.env.example` — New File
+- Documents all `EXPO_PUBLIC_*` environment variables required for a Vercel deployment: Supabase URL/anon key, RevenueCat keys (mobile-only), OpenWeatherMap key, and optional MCP endpoint.
+
+---
+
 # May 2026
 
 ## v1.4.0 / v1.4.1 — Phase 1 Foundation (May 15, 2026)
