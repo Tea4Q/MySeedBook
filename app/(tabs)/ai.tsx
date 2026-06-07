@@ -9,6 +9,7 @@ import { Brain, MessageCircle, Settings, ShoppingCart, Mic, Sparkles, Crown } fr
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
+import { useGlobalSubscription } from '@/lib/globalSubscriptionManager';
 import { AIGardenAssistant } from '@/components/AIGardenAssistant';
 import { SmartShoppingAssistant } from '@/components/SmartShoppingAssistant';
 import { VoiceNotes } from '@/components/VoiceNotes';
@@ -27,6 +28,7 @@ export default function AIScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { isPremium } = usePremiumFeature();
+  const { isPremium: rcIsPremium, isVoice: rcIsVoice } = useGlobalSubscription();
   
   const [activeView, setActiveView] = useState<ActiveView>('overview');
   const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
@@ -46,9 +48,9 @@ export default function AIScreen() {
   });
 
   const loadAIFeatures = useCallback(async () => {
-    const features = await getAIFeatures();
+    const features = await getAIFeatures(rcIsPremium, rcIsVoice);
     setAIFeatures(features);
-  }, []);
+  }, [rcIsPremium, rcIsVoice]);
 
   const loadUserData = useCallback(async () => {
     try {
@@ -200,9 +202,6 @@ export default function AIScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             AI Garden Assistant
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            Phase 1 Features Available
-          </Text>
         </View>
       </View>
 
@@ -262,7 +261,7 @@ export default function AIScreen() {
       </View>
 
       {/* Coming Soon Preview */}
-      <View style={styles.comingSoonContainer}>
+      {/* <View style={styles.comingSoonContainer}>
         <Text style={[styles.comingSoonTitle, { color: colors.text }]}>
           Coming in Phase 2
         </Text>
@@ -284,7 +283,7 @@ export default function AIScreen() {
             true
           )}
         </View>
-      </View>
+      </View> */}
     </View>
   );
 
