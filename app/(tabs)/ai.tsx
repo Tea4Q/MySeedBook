@@ -39,6 +39,7 @@ export default function AIScreen() {
   const [voiceText, setVoiceText] = useState('');
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [isRefreshingAccess, setIsRefreshingAccess] = useState(false);
   const { isConfigured, recheck } = useAIConfigured();
   const [aiFeatures, setAIFeatures] = useState({
     voice_notes: false,
@@ -53,6 +54,16 @@ export default function AIScreen() {
     const features = await getAIFeatures(rcIsPremium, rcIsVoice);
     setAIFeatures(features);
   }, [rcIsPremium, rcIsVoice]);
+
+  const refreshAccess = useCallback(async () => {
+    setIsRefreshingAccess(true);
+    try {
+      await refreshSubscriptionAccess();
+      await loadAIFeatures();
+    } finally {
+      setIsRefreshingAccess(false);
+    }
+  }, [loadAIFeatures, refreshSubscriptionAccess]);
 
   const loadUserData = useCallback(async () => {
     try {
@@ -100,8 +111,8 @@ export default function AIScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshSubscriptionAccess();
-    }, [refreshSubscriptionAccess])
+      void refreshAccess();
+    }, [refreshAccess])
   );
 
   const showAIUpgradePrompt = (_featureName: string) => {
@@ -210,11 +221,11 @@ export default function AIScreen() {
           </Text>
           <Pressable
             style={[styles.webAccessButton, { backgroundColor: colors.primary }]}
-            onPress={() => void refreshSubscriptionAccess()}
-            disabled={subscriptionLoading}
+            onPress={() => void refreshAccess()}
+            disabled={subscriptionLoading || isRefreshingAccess}
           >
             <Text style={[styles.webAccessButtonText, { color: colors.background }]}>
-              {subscriptionLoading ? 'Refreshing…' : 'Refresh Access'}
+              {subscriptionLoading || isRefreshingAccess ? 'Refreshing…' : 'Refresh Access'}
             </Text>
           </Pressable>
         </View>
