@@ -34,9 +34,13 @@ This branch introduces AI-powered features to enhance the gardening experience. 
 ## 🔧 Configuration
 
 ### API Key Setup
-1. Users need to provide their OpenAI API key via the AI Assistant setup screen
-2. Keys are stored securely on device using AsyncStorage
-3. Fallback functionality available when AI is not configured
+1. Users provide their own OpenAI API key through the AI Assistant setup screen.
+2. On Android and iOS, keys are stored locally using expo-secure-store.
+3. A newly entered key is validated before replacing the existing key.
+4. The AI service reads the latest stored key whenever a request is sent.
+5. Invalid or revoked keys return the user to API setup instead of displaying raw OpenAI errors.
+6. Fallback gardening functionality remains available when AI is not configured.
+7. The app never logs, displays, synchronizes, or transmits the complete API key anywhere other than the OpenAI request.
 
 ### Feature Flags
 Located in `config/ai.ts`:

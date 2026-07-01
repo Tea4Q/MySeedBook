@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,26 +10,15 @@ import {
   View,
 } from 'react-native';
 import { Bot, Check, ChevronDown, ChevronUp, Eye, EyeOff, Trash2 } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/lib/theme';
-import { AI_STORAGE_KEYS, AIConfig } from '@/config/ai';
-
-// expo-secure-store is not available on web — fall back to localStorage
-const secureGet = (key: string): Promise<string | null> =>
-  Platform.OS === 'web'
-    ? Promise.resolve(localStorage.getItem(key))
-    : SecureStore.getItemAsync(key);
-
-const secureSet = (key: string, value: string): Promise<void> =>
-  Platform.OS === 'web'
-    ? Promise.resolve(void localStorage.setItem(key, value))
-    : SecureStore.setItemAsync(key, value);
-
-const secureDelete = (key: string): Promise<void> =>
-  Platform.OS === 'web'
-    ? Promise.resolve(void localStorage.removeItem(key))
-    : SecureStore.deleteItemAsync(key);
+import { AIConfig } from '@/config/ai';
+import {
+  clearAIConfiguration,
+  loadAIConfiguration,
+  normalizeAIBaseUrl,
+  saveAIConfiguration,
+  type AIVerificationStatus,
+} from '@/config/aiStorage';
 
 interface AISettingsPanelProps {
   onConfigured?: () => void;
@@ -53,20 +41,23 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
   const [showPresets, setShowPresets] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<AIVerificationStatus>('unverified');
+  const [hasSavedKey, setHasSavedKey] = useState(false);
 
-  const effectiveBaseUrl = baseUrl === 'custom' ? customUrl : baseUrl;
+  const effectiveBaseUrl = normalizeAIBaseUrl(baseUrl === 'custom' ? customUrl : baseUrl);
 
   const load = useCallback(async () => {
-    const [storedKey, storedUrl] = await Promise.all([
-      secureGet(AI_STORAGE_KEYS.apiKey),
-      AsyncStorage.getItem(AI_STORAGE_KEYS.baseUrl),
-    ]);
-    if (storedKey) {
-      setApiKey(storedKey);
-      setIsConfigured(true);
+    const storedConfig = await loadAIConfiguration();
+    if (storedConfig.apiKey) {
+      setApiKey(storedConfig.apiKey);
+      setHasSavedKey(true);
+    } else {
+      setHasSavedKey(false);
     }
-    if (storedUrl) {
+    setVerificationStatus(storedConfig.verificationStatus);
+
+    if (storedConfig.baseUrl) {
+      const storedUrl = storedConfig.baseUrl;
       const isPreset = PRESET_BACKENDS.some(
         p => p.value === storedUrl && p.value !== 'custom' && p.value !== ''
       );
@@ -92,17 +83,37 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
     }
     setIsSaving(true);
     try {
-      const url = effectiveBaseUrl.trim() || '';
-      await Promise.all([
-        secureSet(AI_STORAGE_KEYS.apiKey, apiKey.trim()),
-        url
-          ? AsyncStorage.setItem(AI_STORAGE_KEYS.baseUrl, url)
-          : AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
-      ]);
-      AIConfig.initialize(apiKey.trim(), url || undefined);
-      setIsConfigured(true);
+      const savedConfig = await saveAIConfiguration({
+        apiKey,
+        baseUrl: effectiveBaseUrl,
+        verificationStatus: 'unverified',
+      });
+      AIConfig.initialize(savedConfig.apiKey ?? '', savedConfig.baseUrl ?? undefined, savedConfig.model);
+      setHasSavedKey(savedConfig.hasApiKey);
+
+      const verificationResult = await AIConfig.verifyConfiguration({
+        apiKey: savedConfig.apiKey,
+        baseUrl: savedConfig.baseUrl,
+        model: savedConfig.model,
+      });
+
+      if (verificationResult.ok) {
+        const verifiedConfig = await AIConfig.markVerified();
+        setVerificationStatus(verifiedConfig.verificationStatus);
+        Alert.alert('Saved', 'AI settings were saved and verified successfully.');
+      } else {
+        const rejectedConfig = verificationResult.code === 'unauthorized'
+          ? await AIConfig.markUnverified('unauthorized')
+          : verificationResult.code === 'network_error'
+            ? await AIConfig.markUnverified('network_error')
+            : verificationResult.code === 'rate_limited'
+              ? await AIConfig.markUnverified('rate_limited')
+              : await AIConfig.markUnverified('provider_error');
+        setVerificationStatus(rejectedConfig.verificationStatus);
+        Alert.alert('Saved', verificationResult.message);
+      }
+
       onConfigured?.();
-      Alert.alert('Saved', 'AI settings saved successfully.');
     } catch {
       Alert.alert('Error', 'Failed to save AI settings.');
     } finally {
@@ -117,20 +128,18 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
     }
     setIsTesting(true);
     try {
-      const url = effectiveBaseUrl.trim() || undefined;
-      AIConfig.initialize(apiKey.trim(), url);
-      const client = AIConfig.getClient()!;
-      await client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        max_tokens: 5,
-        messages: [{ role: 'user', content: 'ping' }],
+      const verificationResult = await AIConfig.verifyConfiguration({
+        apiKey,
+        baseUrl: effectiveBaseUrl,
       });
+      if (!verificationResult.ok) {
+        Alert.alert('Connection Failed', verificationResult.message);
+        return;
+      }
+
       Alert.alert('Connection OK', 'Successfully connected to the AI backend.');
-    } catch (err: any) {
-      Alert.alert(
-        'Connection Failed',
-        err?.message ?? 'Could not reach the AI backend. Check your key and URL.'
-      );
+    } catch {
+      Alert.alert('Connection Failed', 'Could not reach the AI backend. Check your key and URL.');
     } finally {
       setIsTesting(false);
     }
@@ -146,14 +155,14 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
-            await Promise.all([
-              secureDelete(AI_STORAGE_KEYS.apiKey),
-              AsyncStorage.removeItem(AI_STORAGE_KEYS.baseUrl),
-            ]);
+            await clearAIConfiguration();
+            AIConfig.invalidateClient();
             setApiKey('');
             setBaseUrl('');
             setCustomUrl('');
-            setIsConfigured(false);
+            setHasSavedKey(false);
+            setVerificationStatus('unverified');
+            onConfigured?.();
           },
         },
       ]
@@ -161,21 +170,33 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
   };
 
   const s = styles(colors);
+  const statusText = !hasSavedKey
+    ? 'Enter your API key to enable AI features'
+    : verificationStatus === 'verified'
+      ? 'AI is configured and ready'
+      : verificationStatus === 'rejected'
+        ? 'Saved key was rejected. Update it in AI Settings.'
+        : 'AI settings are saved but still need provider verification';
+  const statusColor = !hasSavedKey
+    ? colors.warning
+    : verificationStatus === 'verified'
+      ? colors.primary
+      : colors.warning;
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       {/* Status banner */}
-      <View style={[s.statusBanner, { backgroundColor: isConfigured ? colors.primary + '18' : colors.warning + '18' }]}>
-        <Bot size={18} color={isConfigured ? colors.primary : colors.warning} />
-        <Text style={[s.statusText, { color: isConfigured ? colors.primary : colors.warning }]}>
-          {isConfigured ? 'AI is configured and ready' : 'Enter your API key to enable AI features'}
+      <View style={[s.statusBanner, { backgroundColor: statusColor + '18' }]}>
+        <Bot size={18} color={statusColor} />
+        <Text style={[s.statusText, { color: statusColor }]}>
+          {statusText}
         </Text>
       </View>
 
       {/* API Key */}
       <Text style={s.label}>AI API Key</Text>
       <Text style={s.hint}>
-        Enter the API key for your chosen AI provider. Stored securely on-device.
+        Enter the API key for your chosen AI provider. Stored in SecureStore on native devices. On web, browser storage is used.
       </Text>
       <View style={s.row}>
         <TextInput
@@ -268,7 +289,7 @@ export default function AISettingsPanel({ onConfigured }: AISettingsPanelProps) 
         </Pressable>
       </View>
 
-      {isConfigured && (
+      {hasSavedKey && (
         <Pressable style={[s.row, s.clearBtn]} onPress={handleClear}>
           <Trash2 size={14} color={colors.error} />
           <Text style={[s.clearText, { color: colors.error }]}>Clear saved credentials</Text>

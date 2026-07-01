@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -222,7 +223,7 @@ export default function GlobalSubscriptionModal({
       } else {
         Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
       }
-    } catch (err: any) {
+    } catch {
       setLoadingPackageId(null);
       Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
     }
@@ -300,6 +301,76 @@ export default function GlobalSubscriptionModal({
     );
   }
   // ─────────────────────────────────────────────────────────────────────────────
+
+  if (Platform.OS === 'web') {
+    const webHasVoiceAccess = tier === 'voice';
+
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={16}>
+            <X size={22} color={colors.text} />
+          </Pressable>
+
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary }]}>
+                <Sprout size={26} color={colors.primaryText} />
+              </View>
+              <Text style={[styles.heroTitle, { color: colors.text }]}>AI & Voice Access</Text>
+              <Text style={[styles.heroSub, { color: textSecondary }]}> 
+                {webHasVoiceAccess
+                  ? 'AI & Voice access is active.'
+                  : 'AI & Voice access must be purchased in the MySeedBook iOS or Android app. After purchasing, sign in here with the same MySeedBook account.'}
+              </Text>
+            </View>
+
+            <View style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {webHasVoiceAccess ? (
+                <View style={styles.featureRow}>
+                  <Check size={16} color={colors.primary} />
+                  <Text style={[styles.featureText, { color: textSecondary }]}>Your mobile purchase is available on this account.</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.featureRow}>
+                    <Check size={16} color={colors.primary} />
+                    <Text style={[styles.featureText, { color: textSecondary }]}>Purchase AI & Voice in the iOS or Android app.</Text>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Check size={16} color={colors.primary} />
+                    <Text style={[styles.featureText, { color: textSecondary }]}>Then sign in here with the same MySeedBook account.</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            <Pressable
+              style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+              onPress={() => void refresh()}
+              disabled={isLoading || loadingPackageId !== null}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <Text style={[styles.ctaText, { color: colors.primaryText }]}>Refresh Access</Text>
+              )}
+            </Pressable>
+
+            <View style={styles.linkRow}>
+              <Pressable onPress={() => openExternal(PRIVACY_URL, 'Privacy Policy')}>
+                <Text style={[styles.linkText, { color: colors.primary }]}>Privacy</Text>
+              </Pressable>
+              <Text style={[styles.linkDivider, { color: textSecondary }]}>•</Text>
+              <Pressable onPress={() => openExternal(TERMS_URL, 'Terms of Service')}>
+                <Text style={[styles.linkText, { color: colors.primary }]}>Terms</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,26 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { MessageCircle, Send, Lightbulb, Sprout, User, Bot } from 'lucide-react-native';
+import { Send, Lightbulb, Sprout, User, Bot, Mic, Square, X } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
-import { useAuth } from '@/lib/auth';
-import { AIMessage, AIConversation, AIGardenContext } from '@/types/ai';
+import { AIMessage, AIGardenContext } from '@/types/ai';
 import { Seed, Supplier } from '@/types/database';
-import { AIConfig, GARDEN_AI_CONFIG, AI_STORAGE_KEYS } from '@/config/ai';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
-import { guestDataManager } from '@/utils/guestDataManager';
+import { AIConfig, GARDEN_AI_CONFIG } from '@/config/ai';
+import { isAIConfigurationReady, saveAIConfiguration } from '@/config/aiStorage';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 
 interface AIGardenAssistantProps {
   userSeeds?: Seed[];
   userSuppliers?: Supplier[];
   location?: string;
+  onOpenSettings?: () => void;
 }
 
 export default function AIGardenAssistant({ 
   userSeeds = [], 
   userSuppliers = [],
-  location 
+  location,
+  onOpenSettings,
 }: AIGardenAssistantProps) {
   const { colors } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -41,23 +41,51 @@ export default function AIGardenAssistant({
   const [isConfigured, setIsConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [configurationMessage, setConfigurationMessage] = useState<string | null>(null);
+  const {
+    status: voiceStatus,
+    transcript,
+    error: voiceError,
+    isSupported: isVoiceSupported,
+    startRecording,
+    stopAndTranscribe,
+    cancelRecording,
+    reset: resetVoiceInput,
+  } = useVoiceInput();
 
   // Initialize AI configuration
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { checkAPIKeyConfiguration(); }, []);
 
+  useEffect(() => {
+    if (voiceStatus === 'success' && transcript) {
+      setInputText(prev => prev.trim() ? `${prev.trim()} ${transcript}` : transcript);
+      resetVoiceInput();
+    }
+  }, [resetVoiceInput, transcript, voiceStatus]);
+
   const checkAPIKeyConfiguration = async () => {
     try {
-      const [storedKey, storedUrl] = await Promise.all([
-        AsyncStorage.getItem(AI_STORAGE_KEYS.apiKey),
-        AsyncStorage.getItem(AI_STORAGE_KEYS.baseUrl),
-      ]);
-      if (storedKey) {
-        setApiKey(storedKey);
-        AIConfig.initialize(storedKey, storedUrl ?? undefined);
-        setIsConfigured(true);
-        await loadWelcomeMessage();
+      const storedConfiguration = await AIConfig.refreshFromStorage();
+      if (storedConfiguration.apiKey) {
+        setApiKey(storedConfiguration.apiKey);
+        setIsConfigured(isAIConfigurationReady(storedConfiguration));
+        if (isAIConfigurationReady(storedConfiguration)) {
+          setConfigurationMessage(null);
+          setShowApiKeyInput(false);
+          await loadWelcomeMessage();
+          return;
+        }
+
+        setShowApiKeyInput(false);
+        setConfigurationMessage(
+          storedConfiguration.verificationStatus === 'rejected'
+            ? 'Your saved AI key was rejected. Update it in AI Settings before sending another message.'
+            : 'Your AI settings are saved but have not been verified yet. Open AI Settings to verify them.'
+        );
       } else {
+        setConfigurationMessage(null);
+        setIsConfigured(false);
         setShowApiKeyInput(true);
       }
     } catch (error) {
@@ -73,9 +101,36 @@ export default function AIGardenAssistant({
     }
     
     try {
-      await AsyncStorage.setItem(AI_STORAGE_KEYS.apiKey, apiKey.trim());
-      AIConfig.initialize(apiKey.trim());
+      const savedConfiguration = await saveAIConfiguration({
+        apiKey,
+        verificationStatus: 'unverified',
+      });
+      AIConfig.initialize(savedConfiguration.apiKey ?? '', savedConfiguration.baseUrl ?? undefined, savedConfiguration.model);
+      const verificationResult = await AIConfig.verifyConfiguration({
+        apiKey: savedConfiguration.apiKey,
+        baseUrl: savedConfiguration.baseUrl,
+        model: savedConfiguration.model,
+      });
+
+      if (!verificationResult.ok) {
+        if (verificationResult.code === 'unauthorized') {
+          await AIConfig.markUnverified('unauthorized');
+        } else if (verificationResult.code === 'network_error') {
+          await AIConfig.markUnverified('network_error');
+        } else if (verificationResult.code === 'rate_limited') {
+          await AIConfig.markUnverified('rate_limited');
+        } else {
+          await AIConfig.markUnverified('provider_error');
+        }
+        setIsConfigured(false);
+        setConfigurationMessage(verificationResult.message);
+        Alert.alert('Unable to Verify AI', verificationResult.message);
+        return;
+      }
+
+      await AIConfig.markVerified();
       setIsConfigured(true);
+      setConfigurationMessage(null);
       setShowApiKeyInput(false);
       await loadWelcomeMessage();
     } catch (error) {
@@ -136,9 +191,6 @@ I can see you have ${userSeeds.length} seeds in your collection. Feel free to as
     setIsLoading(true);
 
     try {
-      const client = AIConfig.getClient();
-      if (!client) throw new Error('AI client not configured');
-
       const context = getGardenContext();
       const contextualPrompt = `${GARDEN_AI_CONFIG.system_prompt}
 
@@ -157,9 +209,9 @@ Current user context:
         { role: 'user', content: userMessage.content },
       ];
 
-      const response = await client.chat.completions.create({
+      const response = await AIConfig.createChatCompletion({
         model: GARDEN_AI_CONFIG.model,
-        messages: messages as any,
+        messages: messages as { role: 'system' | 'user' | 'assistant'; content: string }[],
         temperature: GARDEN_AI_CONFIG.temperature,
         max_tokens: GARDEN_AI_CONFIG.max_tokens,
       });
@@ -167,7 +219,7 @@ Current user context:
       const assistantMessage: AIMessage = {
         id: `msg-${Date.now()}`,
         role: 'assistant',
-        content: response.choices[0]?.message?.content || 'I apologize, but I couldn\'t process your request. Please try again.',
+        content: response.content || 'I apologize, but I couldn\'t process your request. Please try again.',
         timestamp: new Date(),
       };
 
@@ -180,11 +232,17 @@ Current user context:
 
     } catch (error: any) {
       console.error('Error sending message:', error);
+      const aiError = AIConfig.sanitizeError(error);
+      if (aiError.code === 'unauthorized' || aiError.code === 'provider_error' || aiError.code === 'network_error') {
+        await AIConfig.markUnverified(aiError.code);
+        setIsConfigured(false);
+        setConfigurationMessage(aiError.message);
+      }
       
       const errorMessage: AIMessage = {
         id: `msg-${Date.now()}`,
         role: 'assistant',
-        content: `I apologize, but I encountered an error: ${error.message || 'Unknown error'}. Please check your API key and try again.`,
+        content: aiError.message,
         timestamp: new Date(),
       };
       
@@ -231,6 +289,29 @@ Current user context:
       </View>
     );
   };
+
+  const handleVoiceButtonPress = async () => {
+    if (voiceStatus === 'recording') {
+      await stopAndTranscribe();
+      return;
+    }
+
+    await startRecording();
+  };
+
+  const voiceStatusText = voiceStatus === 'recording'
+    ? 'Listening… tap stop when you are done.'
+    : voiceStatus === 'transcribing'
+      ? 'Processing your speech…'
+      : voiceError
+        ? voiceError
+        : !isVoiceSupported && Platform.OS === 'web'
+          ? 'Voice input is not available in this web build.'
+          : 'Tap the microphone to dictate into the chat input.';
+
+  const voiceButtonDisabled = !isConfigured || isLoading || voiceStatus === 'transcribing' || (!isVoiceSupported && Platform.OS === 'web');
+  const voiceButtonIcon = voiceStatus === 'recording' ? Square : Mic;
+  const voiceButtonLabel = voiceStatus === 'recording' ? 'Stop voice input' : 'Start voice input';
 
   if (showApiKeyInput) {
     return (
@@ -296,6 +377,21 @@ Current user context:
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {configurationMessage ? (
+          <View style={[styles.configurationBanner, { backgroundColor: colors.warning + '18', borderColor: colors.warning + '40' }]}>
+            <Text style={[styles.configurationBannerText, { color: colors.text }]}>
+              {configurationMessage}
+            </Text>
+            {onOpenSettings ? (
+              <Pressable
+                style={[styles.configurationBannerButton, { backgroundColor: colors.primary }]}
+                onPress={onOpenSettings}
+              >
+                <Text style={[styles.configurationBannerButtonText, { color: colors.background }]}>Open AI Settings</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         {conversation.map(renderMessage)}
         {isLoading && (
           <View style={[styles.loadingContainer, { backgroundColor: colors.surface }]}>
@@ -324,6 +420,40 @@ Current user context:
           onSubmitEditing={sendMessage}
           blurOnSubmit={false}
         />
+        <View style={styles.inputActions}>
+          <Pressable
+            style={[
+              styles.voiceButton,
+              {
+                backgroundColor: voiceStatus === 'recording' ? colors.error : colors.primary,
+                opacity: voiceButtonDisabled ? 0.5 : 1,
+              },
+            ]}
+            onPress={() => void handleVoiceButtonPress()}
+            disabled={voiceButtonDisabled}
+            accessibilityLabel={voiceButtonLabel}
+            accessibilityRole="button"
+          >
+            {voiceStatus === 'transcribing' ? (
+              <ActivityIndicator size="small" color={colors.background} />
+            ) : (
+              React.createElement(voiceButtonIcon, {
+                size: 18,
+                color: colors.background,
+              })
+            )}
+          </Pressable>
+          {voiceStatus === 'recording' ? (
+            <Pressable
+              style={[styles.cancelVoiceButton, { borderColor: colors.border }]}
+              onPress={() => void cancelRecording()}
+              accessibilityLabel="Cancel voice input"
+              accessibilityRole="button"
+            >
+              <X size={16} color={colors.textSecondary} />
+            </Pressable>
+          ) : null}
+        </View>
         <Pressable
           style={[styles.sendButton, { 
             backgroundColor: inputText.trim() ? colors.primary : colors.border
@@ -333,6 +463,17 @@ Current user context:
         >
           <Send size={20} color={inputText.trim() ? colors.background : colors.textSecondary} />
         </Pressable>
+      </View>
+      <View style={styles.voiceStatusContainer}>
+        <Text
+          style={[
+            styles.voiceStatusText,
+            { color: voiceError ? colors.error : colors.textSecondary },
+          ]}
+          accessibilityLiveRegion="polite"
+        >
+          {voiceStatusText}
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -408,6 +549,26 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  configurationBanner: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  configurationBannerText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  configurationBannerButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  configurationBannerButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   messageContainer: {
     padding: 12,
     borderRadius: 16,
@@ -459,11 +620,39 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     textAlignVertical: 'top',
   },
+  inputActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voiceButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelVoiceButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sendButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  voiceStatusContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  voiceStatusText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

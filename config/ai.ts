@@ -2,19 +2,119 @@
 import { Platform } from 'react-native';
 import OpenAI from 'openai';
 import { premiumManager } from '@/utils/premiumManager';
+import { supabase } from '@/lib/supabase';
+import {
+  AI_STORAGE_KEYS,
+  inferAIProvider,
+  isAIConfigurationReady,
+  loadAIConfiguration,
+  normalizeAIBaseUrl,
+  normalizeAIModel,
+  type AIConfigurationErrorCode,
+  type ResolvedAIConfiguration,
+  updateAIConfigurationVerification,
+} from './aiStorage';
 
 // Storage keys for AI credentials.
 // API key is kept in SecureStore (encrypted); base URL is non-sensitive so AsyncStorage is fine.
-export const AI_STORAGE_KEYS = {
-  apiKey: 'ai_api_key',       // SecureStore
-  baseUrl: 'ai_base_url',     // AsyncStorage
-} as const;
+export { AI_STORAGE_KEYS };
+
+export type { AIConfigurationErrorCode, ResolvedAIConfiguration } from './aiStorage';
+
+export interface AIConnectionResult {
+  ok: boolean;
+  code?: AIConfigurationErrorCode;
+  message: string;
+}
+
+type AIChatCompletionMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+};
+
+interface AIChatCompletionRequest {
+  messages: AIChatCompletionMessage[];
+  model?: string | null;
+  temperature?: number;
+  max_tokens?: number;
+  apiKey?: string | null;
+  baseUrl?: string | null;
+}
+
+type OpenAIErrorShape = {
+  status?: number;
+  message?: string;
+  code?: string;
+  error?: {
+    message?: string;
+    code?: string;
+    type?: string;
+  };
+};
+
+const AI_PING_MESSAGE = [{ role: 'user' as const, content: 'ping' }];
+
+function buildClientSignature(config: Pick<ResolvedAIConfiguration, 'apiKey' | 'baseUrl' | 'model' | 'provider'>): string | null {
+  if (!config.apiKey) {
+    return null;
+  }
+
+  return JSON.stringify({
+    apiKey: config.apiKey,
+    baseUrl: config.baseUrl,
+    model: config.model,
+    provider: config.provider,
+  });
+}
+
+function sanitizeOpenAIError(error: unknown): AIConnectionResult {
+  const candidate = error as OpenAIErrorShape;
+  const status = candidate.status;
+  const message = (candidate.error?.message ?? candidate.message ?? '').toLowerCase();
+  const code = (candidate.error?.code ?? candidate.code ?? '').toLowerCase();
+
+  if (status === 401 || message.includes('401') || code.includes('invalid_api_key')) {
+    return {
+      ok: false,
+      code: 'unauthorized',
+      message: 'Your AI provider rejected the saved API key. Update it in AI Settings and try again.',
+    };
+  }
+
+  if (status === 429 || message.includes('rate limit')) {
+    return {
+      ok: false,
+      code: 'rate_limited',
+      message: 'The AI provider is rate limiting requests right now. Please wait a moment and try again.',
+    };
+  }
+
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return {
+      ok: false,
+      code: 'network_error',
+      message: 'The AI provider could not be reached. Check your connection or provider URL and try again.',
+    };
+  }
+
+  return {
+    ok: false,
+    code: 'provider_error',
+    message: 'The AI provider could not verify the saved configuration. Review the provider URL and API key in AI Settings.',
+  };
+}
+
+function shouldUseWebOpenAIRelay(
+  config: Pick<ResolvedAIConfiguration, 'baseUrl' | 'provider'> | { baseUrl?: string | null; provider?: 'openai' | 'custom' }
+): boolean {
+  return Platform.OS === 'web' && !normalizeAIBaseUrl(config.baseUrl ?? null) && (config.provider ?? 'openai') === 'openai';
+}
 
 // OpenAI Configuration
 export class AIConfig {
   private static openai: OpenAI | null = null;
-  private static apiKey: string | null = null;
-  private static baseUrl: string | null = null;
+  private static clientSignature: string | null = null;
+  private static runtimeConfig: ResolvedAIConfiguration | null = null;
 
   /**
    * Initialize the AI client.
@@ -23,26 +123,197 @@ export class AIConfig {
    *               (e.g. http://localhost:11434/v1 for Ollama,
    *                     http://localhost:1234/v1 for LM Studio)
    */
-  static initialize(apiKey: string, baseUrl?: string) {
-    this.apiKey = apiKey;
-    this.baseUrl = baseUrl || null;
-    this.openai = new OpenAI({
-      apiKey: apiKey,
-      ...(baseUrl ? { baseURL: baseUrl } : {}),
-      dangerouslyAllowBrowser: true,
-    });
+  static initialize(apiKey: string, baseUrl?: string, model?: string | null) {
+    const normalizedKey = apiKey.trim();
+    const normalizedBaseUrl = normalizeAIBaseUrl(baseUrl);
+    const normalizedModel = normalizeAIModel(model);
+
+    this.runtimeConfig = {
+      ...(this.runtimeConfig ?? {
+        provider: inferAIProvider(normalizedBaseUrl),
+        baseUrl: null,
+        model: null,
+        verificationStatus: 'unverified',
+        verifiedAt: null,
+        lastErrorCode: null,
+        apiKey: null,
+        hasApiKey: false,
+      }),
+      provider: inferAIProvider(normalizedBaseUrl),
+      baseUrl: normalizedBaseUrl,
+      model: normalizedModel,
+      apiKey: normalizedKey || null,
+      hasApiKey: !!normalizedKey,
+    };
+    this.invalidateClient();
   }
 
   static getClient(): OpenAI | null {
+    if (!this.runtimeConfig?.apiKey) {
+      return null;
+    }
+
+    const nextSignature = buildClientSignature(this.runtimeConfig);
+    if (!nextSignature) {
+      return null;
+    }
+
+    if (!this.openai || this.clientSignature !== nextSignature) {
+      this.openai = new OpenAI({
+        apiKey: this.runtimeConfig.apiKey,
+        ...(this.runtimeConfig.baseUrl ? { baseURL: this.runtimeConfig.baseUrl } : {}),
+        dangerouslyAllowBrowser: true,
+      });
+      this.clientSignature = nextSignature;
+    }
+
     return this.openai;
   }
 
   static isConfigured(): boolean {
-    return this.openai !== null && this.apiKey !== null;
+    return !!this.runtimeConfig && isAIConfigurationReady(this.runtimeConfig);
   }
 
   static getBaseUrl(): string | null {
-    return this.baseUrl;
+    return this.runtimeConfig?.baseUrl ?? null;
+  }
+
+  static getRuntimeConfig(): ResolvedAIConfiguration | null {
+    return this.runtimeConfig;
+  }
+
+  static invalidateClient() {
+    this.openai = null;
+    this.clientSignature = null;
+  }
+
+  static async refreshFromStorage(): Promise<ResolvedAIConfiguration> {
+    const storedConfiguration = await loadAIConfiguration();
+    this.runtimeConfig = storedConfiguration;
+    this.invalidateClient();
+    return storedConfiguration;
+  }
+
+  static async markVerified(): Promise<ResolvedAIConfiguration> {
+    const nextConfig = await updateAIConfigurationVerification('verified');
+    this.runtimeConfig = nextConfig;
+    this.invalidateClient();
+    return nextConfig;
+  }
+
+  static async markUnverified(
+    code: AIConfigurationErrorCode
+  ): Promise<ResolvedAIConfiguration> {
+    const status = code === 'unauthorized' ? 'rejected' : 'unverified';
+    const nextConfig = await updateAIConfigurationVerification(status, code);
+    this.runtimeConfig = nextConfig;
+    this.invalidateClient();
+    return nextConfig;
+  }
+
+  static async verifyConfiguration(input?: {
+    apiKey?: string | null;
+    baseUrl?: string | null;
+    model?: string | null;
+  }): Promise<AIConnectionResult> {
+    const apiKey = input?.apiKey?.trim() ?? this.runtimeConfig?.apiKey ?? null;
+    if (!apiKey) {
+      return {
+        ok: false,
+        message: 'An API key is required before AI can be verified.',
+      };
+    }
+
+    const baseUrl = normalizeAIBaseUrl(input?.baseUrl ?? this.runtimeConfig?.baseUrl ?? null);
+    const model = normalizeAIModel(input?.model ?? this.runtimeConfig?.model ?? GARDEN_AI_CONFIG.model);
+    const client = new OpenAI({
+      apiKey,
+      ...(baseUrl ? { baseURL: baseUrl } : {}),
+      dangerouslyAllowBrowser: true,
+    });
+
+    try {
+      const provider = inferAIProvider(baseUrl);
+      if (shouldUseWebOpenAIRelay({ baseUrl, provider })) {
+        await this.createChatCompletion({
+          apiKey,
+          baseUrl,
+          model,
+          max_tokens: 5,
+          messages: AI_PING_MESSAGE,
+        });
+      } else {
+        await client.chat.completions.create({
+          model: model ?? GARDEN_AI_CONFIG.model,
+          max_tokens: 5,
+          messages: AI_PING_MESSAGE,
+        });
+      }
+      return { ok: true, message: 'AI provider verified successfully.' };
+    } catch (error) {
+      return sanitizeOpenAIError(error);
+    }
+  }
+
+  static sanitizeError(error: unknown): AIConnectionResult {
+    return sanitizeOpenAIError(error);
+  }
+
+  static async createChatCompletion({
+    messages,
+    model,
+    temperature,
+    max_tokens,
+    apiKey,
+    baseUrl,
+  }: AIChatCompletionRequest): Promise<{ content: string }> {
+    const resolvedApiKey = apiKey?.trim() ?? this.runtimeConfig?.apiKey ?? null;
+    const resolvedBaseUrl = normalizeAIBaseUrl(baseUrl ?? this.runtimeConfig?.baseUrl ?? null);
+    const resolvedModel = normalizeAIModel(model ?? this.runtimeConfig?.model ?? GARDEN_AI_CONFIG.model) ?? GARDEN_AI_CONFIG.model;
+    const provider = inferAIProvider(resolvedBaseUrl);
+
+    if (!resolvedApiKey) {
+      throw new Error('AI client not configured');
+    }
+
+    if (shouldUseWebOpenAIRelay({ baseUrl: resolvedBaseUrl, provider })) {
+      const { data, error } = await supabase.functions.invoke('ai-openai-relay', {
+        body: {
+          apiKey: resolvedApiKey,
+          messages,
+          model: resolvedModel,
+          temperature,
+          max_tokens,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (typeof data?.content !== 'string' || !data.content.trim()) {
+        throw new Error('The AI provider returned an empty response.');
+      }
+
+      return { content: data.content };
+    }
+
+    const client = new OpenAI({
+      apiKey: resolvedApiKey,
+      ...(resolvedBaseUrl ? { baseURL: resolvedBaseUrl } : {}),
+      dangerouslyAllowBrowser: true,
+    });
+
+    const response = await client.chat.completions.create({
+      model: resolvedModel,
+      messages,
+      ...(typeof temperature === 'number' ? { temperature } : {}),
+      ...(typeof max_tokens === 'number' ? { max_tokens } : {}),
+    });
+
+    return {
+      content: response.choices[0]?.message?.content ?? '',
+    };
   }
 }
 

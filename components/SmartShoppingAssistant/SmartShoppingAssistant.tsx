@@ -8,14 +8,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { ShoppingCart, ExternalLink, Star, TrendingUp, Calendar } from 'lucide-react-native';
-import { useAuth } from '@/lib/auth';
+import { ShoppingCart, Star, TrendingUp, Calendar } from 'lucide-react-native';
 import { useTheme } from '@/lib/theme';
 import { ShoppingRecommendation, AIGardenContext } from '@/types/ai';
 import { Seed, Supplier } from '@/types/database';
 import { AIConfig, SHOPPING_AI_CONFIG } from '@/config/ai';
-import { supabase } from '@/lib/supabase';
-import { guestDataManager } from '@/utils/guestDataManager';
+import { isAIConfigurationReady } from '@/config/aiStorage';
 
 interface SmartShoppingAssistantProps {
   userSeeds: Seed[];
@@ -28,7 +26,6 @@ export default function SmartShoppingAssistant({
   userSuppliers,
   location,
 }: SmartShoppingAssistantProps) {
-  const { session } = useAuth();
   const { colors } = useTheme();
   
   const [recommendations, setRecommendations] = useState<ShoppingRecommendation[]>([]);
@@ -45,9 +42,8 @@ export default function SmartShoppingAssistant({
     setIsLoading(true);
     
     try {
-      const client = AIConfig.getClient();
-      if (!client) {
-        // Fallback to basic recommendations if no AI configured
+      const runtimeConfig = AIConfig.getRuntimeConfig() ?? await AIConfig.refreshFromStorage();
+      if (!isAIConfigurationReady(runtimeConfig)) {
         setRecommendations(getFallbackRecommendations());
         setLastUpdated(new Date());
         return;
@@ -56,7 +52,7 @@ export default function SmartShoppingAssistant({
       const context = buildShoppingContext();
       const prompt = buildShoppingPrompt(context);
 
-      const response = await client.chat.completions.create({
+      const response = await AIConfig.createChatCompletion({
         model: SHOPPING_AI_CONFIG.model,
         messages: [
           { role: 'system', content: SHOPPING_AI_CONFIG.system_prompt },
@@ -66,7 +62,7 @@ export default function SmartShoppingAssistant({
         max_tokens: SHOPPING_AI_CONFIG.max_tokens,
       });
 
-      const content = response.choices[0]?.message?.content;
+      const content = response.content;
       if (!content) throw new Error('No recommendations received');
 
       // Try to parse JSON response — strip markdown code fences GPT often adds
@@ -313,7 +309,7 @@ Return as JSON array with format:
           Build Your Garden First
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          Add some seeds to your inventory and I'll suggest complementary varieties to purchase.
+          Add some seeds to your inventory and I&apos;ll suggest complementary varieties to purchase.
         </Text>
       </View>
     );
