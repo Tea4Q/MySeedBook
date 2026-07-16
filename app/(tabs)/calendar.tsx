@@ -575,16 +575,21 @@ export default function CalendarScreen() {
       seedId,
       seedName,
       date,
+      category,
+      notes,
     }: {
       seedId?: string;
       seedName?: string;
       date?: Date;
+      category?: EventCategory;
+      notes?: string;
     }) => {
       setNewEvent({
-        category: 'sow',
+        category: category || 'sow',
         date: date || selectedDate || new Date(),
         seedId: seedId || '',
         seedName: seedName || '',
+        notes: notes || '',
       });
       setShowSeedDropdown(false);
       setIsAddEventModalVisible(true);
@@ -602,16 +607,24 @@ export default function CalendarScreen() {
   // ── Deep-link params ───────────────────────────────────────────────────────
   useEffect(() => {
     let shouldClear = false;
+    const suggestedDate = typeof params.suggestedDate === 'string' ? new Date(params.suggestedDate) : undefined;
+    const parsedDate = suggestedDate && !Number.isNaN(suggestedDate.getTime()) ? suggestedDate : undefined;
     if (params.openAddEvent === 'true') {
       openAddEventModal({
         seedId: params.seedId as string,
         seedName: params.seedName as string,
+        date: parsedDate,
+        category: params.category as EventCategory | undefined,
+        notes: typeof params.notes === 'string' ? params.notes : undefined,
       });
       shouldClear = true;
     } else if (params.seedId && params.seedName) {
       openAddEventModal({
         seedId: params.seedId as string,
         seedName: params.seedName as string,
+        date: parsedDate,
+        category: params.category as EventCategory | undefined,
+        notes: typeof params.notes === 'string' ? params.notes : undefined,
       });
       shouldClear = true;
     }
@@ -620,9 +633,12 @@ export default function CalendarScreen() {
         openAddEvent: undefined,
         seedId: undefined,
         seedName: undefined,
+        category: undefined,
+        notes: undefined,
+        suggestedDate: undefined,
       });
     }
-  }, [params.openAddEvent, params.seedId, params.seedName, openAddEventModal]);
+  }, [params.openAddEvent, params.seedId, params.seedName, params.category, params.notes, params.suggestedDate, openAddEventModal]);
 
   // ── Calendar grid days ─────────────────────────────────────────────────────
   const days = eachDayOfInterval({

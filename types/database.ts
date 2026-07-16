@@ -21,6 +21,7 @@ export interface Seed {
   type: string;
   quantity: number;
   quantity_unit?: string;
+  source?: string | null;
   supplier_id?: string;
   date_purchased: Date | null | undefined;
   indoor_sow_date?: Date | null | undefined;
@@ -184,6 +185,7 @@ export interface PlantingLog {
   seed_location_id?: string | null;
   logged_at: string;
   image_url?: string | null;
+  result?: string | null;
   notes?: string | null;
 }
 

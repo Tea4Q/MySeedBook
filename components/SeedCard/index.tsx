@@ -13,7 +13,6 @@ import {
   Edit3,
   Tally4,
   Trash2,
-  Truck,
   Leaf,
   Flower2,
   Wheat,
@@ -26,6 +25,11 @@ import SeedImageCarousel from '@/components/SeedImageCarousel';
 import { Seed } from '@/types/database';
 import { useTheme } from '@/lib/theme';
 import { spacing, radius, shadows, fontFamily, fontSize } from '@/lib/tokens';
+import {
+  getSeedPacketInsight,
+  getSeedQuantityLabel,
+  getSeedProvenanceLabel,
+} from '@/lib/services/seedCabinetService';
 
 interface SeedCardProps {
   seed: Seed;
@@ -87,9 +91,6 @@ function getSeedFallbackImageUri(seed: Seed): string {
   return 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=400&h=400&fit=crop&crop=center&auto=format&q=60';
 }
 
-/**
- * Resolves the best image URI for a seed. Falls back to an Unsplash image by type.
- */
 function getSeedImageUri(seed: Seed): string {
   const imageUris = getSeedImageUris(seed);
   return imageUris[0] ?? getSeedFallbackImageUri(seed);
@@ -121,6 +122,13 @@ export function SeedCard({
   const seedImageUris = getSeedImageUris(seed);
   const hasUploadedImages = seedImageUris.length > 0;
   const imageUri = getSeedImageUri(seed);
+  const insight = getSeedPacketInsight(seed);
+
+  const supplierName = seed.suppliers?.supplier_name?.trim();
+  const sourceValue = getSeedProvenanceLabel({
+    supplierName: supplierName || seed.supplier_id,
+    source: seed.source,
+  });
 
   return (
     <>
@@ -136,7 +144,6 @@ export function SeedCard({
         ]}
         onPress={onPress}
       >
-        {/* Image */}
         <Pressable
           style={styles.imageContainer}
           onPress={hasUploadedImages ? () => setIsCarouselVisible(true) : undefined}
@@ -159,7 +166,6 @@ export function SeedCard({
           )}
         </Pressable>
 
-        {/* Main content */}
         <View style={styles.content}>
           <View style={styles.nameRow}>
             <Text style={[styles.seedName, { color: colors.text, fontFamily: fontFamily.bold }]}>
@@ -171,6 +177,26 @@ export function SeedCard({
                 {seed.type}
               </Text>
             </View>
+          </View>
+
+          <View style={[styles.statusStrip, { backgroundColor: colors.surface }]}>
+            <View
+              style={[
+                styles.statusBadge,
+                insight.status === 'low-viability' && { backgroundColor: colors.error },
+                insight.status === 'use-soon' && { backgroundColor: colors.warning },
+                insight.status === 'fresh' && { backgroundColor: colors.success },
+              ]}
+            >
+              <Text style={[styles.statusText, { color: '#fff', fontFamily: fontFamily.semiBold }]}>
+                {insight.label}
+              </Text>
+            </View>
+            {seed.date_purchased ? (
+              <Text style={[styles.statusSubtitle, { color: colors.textSecondary, fontFamily: fontFamily.medium }]}>
+                Purchased {new Date(seed.date_purchased).toLocaleDateString()}
+              </Text>
+            ) : null}
           </View>
 
           <ScrollView
@@ -188,33 +214,32 @@ export function SeedCard({
           </ScrollView>
         </View>
 
-        {/* Bottom detail strip */}
         <View style={styles.bottom}>
           <View style={[styles.detailStrip, { backgroundColor: colors.surface }]}>
             <View style={styles.detailRow}>
-              <Tally4 size={14} color={colors.textSecondary} />
-              <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: fontFamily.medium }]}>
-                Quantity:
-              </Text>
-              <Text style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]}>
-                {seed.quantity} {seed.quantity_unit}
-              </Text>
-            </View>
-            {seed.suppliers && (
-              <View style={styles.detailRow}>
-                <Truck size={14} color={colors.textSecondary} />
+              <View style={styles.detailLeft}>
+                <Tally4 size={14} color={colors.textSecondary} />
                 <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: fontFamily.medium }]}>
-                  Supplier:
-                </Text>
-                <Text
-                  style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {seed.suppliers.supplier_name}
+                  Quantity
                 </Text>
               </View>
-            )}
+              <Text style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]}>
+                {getSeedQuantityLabel(seed.quantity, seed.quantity_unit)}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailLeft}>
+                <Leaf size={14} color={colors.textSecondary} />
+                <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: fontFamily.medium }]}>
+                  Source
+                </Text>
+              </View>
+              <Text style={[styles.detailValue, { color: colors.text, fontFamily: fontFamily.semiBold }]} numberOfLines={1}>
+                {sourceValue}
+              </Text>
+            </View>
+
             <View style={styles.seasonRow}>
               <View style={[styles.seasonTag, { backgroundColor: colors.success }]}>
                 <Text style={[styles.seasonText, { color: '#fff', fontFamily: fontFamily.semiBold }]}>
@@ -229,17 +254,13 @@ export function SeedCard({
             </View>
           </View>
 
-          {/* Web action buttons */}
           {Platform.OS === 'web' && onEdit && onDelete && (
             <View style={[styles.webActions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.webHint, { color: colors.textSecondary, fontFamily: fontFamily.regular }]}>
-                Double-click for calendar · Swipe or use buttons below
+                Click to view details · Double-click for calendar · Swipe or use buttons below
               </Text>
               <View style={styles.webButtonRow}>
-                <Pressable
-                  style={[styles.webBtn, { backgroundColor: colors.warning }]}
-                  onPress={onEdit}
-                >
+                <Pressable style={[styles.webBtn, { backgroundColor: colors.warning }]} onPress={onEdit}>
                   <Edit3 size={15} color="#fff" />
                   <Text style={[styles.webBtnText, { fontFamily: fontFamily.medium }]}>Edit</Text>
                 </Pressable>
@@ -260,7 +281,6 @@ export function SeedCard({
           )}
         </View>
 
-        {/* Chevron — mobile non-tablet only */}
         {Platform.OS !== 'web' && !isTablet && (
           <ChevronRight size={24} color={colors.textSecondary} style={styles.chevron} />
         )}
@@ -333,6 +353,28 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: fontSize.sm,
   },
+  statusStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  statusBadge: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  statusText: {
+    fontSize: fontSize.xs,
+  },
+  statusSubtitle: {
+    fontSize: fontSize.xs,
+    flexShrink: 1,
+  },
   descriptionScroll: {
     flex: 1,
     maxHeight: 200,
@@ -346,9 +388,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     lineHeight: fontSize.md * 1.4,
   },
-  bottom: {},
+  bottom: {
+    marginTop: spacing.md,
+  },
   detailStrip: {
     margin: spacing.sm,
+    marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radius.md,
     gap: spacing.sm,
@@ -356,14 +401,20 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  detailLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
+    minWidth: 110,
   },
   detailLabel: {
     fontSize: fontSize.sm,
   },
   detailValue: {
     fontSize: fontSize.sm,
-    marginLeft: 'auto',
     flex: 1,
     textAlign: 'right',
   },

@@ -1,5 +1,29 @@
 # June 2026
 
+## v1.4.1 — Phase 2 MCP Server (July 15, 2026)
+
+### MCP Endpoint
+- Added `/api/mcp` as the Vercel serverless MCP entrypoint.
+- The endpoint authenticates MySeedBook MCP tokens from `mcp_tokens`, updates `last_used_at`, and serves the Phase 2 seed, supplier, care-log, and garden-summary tools.
+- Added MCP resource reads for `myseedbook://inventory`, `myseedbook://low-stock`, and `myseedbook://calendar`.
+
+### Deployment Routing
+- Updated Vercel rewrites so `/api/*` is preserved for serverless routes instead of being swallowed by the Expo web fallback.
+
+### Seed Card Detail Layout (UI Polish)
+- Updated inventory `SeedCard` detail rows so the first row is now **Quantity** (label + icon on the left, value on the right).
+- Moved provenance display into a dedicated **Source** row directly under Quantity for clearer scanning.
+- Removed duplicate provenance presentation by eliminating the separate supplier detail row.
+- Source now resolves from a single provenance value (supplier name when present, otherwise gift/swap/manual source text).
+- Added spacing between description content and the detail strip for better visual separation.
+
+## v1.4.1 — Phase 1 Bug Fixes & Vercel Web Deployment (June 15, 2026)
+
+### Seed Entry Flexibility
+- Added support for entering seed packets with either a selected supplier or a manual provenance/source value.
+- The inventory experience now displays a shared provenance label so packet source information stays consistent across cards and search.
+- Seed payloads now persist the optional `source` value alongside existing supplier-based data.
+
 ## v1.4.1 — Phase 1 Bug Fixes & Vercel Web Deployment (June 6, 2026)
 
 *Branch: `feature/v1.4.0-v1.4.1-phase1`*

@@ -11,10 +11,11 @@ A comprehensive digital gardening companion built with Expo and React Native. Tr
 - **Unified Experience**: Consistent functionality across all platforms
 
 ### 🌿 Seed Management
-- **Digital Inventory**: Track seed varieties, quantities, and suppliers
+- **Digital Inventory**: Track seed varieties, quantities, and packet provenance
+- **Flexible Seed Entry**: Save a packet with either a supplier or a manual provenance/source note such as a gift, swap, or saved seed
 - **Rich Descriptions**: Scrollable text areas with detailed growing information
 - **Visual Organization**: Color-coded seed types with intuitive icons
-- **Search & Filter**: Quick discovery of seeds in your collection
+- **Search & Filter**: Quick discovery of seeds in your collection by name, type, or provenance
 - **Barcode Scanner** (Premium): Scan seed package barcodes for quick inventory entry
 - **Flexible Web Image Input**: Add images by file picker, clipboard paste, or drag-and-drop
 - **Broad Image Format Support**: JPG, PNG, GIF, WebP, and AVIF on web flows

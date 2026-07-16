@@ -26,7 +26,9 @@
 
 ## 🚀 v1.4.0 — Notifications & Inventory Intelligence (Q3 2026)
 
-> **Phase 1 foundation complete (May 15, 2026):** Database schema, TypeScript types, feature flags, `useNotifications` hook, and `expo-notifications` integration all done on `feature/v1.4.0-v1.4.1-phase1`. UI screens to follow.
+> **Phase 1 foundation complete (May 15, 2026):** Database schema, TypeScript types, feature flags, `useNotifications` hook, and `expo-notifications` integration all done on `feature/v1.4.0-v1.4.1-phase1`.
+
+> **Phase 2 — Planting notifications UI:** build the planting reminders screen, low-stock alerts UI, and notification settings on top of the foundation above.
 
 > Build on the existing calendar and inventory infrastructure. All features use a feature flag in `config/` while in development; no long-lived branch needed.
 
@@ -58,9 +60,9 @@
 - [x] 🤖 `ENV.mcp.endpoint` constant in `config/env.ts`
 
 ### Phase 2 — MCP Server (requires Vercel subscription)
-- [ ] 🤖 Vercel Serverless Function implementing Streamable HTTP MCP transport
-- [ ] 🤖 MCP tools: `list_seeds`, `get_seed`, `add_seed`, `update_seed`, `delete_seed`, `list_harvest_yields`, `log_harvest_yield`, `log_watering`, `log_fertilizer`, `get_garden_summary`
-- [ ] 🤖 MCP resources: `myseedbook://inventory`, `myseedbook://low-stock`, `myseedbook://calendar`
+- [x] 🤖 Vercel Serverless Function implementing Streamable HTTP MCP transport
+- [x] 🤖 MCP tools: `list_seeds`, `get_seed`, `add_seed`, `update_seed`, `delete_seed`, `list_harvest_yields`, `log_harvest_yield`, `log_watering`, `log_fertilizer`, `get_garden_summary`
+- [x] 🤖 MCP resources: `myseedbook://inventory`, `myseedbook://low-stock`, `myseedbook://calendar`
 
 ### Phase 3 — In-app token management UI
 - [ ] 🤖 Token generation screen in `AISettingsPanel` (name, scope, optional expiry)

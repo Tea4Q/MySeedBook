@@ -34,7 +34,8 @@ This document outlines the comprehensive UI improvements made to the inventory s
 #### Improved Content Organization
 - **Seed Names**: Full names display with proper text wrapping
 - **Type Icons**: Color-coded seed type indicators with proper spacing
-- **Details Section**: Quantity, supplier, and season info positioned at card bottom
+- **Details Section**: Quantity and Source rows (with season tags) positioned at card bottom
+- **Provenance Display**: Source now renders once using a unified value (supplier name when present, otherwise gift/swap/manual source text)
 - **Action Elements**: Edit/delete functionality placed logically at bottom
 
 ### 3. Platform-Specific Interactions
@@ -118,6 +119,7 @@ const getResponsiveConfig = () => {
 
 ### Key Files Modified
 - `app/(tabs)/index.tsx` - Main inventory screen with enhanced layout
+- `components/SeedCard/index.tsx` - Seed card detail strip and provenance row alignment
 - `utils/responsive.ts` - Responsive utility system for device detection
 - `docs/TABLET_SUPPORT.md` - Updated documentation for responsive system
 

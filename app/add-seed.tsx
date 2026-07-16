@@ -280,7 +280,7 @@ export default function AddOrEditSeedScreen() {
       type: '',
       description: '',
       quantity: 0,
-      quantity_unit: 'seeds',
+      quantity_unit: 'packages',
       supplier_id: '',
       date_purchased: undefined,
       indoor_sow_date: undefined,
@@ -388,8 +388,9 @@ export default function AddOrEditSeedScreen() {
       type: '',
       description: '',
       quantity: 0,
-      quantity_unit: 'seeds',
+      quantity_unit: 'packages',
       supplier_id: '',
+      source: '',
       date_purchased: undefined,
       indoor_sow_date: undefined,
       transplant_date: undefined,
@@ -545,6 +546,7 @@ export default function AddOrEditSeedScreen() {
         (isValidUUID(seedPackage.supplier_id) || seedPackage.supplier_id.startsWith('sample-supplier-'))
         ? seedPackage.supplier_id 
         : null,
+      source: seedPackage.source?.trim() || null,
     };
 
     const sanitizedPayload = sanitizeForPostgres(payload);
@@ -992,7 +994,12 @@ export default function AddOrEditSeedScreen() {
     if (!seedPackage.quantity || seedPackage.quantity <= 0)
       newErrors.quantity = 'Quantity must be greater than 0';
     if (!seedPackage.type) newErrors.type = 'Seed type is required';
-    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
+
+    const hasSupplier = Boolean(seedPackage.supplier_id);
+    const hasSource = Boolean(seedPackage.source?.trim());
+    if (!hasSupplier && !hasSource) {
+      newErrors.supplier = 'Please add a supplier or enter a provenance/source value';
+    }
     
     // Validate supplier_id format - allow sample IDs for guest users
     if (seedPackage.supplier_id) {
@@ -1063,7 +1070,13 @@ export default function AddOrEditSeedScreen() {
 
   const validateStep2 = (): Record<string, string> => {
     const newErrors: Record<string, string> = {};
-    if (!seedPackage.supplier_id) newErrors.supplier = 'Supplier is required';
+    const hasSupplier = Boolean(seedPackage.supplier_id);
+    const hasSource = Boolean(seedPackage.source?.trim());
+
+    if (!hasSupplier && !hasSource) {
+      newErrors.supplier = 'Please add a supplier or enter a provenance/source value';
+    }
+
     if (seedPackage.supplier_id) {
       const isSampleId = seedPackage.supplier_id.startsWith('sample-supplier-');
       if (!isValidUUID(seedPackage.supplier_id) && !isSampleId) {
@@ -1316,7 +1329,7 @@ export default function AddOrEditSeedScreen() {
           <View style={styles.quantityPriceRow}>
             {/* Quantity Input */}
             <View ref={quantityFieldRef} style={[styles.inputGroup, styles.quantityInput]}>
-              <Text style={[styles.label, { color: colors.text }]}>Quantity *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Packet count *</Text>
               <TextInput
                 style={[styles.input, errors.quantity && styles.inputError, { 
                   backgroundColor: colors.inputBackground,
@@ -1331,7 +1344,7 @@ export default function AddOrEditSeedScreen() {
                     quantity: isNaN(num) ? 0 : num,
                   }));
                 }}
-                placeholder="0"
+                placeholder="1"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
               />
@@ -1382,6 +1395,7 @@ export default function AddOrEditSeedScreen() {
               />
             </View>
           </View>
+
           </>)}
 
           {/* Step 3: Seed Schedule — planting reminders */}
@@ -1599,14 +1613,31 @@ export default function AddOrEditSeedScreen() {
 
             {/* Supplier Selection */}
             <View ref={supplierFieldRef} style={[styles.inputGroup, styles.supplierInput]}>
-              <Text style={[styles.label, { color: colors.text }]}>Supplier *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Supplier or provenance</Text>
               <Text style={[styles.helpText, { color: colors.textSecondary }]}>
-                💡 Type to search or add new supplier
+                💡 Pick a supplier or enter where this packet came from
+              </Text>
+              <Text style={[styles.helpText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+                New: you can save packets from gifts, swaps, or saved seed even without a supplier.
               </Text>
               <SupplierInput
                 onSelect={handleSupplierSelect}
                 selectedSupplier={selectedSupplier}
                 placeholder="Type supplier name..."
+              />
+              <TextInput
+                style={[styles.input, styles.sourceInput, {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                }]}
+                value={seedPackage.source || ''}
+                onChangeText={(text: string) => {
+                  setSeedPackage((prev) => ({ ...prev, source: text }));
+                }}
+                placeholder="e.g. Gift from grandma, saved from last year"
+                placeholderTextColor={colors.textSecondary}
+                multiline
               />
               {errors.supplier && <Text style={[styles.errorText, { color: colors.error }]}>{errors.supplier}</Text>}
             </View>
@@ -2377,6 +2408,10 @@ const styles = StyleSheet.create({
   supplierInput: {
     flex: 1,
     minWidth: 150, // Ensure adequate space for supplier
+  },
+  sourceInput: {
+    marginTop: 8,
+    minHeight: 44,
   },
   voiceRow: {
     flexDirection: 'row',

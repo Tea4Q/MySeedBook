@@ -42,6 +42,7 @@
 - [x] Fixed calendar event creation with proper user ID association (August 2025)
 - [x] Android orientation handling for responsive design (August 2025)
 - [x] Image URL handling for seed suppliers (RareSeeds, Burpee)
+- [x] SeedCard detail strip now shows Quantity and Source rows with right-aligned values, and removes duplicate supplier output
 - [ ] Add onboarding flow for new users
 - [ ] Implement proper form validation feedback
 - [ ] Add keyboard navigation support
