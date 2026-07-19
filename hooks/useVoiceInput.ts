@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { transcribeAudio } from '../lib/voice/transcription';
 
@@ -25,8 +25,10 @@ export interface UseVoiceInputResult {
   status: VoiceInputStatus;
   transcript: string | null;
   error: string | null;
+  isSupported: boolean;
   startRecording: () => Promise<void>;
   stopAndTranscribe: () => Promise<void>;
+  cancelRecording: () => Promise<void>;
   reset: () => void;
 }
 
@@ -35,8 +37,30 @@ export function useVoiceInput(): UseVoiceInputResult {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recordingRef = useRef<any>(null);
+  const isSupported = Platform.OS !== 'web';
+
+  useEffect(() => {
+    return () => {
+      const recording = recordingRef.current;
+      if (!recording) {
+        return;
+      }
+
+      recordingRef.current = null;
+      recording.stopAndUnloadAsync().catch(() => {});
+
+      const Audio = getAudio();
+      if (Audio) {
+        Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+      }
+    };
+  }, []);
 
   const startRecording = async () => {
+    if (recordingRef.current) {
+      return;
+    }
+
     if (Platform.OS === 'web') {
       setError('Voice input is not supported on web.');
       setStatus('error');
@@ -79,16 +103,17 @@ export function useVoiceInput(): UseVoiceInputResult {
   };
 
   const stopAndTranscribe = async () => {
-    if (!recordingRef.current) return;
+    const recording = recordingRef.current;
+    if (!recording) return;
 
     const Audio = getAudio();
 
     try {
       setStatus('transcribing');
-      await recordingRef.current.stopAndUnloadAsync();
-      if (Audio) await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      const uri = recordingRef.current.getURI();
       recordingRef.current = null;
+      await recording.stopAndUnloadAsync();
+      if (Audio) await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = recording.getURI();
 
       if (!uri) throw new Error('Recording URI unavailable.');
 
@@ -103,11 +128,40 @@ export function useVoiceInput(): UseVoiceInputResult {
     }
   };
 
+  const cancelRecording = async () => {
+    const recording = recordingRef.current;
+    if (!recording) {
+      reset();
+      return;
+    }
+
+    const Audio = getAudio();
+
+    try {
+      recordingRef.current = null;
+      await recording.stopAndUnloadAsync();
+      if (Audio) await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    } catch {
+      // Ignore cleanup errors while cancelling.
+    } finally {
+      reset();
+    }
+  };
+
   const reset = () => {
     setStatus('idle');
     setTranscript(null);
     setError(null);
   };
 
-  return { status, transcript, error, startRecording, stopAndTranscribe, reset };
+  return {
+    status,
+    transcript,
+    error,
+    isSupported,
+    startRecording,
+    stopAndTranscribe,
+    cancelRecording,
+    reset,
+  };
 }

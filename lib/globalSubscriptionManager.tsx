@@ -22,7 +22,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, AppState, Linking, Platform } from 'react-native';
 import { PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { globalRevenueCat, SubscriptionInfo, SubscriptionTier } from './globalRevenueCat';
@@ -174,6 +174,7 @@ export function GlobalSubscriptionProvider({
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const [isResubscribeBlocked, setIsResubscribeBlocked] = useState(false);
   const [resubscribeAllowedFrom, setResubscribeAllowedFrom] = useState<string | null>(null);
+  const lastVerifiedWebInfoRef = useRef<SubscriptionInfo | null>(null);
   const initRef = useRef(false);
 
   // ─── Init RevenueCat whenever userId changes ───────────────────────────────
@@ -181,12 +182,23 @@ export function GlobalSubscriptionProvider({
   useEffect(() => {
     const bootstrap = async () => {
       // ── 1. Serve from cache immediately so UI is never blocked ──────────────
-      if (userId) {
+      if (userId && Platform.OS !== 'web') {
         const cached = await loadSubscriptionCache(userId);
         if (cached) {
           setInfo(prev => ({ ...prev, ...cached }));
           setIsLoading(false); // unblock UI — background refresh will follow
         }
+      } else if (!userId) {
+        setInfo({
+          tier: 'free',
+          isPremium: false,
+          isVoice: false,
+          planType: null,
+          renewalDate: null,
+          raw: null,
+        });
+        setOfferings(null);
+        lastVerifiedWebInfoRef.current = null;
       }
 
       // ── 2. Full RevenueCat init + refresh in background ─────────────────────
@@ -209,7 +221,65 @@ export function GlobalSubscriptionProvider({
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
+  const fetchWebEntitlementStatus = useCallback(async (): Promise<SubscriptionInfo | null> => {
+    if (!userId) {
+      return {
+        tier: 'free',
+        isPremium: false,
+        isVoice: false,
+        planType: null,
+        renewalDate: null,
+        raw: null,
+      };
+    }
+
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      return {
+        tier: 'free',
+        isPremium: false,
+        isVoice: false,
+        planType: null,
+        renewalDate: null,
+        raw: null,
+      };
+    }
+
+    const { data: response, error } = await supabase.functions.invoke('revenuecat-entitlement-status');
+    if (error) {
+      throw error;
+    }
+
+    const tier = response?.tier === 'voice' || response?.tier === 'essential' ? response.tier : 'free';
+    return {
+      tier,
+      isPremium: !!response?.isPremium,
+      isVoice: !!response?.isVoice,
+      planType: response?.planType === 'monthly' || response?.planType === 'yearly' ? response.planType : null,
+      renewalDate: typeof response?.expirationDate === 'string' ? response.expirationDate : null,
+      raw: null,
+    };
+  }, [userId]);
+
   const refreshInternal = async (uidForCache?: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        const latest = await fetchWebEntitlementStatus();
+        if (!latest) {
+          return;
+        }
+        setInfo(latest);
+        setOfferings(null);
+        lastVerifiedWebInfoRef.current = latest;
+        return;
+      } catch {
+        if (lastVerifiedWebInfoRef.current) {
+          setInfo(lastVerifiedWebInfoRef.current);
+        }
+        return;
+      }
+    }
+
     const [latest, nextOfferings] = await Promise.all([
       globalRevenueCat.getCustomerInfo(),
       globalRevenueCat.getOfferings(),
@@ -251,8 +321,51 @@ export function GlobalSubscriptionProvider({
     if (userId) await checkResubscribeBlock(userId);
   }, [userId]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !userId) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    };
+
+    const handleFocus = () => {
+      void refresh();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refresh, userId]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && userId) {
+        void refresh();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [refresh, userId]);
+
   const purchase = useCallback(
     async (pkg: PurchasesPackage): Promise<boolean> => {
+      if (Platform.OS === 'web') {
+        return false;
+      }
       if (isResubscribeBlocked) {
         const date = resubscribeAllowedFrom
           ? new Date(resubscribeAllowedFrom).toLocaleDateString()
@@ -293,6 +406,9 @@ export function GlobalSubscriptionProvider({
   );
 
   const restore = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      return false;
+    }
     try {
       const updated = await globalRevenueCat.restorePurchases();
       setInfo(updated);

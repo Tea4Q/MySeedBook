@@ -28,11 +28,19 @@
 
 - ✅ **`lib/auth.tsx`** — CORS/empty-response guard: `{}` error from Supabase now shows a readable message
 
+### Recent Updates
+- ✅ Flexible seed entry now supports either a supplier or a manual provenance/source value.
+- ✅ Inventory cards and search use a shared provenance label so packet source information is displayed consistently.
+- ✅ Seed payloads now persist optional source text for gift/swap/saved packets.
+- ✅ SeedCard detail strip now uses a clear two-row layout: Quantity first, Source second, with right-aligned values.
+- ✅ Removed duplicate supplier output from SeedCard details; provenance is now shown once via a unified Source row.
+- ✅ Added extra spacing between the seed description area and detail strip for better readability.
+
 ### What's next
 - [ ] Apply 3 migrations in Supabase Dashboard SQL Editor
 - [ ] Harvest yield tracking UI screen (Essential tier)
-- [ ] Notification settings screen (free tier)
-- [ ] Get Vercel subscription → begin MCP server (Phase 2)
+- [ ] Planting notifications UI (Phase 2): planting reminders screen, low-stock alerts UI, and notification settings
+- [ ] Deploy the MCP server and wire `EXPO_PUBLIC_MCP_ENDPOINT` to the live URL
 
 ---
 

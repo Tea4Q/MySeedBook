@@ -4,8 +4,10 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  Platform,
 } from 'react-native';
-import { Brain, MessageCircle, Settings, ShoppingCart, Mic, Sparkles, Crown } from 'lucide-react-native';
+import { Brain, MessageCircle, Settings, ShoppingCart, Mic, Crown } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { usePremiumFeature } from '@/hooks/usePremiumFeature';
@@ -28,7 +30,7 @@ export default function AIScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const { isPremium } = usePremiumFeature();
-  const { isPremium: rcIsPremium, isVoice: rcIsVoice } = useGlobalSubscription();
+  const { isPremium: rcIsPremium, isVoice: rcIsVoice, isLoading: subscriptionLoading, refresh: refreshSubscriptionAccess } = useGlobalSubscription();
   
   const [activeView, setActiveView] = useState<ActiveView>('overview');
   const [userSeeds, setUserSeeds] = useState<Seed[]>([]);
@@ -37,6 +39,7 @@ export default function AIScreen() {
   const [voiceText, setVoiceText] = useState('');
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [isRefreshingAccess, setIsRefreshingAccess] = useState(false);
   const { isConfigured, recheck } = useAIConfigured();
   const [aiFeatures, setAIFeatures] = useState({
     voice_notes: false,
@@ -51,6 +54,16 @@ export default function AIScreen() {
     const features = await getAIFeatures(rcIsPremium, rcIsVoice);
     setAIFeatures(features);
   }, [rcIsPremium, rcIsVoice]);
+
+  const refreshAccess = useCallback(async () => {
+    setIsRefreshingAccess(true);
+    try {
+      await refreshSubscriptionAccess();
+      await loadAIFeatures();
+    } finally {
+      setIsRefreshingAccess(false);
+    }
+  }, [loadAIFeatures, refreshSubscriptionAccess]);
 
   const loadUserData = useCallback(async () => {
     try {
@@ -95,6 +108,12 @@ export default function AIScreen() {
     loadUserData();
     loadAIFeatures();
   }, [loadUserData, loadAIFeatures]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAccess();
+    }, [refreshAccess])
+  );
 
   const showAIUpgradePrompt = (_featureName: string) => {
     setShowPremiumModal(true);
@@ -193,6 +212,25 @@ export default function AIScreen() {
 
   const renderOverview = () => (
     <View style={styles.overviewContainer}>
+      {Platform.OS === 'web' && session?.user ? (
+        <View style={[styles.webAccessBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.webAccessTitle, { color: colors.text }]}>
+            {rcIsVoice
+              ? 'AI & Voice access is active.'
+              : 'AI & Voice access must be purchased in the MySeedBook iOS or Android app. After purchasing, sign in here with the same MySeedBook account.'}
+          </Text>
+          <Pressable
+            style={[styles.webAccessButton, { backgroundColor: colors.primary }]}
+            onPress={() => void refreshAccess()}
+            disabled={subscriptionLoading || isRefreshingAccess}
+          >
+            <Text style={[styles.webAccessButtonText, { color: colors.background }]}>
+              {subscriptionLoading || isRefreshingAccess ? 'Refreshing…' : 'Refresh Access'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={[styles.headerIcon, { backgroundColor: colors.primary + '20' }]}>
@@ -295,6 +333,7 @@ export default function AIScreen() {
             userSeeds={userSeeds}
             userSuppliers={userSuppliers}
             location="Your Garden" // Could be enhanced with actual location
+            onOpenSettings={() => setActiveView('settings')}
           />
         );
       case 'shopping':
@@ -351,7 +390,7 @@ export default function AIScreen() {
         return renderOverview();
       case 'settings':
         return (
-          <AISettingsPanel onConfigured={() => loadAIFeatures()} />
+          <AISettingsPanel onConfigured={() => { void Promise.all([loadAIFeatures(), recheck()]); }} />
         );
     }
   };
@@ -444,6 +483,27 @@ const styles = StyleSheet.create({
   overviewContainer: {
     flex: 1,
     padding: 16,
+  },
+  webAccessBanner: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    marginBottom: 20,
+  },
+  webAccessTitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  webAccessButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  webAccessButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   headerContainer: {
     flexDirection: 'row',
