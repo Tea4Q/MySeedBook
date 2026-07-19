@@ -58,12 +58,13 @@ export default function AIScreen() {
   const refreshAccess = useCallback(async () => {
     setIsRefreshingAccess(true);
     try {
-      await refreshSubscriptionAccess();
-      await loadAIFeatures();
+      const latest = await refreshSubscriptionAccess();
+      const features = await getAIFeatures(latest.isPremium, latest.isVoice);
+      setAIFeatures(features);
     } finally {
       setIsRefreshingAccess(false);
     }
-  }, [loadAIFeatures, refreshSubscriptionAccess]);
+  }, [refreshSubscriptionAccess]);
 
   const loadUserData = useCallback(async () => {
     try {
