@@ -34,7 +34,7 @@ const toIconName = (weatherCode: string | number): string => {
 
 interface WeatherIconProps {
   condition: string | number;
-  weatherCode: string | number; // ← was missing from props type
+  weatherCode?: string | number;
   size?: number;
   styleVariant?: 'line' | 'fill';
   autoPlay?: boolean;

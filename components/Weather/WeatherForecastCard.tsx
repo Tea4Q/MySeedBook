@@ -243,5 +243,48 @@ function getStyles(colors: ThemeColors) {
       marginLeft: 4,
       fontWeight: '500',
     },
+    iconContainer: {
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    tempRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    temp: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    tempDivider: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginHorizontal: 2,
+    },
+    tempLow: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      fontWeight: 'normal',
+    },
+    detailsGrid: {
+      width: '100%',
+      marginTop: 4,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    detailLabel: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      marginLeft: 4,
+      flex: 1,
+    },
+    detailValue: {
+      fontSize: 11,
+      color: colors.text,
+      fontWeight: '500',
+    },
   });
 }

@@ -26,7 +26,8 @@
     "nativewind-env.d.ts"
   ],
   "exclude": [
-    "_backup/**/*"
+    "_backup/**/*",
+    "supabase/functions/**/*"
   ],
   "extends": "expo/tsconfig.base"
 }

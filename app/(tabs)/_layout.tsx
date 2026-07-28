@@ -149,8 +149,8 @@ function createAnimatedTabButton({
     accessibilityState,
     accessibilityLabel,
   }: {
-    onPress?: () => void;
-    onLongPress?: () => void;
+    onPress?: ((...args: any[]) => void) | null;
+    onLongPress?: ((...args: any[]) => void) | null;
     accessibilityState?: { selected?: boolean };
     accessibilityLabel?: string;
   }) {
@@ -161,8 +161,8 @@ function createAnimatedTabButton({
         activeTintColor={activeTintColor}
         inactiveTintColor={inactiveTintColor}
         selected={Boolean(accessibilityState?.selected)}
-        onPress={onPress}
-        onLongPress={onLongPress}
+        onPress={onPress != null ? () => onPress() : undefined}
+        onLongPress={onLongPress != null ? () => onLongPress() : undefined}
         accessibilityLabel={accessibilityLabel}
       />
     );

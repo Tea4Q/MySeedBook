@@ -1,4 +1,6 @@
-export interface Supplier {
+import type { Feedback } from './feedback';
+
+export type Supplier = {
   supplier_image: string;
   id: string;
   supplier_name?: string;
@@ -14,7 +16,7 @@ export interface Supplier {
   deleted_at?: string | null; // Soft delete field (optional for backward compatibility)
 }
 
-export interface Seed {
+export type Seed = {
   seed_images: ({ type: 'supabase' | 'url'; url: string }[]) | string;
   id: string;
   seed_name: string;
@@ -47,7 +49,7 @@ export interface Seed {
   suppliers?: Supplier; // Optional joined supplier data
 }
 
-export interface SeedInventoryHistory {
+export type SeedInventoryHistory = {
   id: string;
   seed_id: string;
   action: 'add' | 'remove';
@@ -60,7 +62,7 @@ export interface SeedInventoryHistory {
   created_at: Date;
 }
 
-export interface CalendarEvent {
+export type CalendarEvent = {
   id: string;
   seed_id: string;
   seed_name: string;
@@ -74,7 +76,7 @@ export interface CalendarEvent {
 }
 
 // v1.4.0 — Harvest yield tracking (Essential tier)
-export interface HarvestYield {
+export type HarvestYield = {
   id: string;
   user_id: string;
   seed_id: string;
@@ -90,7 +92,7 @@ export interface HarvestYield {
 }
 
 // v1.4.0 — Notification preferences (Free tier)
-export interface NotificationPreferences {
+export type NotificationPreferences = {
   id: string;
   user_id: string;
   push_enabled: boolean;
@@ -105,7 +107,7 @@ export interface NotificationPreferences {
 // v1.4.1 — MCP token (Voice & AI tier)
 export type McpScope = 'read' | 'write';
 
-export interface McpToken {
+export type McpToken = {
   id: string;
   user_id: string;
   token_hash: string;
@@ -119,7 +121,7 @@ export interface McpToken {
 }
 
 // v1.4.1 — Garden (parent of garden beds/plots)
-export interface Garden {
+export type Garden = {
   id: string;
   user_id: string;
   name: string;
@@ -130,7 +132,7 @@ export interface Garden {
 }
 
 // v1.4.1 — Garden layout (Essential tier, UI ships v1.5.0)
-export interface GardenPlot {
+export type GardenPlot = {
   id: string;
   user_id: string;
   garden_id?: string | null;
@@ -143,7 +145,7 @@ export interface GardenPlot {
   updated_at: string;
 }
 
-export interface SeedLocation {
+export type SeedLocation = {
   id: string;
   user_id: string;
   seed_id: string;
@@ -157,7 +159,7 @@ export interface SeedLocation {
 }
 
 // v1.4.1 — Care tracking logs (Essential tier, UI ships v1.5.0)
-export interface WateringLog {
+export type WateringLog = {
   id: string;
   user_id: string;
   seed_id: string;
@@ -167,7 +169,7 @@ export interface WateringLog {
   notes?: string | null;
 }
 
-export interface FertilizerLog {
+export type FertilizerLog = {
   id: string;
   user_id: string;
   seed_id: string;
@@ -178,7 +180,7 @@ export interface FertilizerLog {
   notes?: string | null;
 }
 
-export interface PlantingLog {
+export type PlantingLog = {
   id: string;
   user_id: string;
   seed_id: string;
@@ -189,74 +191,113 @@ export interface PlantingLog {
   notes?: string | null;
 }
 
-export interface Database {
+export type Profile = {
+  id: string;
+  username?: string | null;
+  website?: string | null;
+  avatar_url?: string | null;
+  display_name?: string | null;
+  updated_at?: string | null;
+  resubscribe_blocked_until?: string | null;
+}
+
+export type Database = {
   public: {
     Tables: {
       suppliers: {
         Row: Supplier;
         Insert: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       seeds: {
         Row: Seed;
         Insert: Omit<Seed, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Seed, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       seed_inventory_history: {
         Row: SeedInventoryHistory;
         Insert: Omit<SeedInventoryHistory, 'id' | 'created_at'>;
-        Update: never;
+        Update: Partial<Omit<SeedInventoryHistory, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       calendar_events: {
         Row: CalendarEvent;
         Insert: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       harvest_yields: {
         Row: HarvestYield;
         Insert: Omit<HarvestYield, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<HarvestYield, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       notification_preferences: {
         Row: NotificationPreferences;
         Insert: Omit<NotificationPreferences, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<NotificationPreferences, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       mcp_tokens: {
         Row: McpToken;
         Insert: Omit<McpToken, 'id' | 'created_at'>;
         Update: Partial<Omit<McpToken, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       gardens: {
         Row: Garden;
         Insert: Omit<Garden, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Garden, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       garden_plots: {
         Row: GardenPlot;
         Insert: Omit<GardenPlot, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<GardenPlot, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
       seed_locations: {
         Row: SeedLocation;
         Insert: Omit<SeedLocation, 'id' | 'created_at'>;
         Update: Partial<Omit<SeedLocation, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       watering_logs: {
         Row: WateringLog;
         Insert: Omit<WateringLog, 'id'>;
-        Update: never;
+        Update: Partial<Omit<WateringLog, 'id'>>;
+        Relationships: [];
       };
       fertilizer_logs: {
         Row: FertilizerLog;
         Insert: Omit<FertilizerLog, 'id'>;
-        Update: never;
+        Update: Partial<Omit<FertilizerLog, 'id'>>;
+        Relationships: [];
       };
       planting_logs: {
         Row: PlantingLog;
         Insert: Omit<PlantingLog, 'id'>;
-        Update: never;
+        Update: Partial<Omit<PlantingLog, 'id'>>;
+        Relationships: [];
+      };
+      profiles: {
+        Row: Profile;
+        Insert: Partial<Profile>;
+        Update: Partial<Profile>;
+        Relationships: [];
+      };
+      feedback: {
+        Row: Feedback;
+        Insert: Omit<Feedback, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Feedback, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
       };
     };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
   };
 }

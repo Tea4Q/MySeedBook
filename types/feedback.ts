@@ -12,7 +12,7 @@ export type FeedbackStatus =
   | 'completed'
   | 'closed';
 
-export interface DeviceInfo {
+export type DeviceInfo = {
   platform: string;
   osVersion?: string;
   appVersion?: string;
@@ -21,9 +21,9 @@ export interface DeviceInfo {
     width: number;
     height: number;
   };
-}
+};
 
-export interface Feedback {
+export type Feedback = {
   id: string;
   user_id: string | null;
   user_email: string | null;
@@ -36,13 +36,13 @@ export interface Feedback {
   status: FeedbackStatus;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface FeedbackFormData {
+export type FeedbackFormData = {
   feedback_type: FeedbackType;
   subject: string;
   description: string;
   rating: number | null;
   user_email?: string;
   screenshot_url?: string;
-}
+};

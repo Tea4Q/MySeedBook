@@ -41,9 +41,9 @@ const mockFrom = jest.fn(() => ({
 jest.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
-      getUser: (...args: unknown[]) => mockGetUser(...args),
+      getUser: (...args: any[]) => (mockGetUser as any)(...args),
     },
-    from: (...args: unknown[]) => mockFrom(...args),
+    from: (...args: any[]) => (mockFrom as any)(...args),
   },
 }));
 
