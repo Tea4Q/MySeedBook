@@ -31,7 +31,8 @@ const getEditSupplierDraftKey = (supplierId: string) =>
   `edit_supplier_draft_v1_${supplierId}`;
 
 export default function EditSupplierScreen() {
-  const { id } = useLocalSearchParams();
+  const { id: rawId } = useLocalSearchParams();
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const navigation = useNavigation();
   const { colors } = useTheme();
   const [supplier, setSupplier] = useState<Supplier | null>(null);

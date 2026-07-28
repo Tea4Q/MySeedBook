@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { Feedback, FeedbackFormData, DeviceInfo } from '../../types/feedback';
+import { Feedback, FeedbackFormData, FeedbackStatus, DeviceInfo } from '../../types/feedback';
 import { Platform, Dimensions } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -44,13 +44,13 @@ class FeedbackService {
         rating: formData.rating,
         device_info: deviceInfo,
         screenshot_url: formData.screenshot_url || null,
-        status: 'new',
+        status: 'new' as FeedbackStatus,
       };
 
       // Insert feedback
       const { error } = await supabase
         .from('feedback')
-        .insert([feedbackData]);
+        .insert(feedbackData);
 
       if (error) {
         console.error('Error submitting feedback:', error);

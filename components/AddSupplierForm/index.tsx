@@ -151,6 +151,8 @@ export default function AddSupplierForm({
       const supplierDataToSave = {
         ...formData,
         user_id: user.id,
+        supplier_name: formData.supplier_name || '',
+        is_active: formData.is_active ?? true,
         supplier_images: imagesToSave, // Save as array of objects
         updated_at: new Date().toISOString(),
       };
@@ -245,7 +247,7 @@ export default function AddSupplierForm({
                   formData.email !== '' &&
                   { borderColor: colors.error },
               ]}
-              value={formData.email}
+              value={formData.email ?? undefined}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               placeholder="Enter email address"
               placeholderTextColor={colors.textSecondary}
@@ -286,7 +288,7 @@ export default function AddSupplierForm({
             </View>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
-              value={formData.address}
+              value={formData.address ?? undefined}
               onChangeText={(text) => setFormData({ ...formData, address: text })}
               placeholder="Enter physical address"
               placeholderTextColor={colors.textSecondary}
@@ -302,7 +304,7 @@ export default function AddSupplierForm({
             </View>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.inputText, borderColor: colors.inputBorder }]}
-              value={formData.notes}
+              value={formData.notes ?? undefined}
               onChangeText={(text) => setFormData({ ...formData, notes: text })}
               placeholder="Enter any additional notes"
               placeholderTextColor={colors.textSecondary}

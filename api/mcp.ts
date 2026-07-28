@@ -256,15 +256,15 @@ function sanitizePayload<T extends Record<string, unknown>>(payload: T, disallow
   return sanitized;
 }
 
-function parseSeedImages(value: unknown): unknown {
+function parseSeedImages(value: unknown): ({ type: 'supabase' | 'url'; url: string }[]) | string | null {
   if (!Array.isArray(value)) {
-    return value ?? null;
+    return typeof value === 'string' ? value : null;
   }
 
   return value
     .filter((item) => item && typeof item === 'object' && typeof (item as { url?: unknown }).url === 'string')
     .map((item) => ({
-      type: typeof (item as { type?: unknown }).type === 'string' ? (item as { type: string }).type : 'url',
+      type: (typeof (item as { type?: unknown }).type === 'string' ? (item as { type: string }).type : 'url') as 'supabase' | 'url',
       url: (item as { url: string }).url,
     }));
 }

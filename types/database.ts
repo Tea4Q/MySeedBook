@@ -1,17 +1,17 @@
 import type { Feedback } from './feedback';
 
 export type Supplier = {
-  supplier_image: string;
+  supplier_image?: string;
   id: string;
-  supplier_name?: string;
-  webaddress?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  notes?: string;
+  supplier_name: string;
+  webaddress?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
   is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
   user_id: string;
   deleted_at?: string | null; // Soft delete field (optional for backward compatibility)
 }
@@ -25,9 +25,9 @@ export type Seed = {
   quantity_unit?: string;
   source?: string | null;
   supplier_id?: string;
-  date_purchased: Date | null | undefined;
-  indoor_sow_date?: Date | null | undefined;
-  transplant_date?: Date | null | undefined;
+  date_purchased?: Date | string | null;
+  indoor_sow_date?: Date | string | null;
+  transplant_date?: Date | string | null;
   seed_price?: number;
   storage_location?: string;
   storage_requirements?: string;
@@ -42,10 +42,11 @@ export type Seed = {
   days_to_harvest?: string | number;
   planting_season?: string;
   harvest_season?: string;
-  notes?: string;
+  notes?: string | null;
   user_id: string;
   description?: string;
   deleted_at?: string | null; // Soft delete field
+  low_stock_threshold?: number | null;
   suppliers?: Supplier; // Optional joined supplier data
 }
 
@@ -96,10 +97,10 @@ export type NotificationPreferences = {
   id: string;
   user_id: string;
   push_enabled: boolean;
-  planting_reminder_days: number;
-  low_stock_default_threshold: number;
-  reorder_reminder_enabled: boolean;
-  harvest_reminder_enabled: boolean;
+  planting_reminder_days?: number;
+  low_stock_default_threshold?: number;
+  reorder_reminder_enabled?: boolean;
+  harvest_reminder_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -155,7 +156,7 @@ export type SeedLocation = {
   planted_date?: string | null;
   notes?: string | null;
   created_at: string;
-  deleted_at: string | null;
+  deleted_at?: string | null;
 }
 
 // v1.4.1 — Care tracking logs (Essential tier, UI ships v1.5.0)
@@ -206,14 +207,22 @@ export type Database = {
     Tables: {
       suppliers: {
         Row: Supplier;
-        Insert: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;
+        Insert: Omit<Supplier, 'id' | 'created_at' | 'updated_at'> & { is_active?: boolean };
         Update: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>;
         Relationships: [];
       };
       seeds: {
         Row: Seed;
-        Insert: Omit<Seed, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Seed, 'id' | 'created_at' | 'updated_at'>>;
+        Insert: Omit<Seed, 'id' | 'created_at' | 'updated_at' | 'date_purchased' | 'indoor_sow_date' | 'transplant_date'> & {
+          date_purchased?: string | null;
+          indoor_sow_date?: string | null;
+          transplant_date?: string | null;
+        };
+        Update: Partial<Omit<Seed, 'id' | 'created_at' | 'updated_at'> & {
+          date_purchased?: string | null;
+          indoor_sow_date?: string | null;
+          transplant_date?: string | null;
+        }>;
         Relationships: [];
       };
       seed_inventory_history: {
@@ -292,6 +301,18 @@ export type Database = {
         Row: Feedback;
         Insert: Omit<Feedback, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Feedback, 'id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
+      };
+      pending_deletion: {
+        Row: { id: string; user_id: string; user_email: string; reason: string; status: string; created_at: string };
+        Insert: { user_id: string; user_email: string; reason: string; status: string };
+        Update: Partial<{ user_email: string; reason: string; status: string }>;
+        Relationships: [];
+      };
+      global_deletion_log: {
+        Row: { id: string; user_id: string; deleted_at: string; plan_at_deletion: string };
+        Insert: { user_id: string; deleted_at: string; plan_at_deletion: string };
+        Update: Partial<{ deleted_at: string; plan_at_deletion: string }>;
         Relationships: [];
       };
     };

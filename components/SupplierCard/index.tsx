@@ -8,10 +8,10 @@ export type Supplier = {
   id: string;
   supplier_name: string;
   description?: string;
-  webaddress?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
+  webaddress?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   specialties?: string[];
   rating?: number;
   supplier_image?: string;
