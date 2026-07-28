@@ -246,3 +246,12 @@ export function recommendNextSeeds(seeds: Seed[], referenceDate = new Date()): I
     .slice(0, 4)
     .map(({ score: _score, ...rest }) => rest);
 }
+
+export function buildReminderPayload(seedName: string, reason: string): { notes: string; suggestedDateISO: string } {
+  const suggestedDate = new Date();
+  suggestedDate.setDate(suggestedDate.getDate() + 7);
+  return {
+    notes: `${seedName}: ${reason}`,
+    suggestedDateISO: suggestedDate.toISOString().slice(0, 10),
+  };
+}

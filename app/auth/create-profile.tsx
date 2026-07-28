@@ -27,7 +27,7 @@ export default function CreateProfileScreen() {
         username,
         website,
         avatar_url: avatarUrl,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString(),
       };
       const { error } = await supabase.from('profiles').upsert(updates);
       if (error) {

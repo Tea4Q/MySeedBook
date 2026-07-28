@@ -52,6 +52,7 @@ export default function InventoryScreen() {
   const [highlightedSeedId, setHighlightedSeedId] = useState<string | null>(null);
   const [deletingSeedId, setDeletingSeedId] = useState<string | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const isMultiColumn = Platform.OS === 'web' || responsive.gridColumns > 1;
 
   const isMounted = useRef(true);
 
@@ -341,13 +342,14 @@ export default function InventoryScreen() {
   }, []);
 
   const seedCards = (
-    <View style={[styles.seedGrid, Platform.OS === 'web' ? styles.seedGridWeb : styles.seedGridMobile]}>
+    <View style={[styles.seedGrid,
+      isMultiColumn ? styles.seedGridWeb : styles.seedGridMobile,]}>
       {seeds.map((seed) => (
         <View
           key={seed.id}
           style={[
             styles.seedCardWrap,
-            Platform.OS === 'web' ? styles.seedCardWrapWeb : styles.seedCardWrapMobile,
+            isMultiColumn ? styles.seedCardWrapWeb : styles.seedCardWrapMobile,
           ]}
         >
           <SeedCard

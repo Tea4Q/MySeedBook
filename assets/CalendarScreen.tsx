@@ -41,10 +41,10 @@ import { supabase } from '@../../lib/supabase';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTheme } from '@/lib/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { CalendarWeatherIcon } from '../../components/Weather/AnimatedWeatherIcon';
-import { WeatherDetailModal } from '../../components/Weather/WeatherDetailModal';
-import { calendarWeatherService } from '../../lib/services/calendarWeatherService';
-import { usePremiumFeature } from '../../hooks/usePremiumFeature';
+import { CalendarWeatherIcon } from '../components/Weather/AnimatedWeatherIcon';
+import { WeatherDetailModal } from '../components/Weather/WeatherDetailModal';
+import { calendarWeatherService } from '../lib/services/calendarWeatherService';
+import { usePremiumFeature } from '../hooks/usePremiumFeature';
 
 // ─── Weather error boundary ───────────────────────────────────────────────────
 class WeatherIconBoundary extends Component<

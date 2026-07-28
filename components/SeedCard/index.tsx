@@ -301,17 +301,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginBottom: spacing.md,
     overflow: 'hidden',
-    height: 680,
+    height: 620,
     ...shadows.md,
   },
   imageContainer: {
     width: '100%',
-    height: 200,
+    height: 180,
     position: 'relative',
   },
   seedImage: {
     width: '100%',
-    height: 200,
+    height: 180,
   },
   imageBadge: {
     position: 'absolute',
@@ -325,14 +325,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
   content: {
-    padding: spacing.md,
-    flex: 1,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xs, // was part of padding: spacing.md
   },
   nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     flexWrap: 'wrap',
   },
   seedName: {
@@ -376,33 +377,35 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   descriptionScroll: {
-    flex: 1,
-    maxHeight: 200,
-    minHeight: 180,
+    height: 132,
+    maxHeight: 132,
+    minHeight: 132,
+    marginBottom: spacing.xs,
   },
   descriptionContent: {
     padding: spacing.sm,
-    minHeight: 200,
+    minHeight: 132,
   },
   descriptionText: {
     fontSize: fontSize.md,
     lineHeight: fontSize.md * 1.4,
   },
   bottom: {
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
   },
   detailStrip: {
-    margin: spacing.sm,
-    marginTop: spacing.md,
-    padding: spacing.md,
+    marginHorizontal: spacing.sm,
+    marginTop: 0,
+    marginBottom: spacing.xs,
+    padding: spacing.sm,
     borderRadius: radius.md,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   detailLeft: {
     flexDirection: 'row',

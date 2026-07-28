@@ -15,20 +15,6 @@ import { useTheme } from '@/lib/theme';
 import { AppText } from '@/components/ui/AppText';
 import { SupplierCard, type Supplier } from '@/components/SupplierCard';
 
-type Supplier = {
-  id: string;
-  supplier_name: string;
-  description?: string;
-  webaddress?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  specialties?: string[];
-  rating?: number;
-  supplier_image?: string;
-  user_id?: string;
-};
-
 const mockSuppliers: Supplier[] = [
   {
     id: 'mock-1',

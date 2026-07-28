@@ -117,7 +117,7 @@ export interface GlobalSubscriptionContextValue {
   /** Restore purchases (required by App Store & Google Play) */
   restore: () => Promise<boolean>;
   /** Refresh subscription state from RevenueCat */
-  refresh: () => Promise<void>;
+  refresh: () => Promise<SubscriptionInfo>;
   /** Open platform subscription management page */
   openManageSubscriptions: () => Promise<void>;
   /** Deep-link to platform refund page if within window */
@@ -140,7 +140,14 @@ const defaultValue: GlobalSubscriptionContextValue = {
   resubscribeAllowedFrom: null,
   purchase: async () => false,
   restore: async () => false,
-  refresh: async () => {},
+  refresh: async () => ({
+    tier: 'free',
+    isPremium: false,
+    isVoice: false,
+    planType: null,
+    renewalDate: null,
+    raw: null,
+  }),
   openManageSubscriptions: async () => {},
   requestRefund: async () => {},
 };
@@ -261,22 +268,23 @@ export function GlobalSubscriptionProvider({
     };
   }, [userId]);
 
-  const refreshInternal = async (uidForCache?: string) => {
+  const refreshInternal = async (uidForCache?: string): Promise<SubscriptionInfo> => {
     if (Platform.OS === 'web') {
       try {
         const latest = await fetchWebEntitlementStatus();
         if (!latest) {
-          return;
+          return info;
         }
         setInfo(latest);
         setOfferings(null);
         lastVerifiedWebInfoRef.current = latest;
-        return;
+        return latest;
       } catch {
         if (lastVerifiedWebInfoRef.current) {
           setInfo(lastVerifiedWebInfoRef.current);
+          return lastVerifiedWebInfoRef.current;
         }
-        return;
+        return info;
       }
     }
 
@@ -290,6 +298,7 @@ export function GlobalSubscriptionProvider({
     if (uidForCache) {
       saveSubscriptionCache(uidForCache, latest);
     }
+    return latest;
   };
 
   const checkResubscribeBlock = async (uid: string) => {
@@ -317,8 +326,9 @@ export function GlobalSubscriptionProvider({
   };
 
   const refresh = useCallback(async () => {
-    await refreshInternal(userId ?? undefined);
+    const latest = await refreshInternal(userId ?? undefined);
     if (userId) await checkResubscribeBlock(userId);
+    return latest;
   }, [userId]);
 
   useEffect(() => {
